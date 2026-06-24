@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import TopNav from './components/TopNav';
 import Home from './pages/Home';
+import Onboarding from './pages/Onboarding';
+import ExerciseList from './pages/ExerciseList';
 
 function App() {
   return (
@@ -9,11 +11,13 @@ function App() {
       <div className="min-vh-100 bg-body text-body">
         {/* Navbar nằm ở trên cùng */}
         <TopNav />
-        
+
         {/* Nội dung các trang sẽ render ở dưới */}
         <Routes>
           <Route path="/" element={<Home />} />
           {/* Thêm các Route khác sau này (Ví dụ: /workout, /onboarding...) */}
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/exercises/:id" element={<ExerciseList />} />
         </Routes>
       </div>
     </Router>

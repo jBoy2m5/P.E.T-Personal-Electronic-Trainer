@@ -3,10 +3,17 @@ import { Navbar, Nav, Container } from 'react-bootstrap';
 import logo from '../assets/logo.png'; 
 
 export default function TopNav() {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme !== null) {
+      return savedTheme === 'dark';
+    }
+    return true;
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
   const handleThemeToggle = () => {
@@ -43,6 +50,8 @@ export default function TopNav() {
           <Nav className="mx-auto fw-bold" style={{ fontSize: '0.85rem' }}>
             <Nav.Link href="#routines" className={`px-4 nav-link-custom nav-link-active ${isDark ? 'text-white' : 'text-dark'}`}>LỘ TRÌNH</Nav.Link>
             <Nav.Link href="#calories" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>QUẢN LÝ CALO</Nav.Link>
+            <Nav.Link href="#schedule" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>LỊCH TẬP</Nav.Link>
+            <Nav.Link href="#daily" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>HÀNG NGÀY</Nav.Link>
           </Nav>
 
           <Nav className="align-items-center mt-3 mt-lg-0">
