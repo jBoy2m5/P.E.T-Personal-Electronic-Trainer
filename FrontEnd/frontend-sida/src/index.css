@@ -267,3 +267,247 @@ body {
   background: #e9ecef;
 }
 
+/* =========================================
+   HỆ THỐNG CLASS ĐỒNG BỘ MÀU (SURFACE SYSTEM)
+========================================= */
+
+/* Dark Mode (Mặc định) */
+.bg-surface-main { background-color: #000000 !important; }
+.bg-surface-card { background: #121214 !important; }
+.bg-surface-card-gradient { background: linear-gradient(180deg, #1c1c1e 0%, #121214 100%) !important; }
+.border-surface { border-color: rgba(255,255,255,0.05) !important; }
+.text-primary-dynamic { color: #ffffff !important; }
+
+/* Light Mode */
+[data-bs-theme="light"] .bg-surface-main { background-color: #f8f9fa !important; }
+.hero-card {
+  /* Tạo nền gradient từ xám đậm xuống đen để có chiều sâu */
+  background: linear-gradient(145deg, #2a2a2a 0%, #121212 100%); 
+  
+  /* Viền xám sáng hơn một chút, kết hợp ánh xanh neon cực mờ */
+  border: 1px solid rgba(204, 255, 0, 0.15) !important; 
+  
+  /* Đổ bóng 2 lớp: 1 lớp đen tạo khối + 1 lớp Neon tạo hiệu ứng phát sáng mờ */
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 
+              0 0 20px rgba(204, 255, 0, 0.05) !important;
+  
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+/* Thêm tí tương tác khi người dùng di chuột vào thẻ */
+.hero-card:hover {
+  border: 1px solid rgba(204, 255, 0, 0.4) !important; 
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 
+              0 0 30px rgba(204, 255, 0, 0.1) !important;
+  transform: translateY(-3px); /* Nhích nhẹ thẻ lên trên */
+}
+
+/* --- BỔ SUNG CHO NAVBAR --- */
+.text-neon {
+  color: #ccff00 !important; /* Mã màu xanh Neon đặc trưng */
+}
+
+.border-neon {
+  border-color: #ccff00 !important;
+}
+
+.nav-link-custom {
+  color: #ffffff !important;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.nav-link-custom:hover {
+  color: #ccff00 !important;
+  text-shadow: 0 0 8px rgba(204, 255, 0, 0.4);
+}
+
+/* --- LOGO TỐI ƯU --- */
+.logo-brand {
+  cursor: pointer;
+  transition: transform 0.3s ease, text-shadow 0.3s ease;
+}
+
+.logo-brand:hover {
+  transform: scale(1.05);
+}
+
+.logo-brand:hover span.fw-bold {
+  color: #ccff00 !important;
+  text-shadow: 0 0 8px rgba(204, 255, 0, 0.4);
+}
+
+/* --- TRẠNG THÁI ACTIVE TRÊN NAVBAR --- */
+.nav-link-active {
+  color: #ccff00 !important; /* Xanh Neon */
+  position: relative;
+}
+
+.nav-link-active::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 24px; /* Chỉnh độ lệch so với lề trái của padding */
+  right: 24px;
+  height: 2px;
+  background-color: #ccff00;
+}
+
+/* Kẻ dọc phân cách (Divider) */
+.nav-divider {
+  width: 1px;
+  background-color: #333;
+  height: 20px;
+  margin: auto 15px;
+}
+
+/* Nút Đăng Nhập */
+.btn-login {
+  background-color: #222;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-login:hover {
+  background-color: #333;
+  border-color: #ccff00;
+  color: #ccff00;
+}
+
+/* --- ICON BUTTONS TRÊN NAVBAR --- */
+.tool-btn {
+  background: transparent;
+  color: #a0a0a0;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 6px 10px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.tool-btn:hover {
+  background: #222;
+  color: #fff;
+  border-color: #555;
+}
+
+/* =========================================
+   GIAO DIỆN SÁNG (LIGHT MODE OVERRIDES)
+========================================= */
+
+/* 1. Khung Lộ Trình sáng sủa, đổ bóng nhẹ nhàng */
+[data-bs-theme="light"] .hero-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f4f6f8 100%);
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03) !important;
+}
+
+[data-bs-theme="light"] .hero-card:hover {
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 2. Đổi màu chữ Neon sang màu Xanh Thể thao (để dễ đọc trên nền trắng) */
+[data-bs-theme="light"] .text-neon {
+  color: #198754 !important; /* Xanh lá Bootstrap Success */
+}
+
+/* 3. Link Navbar ở Light Mode */
+[data-bs-theme="light"] .nav-link-custom {
+  color: #333 !important;
+}
+
+[data-bs-theme="light"] .nav-link-custom:hover,
+[data-bs-theme="light"] .nav-link-active {
+  color: #198754 !important;
+  text-shadow: none;
+}
+
+[data-bs-theme="light"] .nav-link-active::after {
+  background-color: #198754;
+}
+
+/* 4. Nút bấm Đăng nhập & Công cụ ở Light Mode */
+[data-bs-theme="light"] .btn-login {
+  background-color: #ffffff;
+  color: #212529;
+  border-color: #dee2e6;
+}
+
+[data-bs-theme="light"] .btn-login:hover {
+  background-color: #f8f9fa;
+  border-color: #198754;
+  color: #198754;
+}
+
+[data-bs-theme="light"] .tool-btn {
+  color: #495057;
+  border-color: #dee2e6;
+}
+
+[data-bs-theme="light"] .tool-btn:hover {
+  background: #e9ecef;
+}
+
+/* =========================================
+   HỆ THỐNG CLASS ĐỒNG BỘ MÀU (SURFACE SYSTEM)
+========================================= */
+
+/* CSS Variables for Brand Colors */
+:root {
+  --brand-neon: #ccff00;
+  --brand-neon-rgb: 204, 255, 0;
+}
+[data-bs-theme="light"] {
+  --brand-neon: #198754;
+  --brand-neon-rgb: 25, 135, 84;
+}
+
+/* Dark Mode (Mặc định) */
+.bg-surface-main { background-color: #000000 !important; }
+.bg-surface-card { background: #121214 !important; }
+.bg-surface-card-gradient { background: linear-gradient(180deg, #1c1c1e 0%, #121214 100%) !important; }
+.border-surface { border-color: rgba(255,255,255,0.05) !important; }
+.text-primary-dynamic { color: #ffffff !important; }
+
+/* Light Mode */
+[data-bs-theme="light"] .bg-surface-main { background-color: #f8f9fa !important; }
+[data-bs-theme="light"] .bg-surface-card { background: #ffffff !important; box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important; }
+[data-bs-theme="light"] .bg-surface-card-gradient { background: linear-gradient(180deg, #ffffff 0%, #f1f3f5 100%) !important; box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important; }
+[data-bs-theme="light"] .border-surface { border-color: rgba(0,0,0,0.1) !important; }
+[data-bs-theme="light"] .text-primary-dynamic { color: #212529 !important; }
+
+/* Sửa các chỗ bị đen thui trong thẻ modal hoặc inner component */
+[data-bs-theme="light"] .bg-black { background-color: #f8f9fa !important; }
+
+/* Hero Banner */
+.bg-hero-banner { background: linear-gradient(90deg, #121214 0%, #121214 50%, #000000 100%) !important; }
+[data-bs-theme="light"] .bg-hero-banner { background: linear-gradient(90deg, #f8f9fa 0%, #f8f9fa 50%, #ffffff 100%) !important; }
+
+
+/* SVG Gradient stops cho Calorie Tracker */
+[data-bs-theme="light"] #kcalGradientPremium stop:nth-child(1),
+[data-bs-theme="light"] #kcalGrad stop:nth-child(1) { stop-color: #198754; }
+[data-bs-theme="light"] #kcalGradientPremium stop:nth-child(2),
+[data-bs-theme="light"] #kcalGradientPremium stop:nth-child(3),
+[data-bs-theme="light"] #kcalGrad stop:nth-child(2) { stop-color: #20c997; }
+
+/* Sửa các chỗ bị đen thui trong thẻ modal hoặc inner component */
+[data-bs-theme="light"] .bg-black { background-color: #f8f9fa !important; }
+
+/* Hero Banner */
+.bg-hero-banner { background: linear-gradient(90deg, #121214 0%, #121214 50%, #000000 100%) !important; }
+[data-bs-theme="light"] .bg-hero-banner { background: linear-gradient(90deg, #f8f9fa 0%, #f8f9fa 50%, #ffffff 100%) !important; }

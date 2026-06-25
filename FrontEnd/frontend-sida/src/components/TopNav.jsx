@@ -15,19 +15,37 @@ export default function TopNav() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
 
+  const [notifications, setNotifications] = useState([]);
+  const [showNotif, setShowNotif] = useState(false);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
+  useEffect(() => {
+    const loadNotifs = () => {
+      const saved = localStorage.getItem('pet-notifications');
+      if (saved) {
+        setNotifications(JSON.parse(saved));
+      }
+    };
+    loadNotifs();
+    window.addEventListener('storage', loadNotifs);
+    return () => window.removeEventListener('storage', loadNotifs);
+  }, []);
+
   const handleThemeToggle = () => {
     setIsDark(!isDark);
   };
 
-  if (isLoginPage) {
-    return null;
-  }
+  const unreadCount = notifications.filter(n => !n.read).length;
 
+  const markAllAsRead = () => {
+    const updated = notifications.map(n => ({ ...n, read: true }));
+    setNotifications(updated);
+    localStorage.setItem('pet-notifications', JSON.stringify(updated));
+  };
   return (
     <Navbar 
       expand="lg" 
@@ -59,9 +77,9 @@ export default function TopNav() {
             <Navbar.Collapse id="basic-navbar-nav">
               <Nav className="mx-auto fw-bold" style={{ fontSize: '0.85rem' }}>
                 <Nav.Link href="#routines" className={`px-4 nav-link-custom nav-link-active ${isDark ? 'text-white' : 'text-dark'}`}>LỘ TRÌNH</Nav.Link>
-                <Nav.Link href="#calories" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>QUẢN LÝ CALO</Nav.Link>
-                <Nav.Link href="#schedule" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>LỊCH TẬP</Nav.Link>
-                <Nav.Link href="#daily" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>HÀNG NGÀY</Nav.Link>
+                <Nav.Link href="/calories" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>QUẢN LÝ CALO</Nav.Link>
+                <Nav.Link href="/schedule" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>LỊCH TẬP</Nav.Link>
+                <Nav.Link href="/daily" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>NHIỆM VỤ</Nav.Link>
               </Nav>
 
               <Nav className="align-items-center mt-3 mt-lg-0">
@@ -77,6 +95,50 @@ export default function TopNav() {
                 </button>
                 
                 <div className={`nav-divider d-none d-lg-block mx-2 ${!isDark && 'bg-secondary'}`}></div>
+
+                {/* Notification Bell */}
+                <div className="position-relative d-flex align-items-center mt-2 mt-lg-0 me-3">
+                  <button 
+                    className="tool-btn position-relative" 
+                    onClick={() => {
+                      setShowNotif(!showNotif);
+                      if (!showNotif && unreadCount > 0) markAllAsRead();
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.6rem' }}>
+                        {unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {showNotif && (
+                    <div 
+                      className={`position-absolute top-100 end-0 mt-2 rounded-3 shadow-lg ${isDark ? 'bg-dark border-secondary' : 'bg-white border-light'}`} 
+                      style={{ width: '300px', zIndex: 1050, border: '1px solid', overflow: 'hidden' }}
+                    >
+                      <div className={`p-3 border-bottom fw-bold ${isDark ? 'text-white border-secondary' : 'text-dark border-light'}`}>
+                        Thông Báo
+                      </div>
+                      <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                        {notifications.length === 0 ? (
+                          <div className="p-4 text-center text-muted small">Chưa có thông báo nào</div>
+                        ) : (
+                          notifications.map(n => (
+                            <div key={n.id} className={`p-3 border-bottom ${isDark ? 'border-secondary' : 'border-light'} hover-bg`} style={{ cursor: 'pointer' }}>
+                              <div className={`small fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>{n.message}</div>
+                              <div className="text-muted" style={{ fontSize: '0.7rem' }}>{new Date(n.time).toLocaleString()}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <Nav.Link as={Link} to="/login" className="p-0 mt-2 mt-lg-0">
                   <button className="btn-login" style={{ fontSize: '0.85rem' }}>
