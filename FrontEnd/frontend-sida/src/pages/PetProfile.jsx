@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Card, Form, Badge, ProgressBar } from 'react-bootstrap';
+import { Container, Row, Col, Card, Modal, Button, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import petChatbot from '../assets/pet_chatbot.png';
+import petBgImage from '../assets/pet_bg.png'; // File background ảnh thật
 
 const PET_LEVELS = [
   { level: 1, name: 'Trứng', minPoints: 0, icon: '🥚' },
@@ -16,216 +17,406 @@ const PET_LEVELS = [
 
 export default function PetProfile() {
   const navigate = useNavigate();
+
   const [petData, setPetData] = useState({
     pet_name: 'P.E.T',
-    appearance_type: 'Cân đối',
-    emotional_state: 'Bình thường',
     total_exp: 0,
+    checkin_streak: 0,
     level: 1,
-    last_updated: new Date().toISOString()
   });
 
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [tempName, setTempName] = useState('');
+  const [tasks, setTasks] = useState([]);
+
+  // Modal States
+  const [showEditName, setShowEditName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState('');
+  
+  const [showOutfit, setShowOutfit] = useState(false);
+  const [showDonation, setShowDonation] = useState(false);
+  
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([{ sender: 'ai', text: 'Chào đằng ấy! Cần mình tư vấn gì về lịch tập hay dinh dưỡng không?' }]);
+  const [chatInput, setChatInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
-    // Tải dữ liệu exp và streak từ pet-daily để tính toán trạng thái
+    // 1. Load Daily EXP & Streak
     const dailySaved = localStorage.getItem('pet-daily');
     let exp = 0;
     let streak = 0;
-    let lastCheckin = null;
-    
     if (dailySaved) {
       const dailyParsed = JSON.parse(dailySaved);
       exp = dailyParsed.totalPoints || 0;
       streak = dailyParsed.checkinStreak || 0;
-      lastCheckin = dailyParsed.lastCheckinDate;
     }
 
-    // Tính toán Level
+    // 2. Calculate Level
     let currentLevelObj = PET_LEVELS[0];
     for (const lvl of PET_LEVELS) {
       if (exp >= lvl.minPoints) currentLevelObj = lvl;
     }
 
-    // Logic Cảm xúc & Thể trạng dựa trên chuỗi tập luyện (Streak)
-    let emotional_state = 'Bình thường';
-    let appearance_type = 'Cân đối';
-
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    
-    // Nếu bỏ tập (không checkin hôm nay hoặc hôm qua thì streak sẽ về 0 hoặc đang 0)
-    if (streak === 0 && lastCheckin !== todayStr) {
-      emotional_state = 'Buồn rầu';
-      appearance_type = 'Yếu ớt';
-    } else if (streak >= 3) {
-      emotional_state = 'Rất vui';
-      appearance_type = 'Mạnh mẽ';
-    } else if (streak >= 1) {
-      emotional_state = 'Bình thường';
-      appearance_type = 'Cân đối';
-    }
-
-    // Tải tên pet từ pet-data nếu có
+    // 3. Load Pet Name
     const petSaved = localStorage.getItem('pet-data');
-    let pet_name = 'Trứng Vô Danh';
-    if (exp >= 10) pet_name = 'P.E.T Của Tôi'; // Default sau khi nở
-    
+    let pet_name = 'Vô Danh';
+    if (exp >= 10) pet_name = 'Quẹc';
     if (petSaved) {
       const parsedPet = JSON.parse(petSaved);
       if (parsedPet.pet_name) pet_name = parsedPet.pet_name;
     }
 
-    const newData = {
-      pet_id: petSaved ? JSON.parse(petSaved).pet_id || 1 : 1,
-      user_id: petSaved ? JSON.parse(petSaved).user_id || 1 : 1,
-      pet_name,
-      appearance_type,
-      emotional_state,
-      total_exp: exp,
-      level: currentLevelObj.level,
-      last_updated: new Date().toISOString()
-    };
+    setPetData({ pet_name, total_exp: exp, checkin_streak: streak, level: currentLevelObj.level });
 
-    setPetData(newData);
-    localStorage.setItem('pet-data', JSON.stringify(newData));
+    // 4. Load Tasks based on daily progress
+    const trainedArray = dailySaved ? JSON.parse(dailySaved).exercisesTrained || [] : [];
+    
+    let loadedTasks = [
+      { id: 1, name: 'Đăng nhập vào ứng dụng', expReward: 10, completed: true },
+      { id: 2, name: 'Hoàn thành 1 bài tập bất kỳ', expReward: 20, completed: trainedArray.length > 0 },
+      { id: 3, name: 'Thực hiện ít nhất 3 bài tập', expReward: 50, completed: trainedArray.length >= 3 }
+    ];
 
-  }, []);
-
-  const handleNameSave = () => {
-    if (tempName.trim()) {
-      const newData = { ...petData, pet_name: tempName.trim(), last_updated: new Date().toISOString() };
-      setPetData(newData);
-      localStorage.setItem('pet-data', JSON.stringify(newData));
+    if (trainedArray.length > 0) {
+      trainedArray.slice(0, 2).forEach((ex, idx) => {
+        loadedTasks.push({
+          id: 4 + idx,
+          name: `Hoàn thành bài tập ${ex}`,
+          expReward: 15,
+          completed: true
+        });
+      });
     }
-    setIsEditingName(false);
-  };
+
+    setTasks(loadedTasks);
+  }, []);
 
   const currentLevelObj = PET_LEVELS.find(l => l.level === petData.level) || PET_LEVELS[0];
   const nextLevelObj = PET_LEVELS.find(l => l.minPoints > petData.total_exp);
-  const progressToNext = nextLevelObj 
-    ? ((petData.total_exp - currentLevelObj.minPoints) / (nextLevelObj.minPoints - currentLevelObj.minPoints)) * 100 
-    : 100;
+  
+  // Progress Bar Width
+  const maxExp = nextLevelObj ? nextLevelObj.minPoints : petData.total_exp;
+  const progressPercent = Math.min((petData.total_exp / maxExp) * 100, 100);
 
-  const emotionData = {
-    label: petData.emotional_state === 'Rất vui' ? 'Rất vui 😁' : petData.emotional_state === 'Buồn rầu' ? 'Buồn rầu 😢' : 'Bình thường 😐'
+  const handleNameSave = () => {
+    if (editNameValue.trim()) {
+      const newData = { ...petData, pet_name: editNameValue.trim() };
+      setPetData(newData);
+      localStorage.setItem('pet-data', JSON.stringify(newData));
+    }
+    setShowEditName(false);
   };
-  const appearanceData = {
-    label: petData.appearance_type,
-    color: petData.appearance_type === 'Yếu ớt' ? 'text-danger' : 'text-success'
+
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return;
+    const newMsg = { sender: 'user', text: chatInput };
+    setChatMessages([...chatMessages, newMsg]);
+    setChatInput('');
+    setIsTyping(true);
+
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, { sender: 'ai', text: 'Đây là câu trả lời tự động từ AI (Gắn API thực tế sau nhé!). Bạn cứ tập trung đẩy tạ đi!' }]);
+      setIsTyping(false);
+    }, 1500);
   };
 
   return (
-    <Container className="py-5 bg-surface-main" fluid style={{ minHeight: '100vh' }}>
-      <Container style={{ maxWidth: '700px' }}>
-        <button 
-          onClick={() => navigate(-1)} 
-          className="btn text-primary-dynamic mb-4 p-0 d-flex align-items-center gap-2"
-          style={{ background: 'none', border: 'none' }}
-        >
-          <span style={{ fontSize: '1.2rem' }}>←</span> Quay lại
-        </button>
-
-        <h2 className="fw-bold text-primary-dynamic text-center mb-4" style={{ letterSpacing: '1px' }}>HỒ SƠ THÚ CƯNG</h2>
-
-        <Card className="bg-surface-card-gradient border-surface p-4 p-md-5 overflow-hidden position-relative" style={{ borderRadius: '32px' }}>
+    <div className="pet-tiktok-layout" style={{ background: '#f8f9fa', minHeight: '100vh', overflow: 'hidden' }}>
+      <Container fluid className="p-0 h-100">
+        <Row className="m-0 h-100" style={{ minHeight: '100vh' }}>
           
-          <div className="text-center mb-5 position-relative">
-            {petData.level >= 4 && (
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.1) 0%, transparent 60%)', filter: 'blur(20px)', zIndex: 0 }}></div>
-            )}
+          {/* CỘT TRÁI: Khu vực Thao tác & Thông tin */}
+          <Col lg={5} xl={4} className="d-flex flex-column order-2 order-lg-1 bg-white shadow-lg z-2" style={{ maxHeight: '100vh', overflowY: 'auto' }}>
             
-            <div style={{
-              width: '180px', height: '180px', background: '#0a0a0c', borderRadius: '50%',
-              margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '2px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 10px 30px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.3)',
-              position: 'relative', zIndex: 1
-            }}>
-              {petData.level === 1 ? (
-                <span style={{ fontSize: '6rem', animation: 'petBounce 3s infinite ease-in-out' }}>🥚</span>
-              ) : (
-                <img src={petChatbot} alt="Pet" style={{ width: '120px', height: '120px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out' }} />
-              )}
-            </div>
-
-            <div className="mt-4">
-              {isEditingName ? (
-                <Form.Control
-                  type="text"
-                  value={editNameValue}
-                  onChange={(e) => setEditNameValue(e.target.value)}
-                  onBlur={handleNameSubmit}
-                  onKeyDown={(e) => e.key === 'Enter' && handleNameSubmit()}
-                  autoFocus
-                  className="bg-transparent text-primary-dynamic text-center border-0 fs-2 fw-bold mx-auto p-0"
-                  style={{ maxWidth: '250px', boxShadow: 'none' }}
-                />
-              ) : (
-                <div 
-                  className="fs-2 fw-bold text-primary-dynamic d-inline-flex align-items-center justify-content-center gap-2"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setIsEditingName(true)}
-                  title="Click để đổi tên"
-                >
-                  {petData.pet_name} 
-                  <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.3)' }}>✏️</span>
-                </div>
-              )}
-              <div style={{ color: 'var(--brand-neon)', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                Level {petData.level} - {currentLevelObj.name}
-              </div>
-            </div>
-          </div>
-
-          <div className="px-md-3">
-            <Row className="g-3 mb-5">
-              <Col xs={6}>
-                <div className="p-3 rounded-4 border-surface text-center" style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.03))', border: '1px solid' }}>
-                  <div className="text-muted small fw-bold mb-1">CẢM XÚC</div>
-                  <div className="fs-5 fw-bold text-primary-dynamic">{emotionData.label}</div>
-                </div>
-              </Col>
-              <Col xs={6}>
-                <div className="p-3 rounded-4 border-surface text-center" style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.03))', border: '1px solid' }}>
-                  <div className="text-muted small fw-bold mb-1">THỂ TRẠNG</div>
-                  <div className={`fs-5 fw-bold ${appearanceData.color}`}>{appearanceData.label}</div>
-                </div>
-              </Col>
-            </Row>
-
-            <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <div className="d-flex justify-content-between mb-2">
-                <span className="fw-bold text-primary-dynamic">Tổng EXP: {petData.total_exp}</span>
-                {nextLevelObj && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>Tiếp theo: {nextLevelObj.minPoints}</span>}
-              </div>
+            {/* Top Bar */}
+            <div className="d-flex justify-content-between align-items-center p-4 sticky-top bg-white z-3">
+              <button onClick={() => navigate(-1)} className="btn p-0 d-flex align-items-center justify-content-center rounded-circle border" style={{ width: '40px', height: '40px', background: '#f8f9fa' }}>
+                <span className="fw-bold text-dark fs-5">✕</span>
+              </button>
               
-              {nextLevelObj ? (
-                <div style={{ height: '12px', background: 'rgba(0,0,0,0.5)', borderRadius: '6px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{
-                    width: `${progressToNext}%`, height: '100%',
-                    background: 'linear-gradient(90deg, var(--brand-neon), #00ff88)',
-                    borderRadius: '6px', transition: 'width 1s ease-in-out',
-                    boxShadow: '0 0 10px rgba(var(--brand-neon-rgb),0.5)'
-                  }}></div>
+              <div 
+                className="fw-bold text-dark fs-5 d-flex align-items-center gap-2 px-4 py-2 rounded-pill bg-light border" 
+                style={{ cursor: 'pointer' }}
+                onClick={() => { setEditNameValue(petData.pet_name); setShowEditName(true); }}
+              >
+                {petData.pet_name} ✏️
+              </div>
+
+              <button className="btn p-0 d-flex align-items-center justify-content-center rounded-circle border" style={{ width: '40px', height: '40px', background: '#f8f9fa' }}>
+                <span className="fw-bold text-dark">...</span>
+              </button>
+            </div>
+
+            {/* Content Left */}
+            <div className="p-4 pt-0">
+              {/* Premium Artistic Progress Bar */}
+              <div className="mb-4">
+                <div className="d-flex justify-content-between align-items-end fw-black mb-2 px-1">
+                  <span style={{ color: '#6c757d', fontSize: '1rem', letterSpacing: '0.5px' }}>CẤP ĐỘ {petData.level}</span>
+                  <span style={{ color: '#00b4d8', fontSize: '1.2rem', textShadow: '0 2px 4px rgba(0,180,216,0.2)' }}>{petData.total_exp} / {maxExp} <span style={{ fontSize: '0.8rem' }}>EXP</span></span>
                 </div>
+                
+                {/* Thanh chứa ngoài (Track) */}
+                <div className="position-relative overflow-hidden" style={{ 
+                  width: '100%', 
+                  height: '24px', 
+                  background: 'rgba(240, 242, 245, 0.8)', 
+                  borderRadius: '12px', 
+                  boxShadow: 'inset 0 4px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(255,255,255,1)',
+                  border: '1px solid rgba(255,255,255,0.5)'
+                }}>
+                  {/* Thanh phần trăm bên trong (Fill) */}
+                  <div className="h-100 position-relative" style={{ 
+                    width: `${progressPercent}%`, 
+                    borderRadius: '12px',
+                    background: 'linear-gradient(90deg, #00c6ff, #0072ff, #00c6ff)', 
+                    backgroundSize: '200% 100%',
+                    transition: 'width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', /* Hiệu ứng nảy nhẹ khi tăng */
+                    animation: 'shimmer 3s linear infinite',
+                    boxShadow: 'inset 0 -2px 6px rgba(0,0,0,0.1), 0 4px 10px rgba(0, 198, 255, 0.4)'
+                  }}>
+                    {/* Hạt sáng ở đỉnh thanh (Glowing Tip) */}
+                    <div className="position-absolute bg-white rounded-circle" style={{
+                      right: '4px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: '12px',
+                      height: '12px',
+                      boxShadow: '0 0 12px 4px rgba(255,255,255,0.9), 0 0 20px 5px rgba(0,198,255,0.6)'
+                    }}></div>
+                  </div>
+                </div>
+                
+                <div className="mt-3 text-center fw-bold" style={{ fontSize: '0.9rem', color: '#0077b6', opacity: 0.9 }}>✨ Chăm chỉ hoàn thành nhiệm vụ để thăng cấp nhé!</div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="d-flex flex-wrap gap-2 justify-content-center mb-4">
+                <button onClick={() => setShowOutfit(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: '#f8f9fa', color: '#0077b6', border: '1px solid rgba(0,119,182,0.2)' }}>
+                  👕 Trang phục
+                </button>
+                <button onClick={() => setShowChat(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: '#f8f9fa', color: '#023e8a', border: '1px solid rgba(2,62,138,0.2)' }}>
+                  💬 Chat AI
+                </button>
+                <button onClick={() => setShowDonation(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: '#f8f9fa', color: '#e63946', border: '1px solid rgba(230,57,70,0.2)' }}>
+                  💖 Quyên góp
+                </button>
+              </div>
+
+              {/* Task Card */}
+              <Card className="border shadow-sm rounded-4 mb-4 bg-white text-dark">
+                <Card.Body className="p-4">
+                  <h5 className="fw-black mb-4">Nhiệm vụ Thú cưng</h5>
+                  <div className="d-flex flex-column gap-3">
+                    {tasks.map(task => (
+                      <div key={task.id} className="d-flex align-items-center gap-3">
+                        <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '40px', height: '40px', background: task.completed ? '#e8f5e9' : '#f8f9fa', color: task.completed ? '#2e7d32' : '#adb5bd', border: task.completed ? 'none' : '1px solid #dee2e6' }}>
+                          {task.completed ? '✓' : '•'}
+                        </div>
+                        <div>
+                          <div className="fw-bold" style={{ color: task.completed ? '#212529' : '#495057' }}>{task.name}</div>
+                          <div style={{ color: '#00b4d8', fontSize: '0.85rem', fontWeight: 'bold' }}>+{task.expReward} EXP</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card.Body>
+              </Card>
+
+              {/* Streak Card */}
+              <Card className="border shadow-sm rounded-4 mb-5 bg-white text-dark">
+                <Card.Body className="p-4">
+                  <h5 className="fw-black mb-4">Huy hiệu Streak</h5>
+                  <div className="d-flex justify-content-between align-items-center position-relative">
+                    <div className="position-absolute" style={{ top: '35%', left: '10%', right: '10%', height: '2px', background: '#e9ecef', zIndex: 0 }}></div>
+                    {[3, 10, 30, 100, 200].map(days => {
+                      const achieved = petData.checkin_streak >= days;
+                      return (
+                        <div key={days} className="d-flex flex-column align-items-center position-relative z-1" style={{ width: '50px' }}>
+                          <div className="mb-2 d-flex align-items-center justify-content-center bg-white" style={{ 
+                            width: '45px', height: '45px', borderRadius: '50%',
+                            border: achieved ? '2px solid #ff9900' : '2px solid #e9ecef',
+                            boxShadow: achieved ? '0 5px 15px rgba(255,153,0,0.3)' : 'none'
+                          }}>
+                            <span style={{ fontSize: '1.5rem', filter: achieved ? 'none' : 'grayscale(100%) opacity(0.3)' }}>🔥</span>
+                          </div>
+                          <span className="fw-bold" style={{ fontSize: '0.8rem', color: achieved ? '#ff9900' : '#adb5bd' }}>{days}d</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </Card.Body>
+              </Card>
+            </div>
+          </Col>
+
+          {/* CỘT PHẢI: Pet Center Stage */}
+          <Col lg={7} xl={8} className="d-flex flex-column align-items-center justify-content-center p-0 order-1 order-lg-2 position-relative" style={{ minHeight: '40vh', backgroundImage: `url(${petBgImage})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#e0c3fc' }}>
+            
+            {/* Animated Glow behind Pet (Giữ lại để pet nổi bật trên nền) */}
+            <div className="position-absolute rounded-circle" style={{ width: '40vw', height: '40vw', maxWidth: '500px', maxHeight: '500px', background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)', filter: 'blur(20px)', animation: 'pulseGlow 4s infinite alternate' }}></div>
+
+            <div className="z-2 text-center">
+              {petData.level === 1 ? (
+                <span style={{ fontSize: '15vw', animation: 'petFloat 3s ease-in-out infinite', display: 'inline-block', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.2))' }}>🥚</span>
               ) : (
-                <div className="text-center mt-3">
-                  <Badge bg="warning" className="text-dark px-4 py-2 rounded-pill fw-bold w-100">MAX LEVEL</Badge>
-                </div>
+                <img src={petChatbot} alt="Pet" className="pet-img" style={{ width: '40vw', maxWidth: '400px', minWidth: '200px', height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 25px 35px rgba(0,0,0,0.3))', animation: 'petFloat 3s ease-in-out infinite' }} />
               )}
             </div>
-          </div>
 
-        </Card>
+            {/* Lời thoại động dễ thương */}
+            <div className="position-absolute z-2 bg-white rounded-pill px-4 py-2 shadow fw-bold text-primary" style={{ top: '20%', right: '20%', transform: 'rotate(5deg)', animation: 'petFloat 4s ease-in-out infinite' }}>
+              Chăm chỉ lên nha! 💪
+            </div>
+
+          </Col>
+        </Row>
       </Container>
-      
+
+      {/* --- MODALS (Không thay đổi) --- */}
+
+      {/* 1. Edit Name Modal */}
+      <Modal show={showEditName} onHide={() => setShowEditName(false)} centered>
+        <Modal.Body className="text-center p-4">
+          <h5 className="fw-black mb-3">Đổi tên Pet</h5>
+          <Form.Control type="text" value={editNameValue} onChange={(e) => setEditNameValue(e.target.value)} className="mb-3 text-center fw-bold" placeholder="Nhập tên mới..." autoFocus />
+          <Button className="w-100 fw-bold rounded-pill" onClick={handleNameSave} style={{ background: '#00b4d8', border: 'none' }}>LƯU TÊN</Button>
+        </Modal.Body>
+      </Modal>
+
+      {/* 2. Outfit Shop Modal */}
+      <Modal show={showOutfit} onHide={() => setShowOutfit(false)} centered>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fw-black text-primary">👕 Cửa Hàng Trang Phục</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4 text-center">
+          <div className="mb-4">
+            <span className="fw-bold text-secondary">EXP của bạn: </span>
+            <span className="fw-black text-primary fs-5">{petData.total_exp}</span>
+          </div>
+          <div className="d-flex gap-3 justify-content-center flex-wrap">
+            <div className="p-3 border rounded-3 bg-light" style={{ width: '120px' }}>
+              <div style={{ fontSize: '3rem' }}>🧢</div>
+              <div className="fw-bold mt-2 small">Mũ Snapback</div>
+              <Button size="sm" variant="outline-primary" className="mt-2 fw-bold w-100">150 EXP</Button>
+            </div>
+            <div className="p-3 border rounded-3 bg-light" style={{ width: '120px' }}>
+              <div style={{ fontSize: '3rem' }}>🕶️</div>
+              <div className="fw-bold mt-2 small">Kính râm</div>
+              <Button size="sm" variant="outline-primary" className="mt-2 fw-bold w-100">200 EXP</Button>
+            </div>
+          </div>
+        </Modal.Body>
+      </Modal>
+
+      {/* 3. Donation Modal */}
+      <Modal show={showDonation} onHide={() => setShowDonation(false)} centered>
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fw-black text-danger">💖 Quyên Góp Từ Thiện</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4 text-center">
+          <p className="text-muted fw-bold mb-4">Sử dụng điểm tập luyện của bạn để làm những việc có ích cho cộng đồng.</p>
+          <div className="d-flex flex-column gap-3">
+            <Card className="border-0 bg-light">
+              <Card.Body className="d-flex align-items-center justify-content-between p-3">
+                <div className="d-flex align-items-center gap-3">
+                  <div className="fs-1">🌳</div>
+                  <div className="text-start">
+                    <div className="fw-bold">Góp cây xanh</div>
+                    <div className="text-muted small">Dự án Hạnh Phúc Xanh</div>
+                  </div>
+                </div>
+                <Button variant="danger" className="fw-bold rounded-pill px-3">500 EXP</Button>
+              </Card.Body>
+            </Card>
+            <Card className="border-0 bg-light">
+              <Card.Body className="d-flex align-items-center justify-content-between p-3">
+                <div className="d-flex align-items-center gap-3">
+                  <div className="fs-1">🍱</div>
+                  <div className="text-start">
+                    <div className="fw-bold">Bữa ăn cho em</div>
+                    <div className="text-muted small">Dự án Nuôi Em</div>
+                  </div>
+                </div>
+                <Button variant="danger" className="fw-bold rounded-pill px-3">1000 EXP</Button>
+              </Card.Body>
+            </Card>
+          </div>
+        </Modal.Body>
+      </Modal>
+
+      {/* 4. AI Chat Modal */}
+      <Modal show={showChat} onHide={() => setShowChat(false)} fullscreen="sm-down" centered size="lg">
+        <Modal.Header closeButton className="border-bottom">
+          <Modal.Title className="fw-black text-primary d-flex align-items-center gap-2">
+            <img src={petChatbot} alt="AI" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            Chuyên gia {petData.pet_name}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="p-4 d-flex flex-column" style={{ height: '60vh', background: '#f8f9fa' }}>
+          <div className="flex-grow-1 overflow-auto d-flex flex-column gap-3 mb-3">
+            {chatMessages.map((msg, idx) => (
+              <div key={idx} className={`d-flex ${msg.sender === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
+                <div 
+                  className={`p-3 rounded-4 shadow-sm ${msg.sender === 'user' ? 'bg-primary text-white' : 'bg-white text-dark border'}`}
+                  style={{ maxWidth: '75%', borderBottomRightRadius: msg.sender === 'user' ? '4px' : '16px', borderBottomLeftRadius: msg.sender === 'ai' ? '4px' : '16px' }}
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            {isTyping && (
+              <div className="d-flex justify-content-start">
+                <div className="p-3 rounded-4 bg-white text-muted border shadow-sm" style={{ borderBottomLeftRadius: '4px' }}>
+                  <span className="typing-dots">Đang gõ...</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="d-flex gap-2">
+            <Form.Control 
+              type="text" 
+              placeholder="Hỏi AI về lịch tập, dinh dưỡng..." 
+              className="rounded-pill px-4 shadow-sm border-0 py-3"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            />
+            <Button onClick={handleSendMessage} className="rounded-circle d-flex align-items-center justify-content-center shadow-sm" style={{ width: '50px', height: '50px', flexShrink: 0, background: '#00b4d8', border: 'none' }}>
+              ➤
+            </Button>
+          </div>
+        </Modal.Body>
+      </Modal>
+
       <style>{`
-        @keyframes petBounce {
+        @keyframes petFloat {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-15px); }
         }
+        @keyframes pulseGlow {
+          0% { transform: scale(0.9); opacity: 0.6; }
+          100% { transform: scale(1.1); opacity: 1; }
+        }
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: 0 0; }
+        }
+        .typing-dots {
+          animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
+        }
+        
+        /* Chỉnh tỷ lệ pet trên Desktop */
+        @media (min-width: 992px) {
+          .pet-img {
+            width: 35vw !important;
+            max-width: 500px !important;
+          }
+        }
       `}</style>
-    </Container>
+    </div>
   );
 }

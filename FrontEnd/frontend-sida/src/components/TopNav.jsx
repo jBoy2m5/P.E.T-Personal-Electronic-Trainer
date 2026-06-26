@@ -76,10 +76,10 @@ export default function TopNav() {
             
             <Navbar.Collapse id="basic-navbar-nav">
               <Nav className="mx-auto fw-bold" style={{ fontSize: '0.85rem' }}>
-                <Nav.Link href="#routines" className={`px-4 nav-link-custom nav-link-active ${isDark ? 'text-white' : 'text-dark'}`}>LỘ TRÌNH</Nav.Link>
-                <Nav.Link href="/calories" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>QUẢN LÝ CALO</Nav.Link>
-                <Nav.Link href="/schedule" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>LỊCH TẬP</Nav.Link>
-                <Nav.Link href="/daily" className={`px-4 nav-link-custom ${isDark ? 'text-white' : 'text-dark'}`}>NHIỆM VỤ</Nav.Link>
+                <Nav.Link as={Link} to="/roadmap" className={`px-4 nav-link-custom ${location.pathname.startsWith('/roadmap') ? 'nav-link-active' : ''} ${isDark ? 'text-white' : 'text-dark'}`}>LỘ TRÌNH</Nav.Link>
+                <Nav.Link as={Link} to="/calories" className={`px-4 nav-link-custom ${location.pathname.startsWith('/calories') ? 'nav-link-active' : ''} ${isDark ? 'text-white' : 'text-dark'}`}>QUẢN LÝ CALO</Nav.Link>
+                <Nav.Link as={Link} to="/schedule" className={`px-4 nav-link-custom ${location.pathname.startsWith('/schedule') ? 'nav-link-active' : ''} ${isDark ? 'text-white' : 'text-dark'}`}>LỊCH TẬP</Nav.Link>
+                <Nav.Link as={Link} to="/daily" className={`px-4 nav-link-custom ${location.pathname.startsWith('/daily') ? 'nav-link-active' : ''} ${isDark ? 'text-white' : 'text-dark'}`}>NHIỆM VỤ</Nav.Link>
               </Nav>
 
               <Nav className="align-items-center mt-3 mt-lg-0">

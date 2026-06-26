@@ -18,13 +18,24 @@ export default function Home() {
   const [burnedCalories, setBurnedCalories] = useState(0);
 
   useEffect(() => {
+    // 1. Load User Data
+    let currentUserData = {
+      user_id: 1,
+      email: 'user@example.com',
+      height: 175,
+      weight: 72,
+      bmi: 23.5,
+      fitness_goal: 'Tăng cơ nạc'
+    };
     const saved = localStorage.getItem('user-data');
     if (saved) {
-      setUserData(JSON.parse(saved));
+      currentUserData = JSON.parse(saved);
+      setUserData(currentUserData);
     } else {
-      localStorage.setItem('user-data', JSON.stringify(userData));
+      localStorage.setItem('user-data', JSON.stringify(currentUserData));
     }
 
+    // 3. Load Calories
     const loadCalories = () => {
       const sessionsStr = localStorage.getItem('workout-sessions');
       if (sessionsStr) {
@@ -144,64 +155,6 @@ export default function Home() {
       <Container className="py-5">
 
         {/* PHẦN 1: LỘ TRÌNH CÁ NHÂN (Hero Section) */}
-        <div className="mb-5">
-          <h2 className="fw-bold mb-1 text-primary-dynamic">LỘ TRÌNH CÁ NHÂN</h2>
-          <p className="text-muted">TẠO TỰ ĐỘNG DỰA TRÊN CHỈ SỐ CƠ THỂ CỦA BẠN</p>
-
-          <Card className="hero-card p-4 mt-4 border-0 bg-surface-card text-primary-dynamic">
-            <Row>
-              <Col lg={8}>
-                <h1 className="fw-bold display-5 mb-3">Giáo án <span className="text-neon">TĂNG CƠ TỐI ƯU</span></h1>
-                <p className="text-muted mb-4" style={{ maxWidth: '600px' }}>
-                  Dựa trên mục tiêu tăng 3kg cơ nạc trong 2 tháng của bạn. Hôm nay chúng ta sẽ tập trung vào nhóm cơ lớn với cường độ cao (Hypertrophy).
-                </p>
-
-                {/* Thông số user */}
-                <Row className="text-muted small fw-bold">
-                  <Col xs={4}>
-                    <div className="mb-1 text-uppercase" style={{ letterSpacing: '1px' }}>Chiều cao</div>
-                    <div className="fs-5 text-primary-dynamic">{userData.height} <span className="fs-6 text-muted">cm</span></div>
-                  </Col>
-                  <Col xs={4}>
-                    <div className="mb-1 text-uppercase" style={{ letterSpacing: '1px' }}>Cân nặng</div>
-                    <div className="fs-5 text-primary-dynamic">{userData.weight} <span className="fs-6 text-muted">kg</span></div>
-                  </Col>
-                  <Col xs={4}>
-                    <div className="mb-1 text-uppercase" style={{ letterSpacing: '1px' }}>Mục tiêu</div>
-                    <div className="text-neon fs-5" style={{ fontSize: '1rem' }}>{userData.fitness_goal}</div>
-                  </Col>
-                </Row>
-              </Col>
-
-              {/* Card Tiến độ bên phải */}
-              <Col lg={4} className="mt-4 mt-lg-0">
-                <Card className="bg-surface-main border-0 p-3 h-100" style={{ borderRadius: '12px' }}>
-                  <div className="d-flex justify-content-between align-items-end mb-2">
-                    <span className="text-muted fw-bold small">TIẾN ĐỘ KHÓA HỌC</span>
-                    <span className="text-neon fw-bold fs-4">46%</span>
-                  </div>
-                  <div className="progress-custom mb-3">
-                    <div className="progress-bar-neon" style={{ width: '46%' }}></div>
-                  </div>
-                  <div className="d-flex justify-content-between text-muted small fw-bold mb-4">
-                    <span>NGÀY 1</span>
-                    <span >NGÀY 14</span>
-                    <span>NGÀY 30</span>
-                  </div>
-
-                  <div className="mt-auto">
-                    <div className="text-neon small fw-bold mb-1">BÀI TẬP HÔM NAY</div>
-                    <h4 className="fw-bold text-primary-dynamic">SỨC MẠNH TOÀN THÂN</h4>
-                    <div className="text-muted small fw-bold" style={{ letterSpacing: '0.5px' }}>
-                      <span className="me-3">5 Bài tập</span>
-                      <span>450 kcal</span>
-                    </div>
-                  </div>
-                </Card>
-              </Col>
-            </Row>
-          </Card>
-        </div>
 
 
 

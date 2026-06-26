@@ -1,28 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Modal, Button, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Modal, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import confetti from 'canvas-confetti';
 
-// ALL_MISSIONS ánh xạ trực tiếp với bài tập thực tế trong ExerciseList
+// Loại bỏ toàn bộ icon/emoji để giao diện trông chuyên nghiệp và trực quan hơn (Typographic style)
 const ALL_MISSIONS = [
-  { id: '101', title: 'Hít đất cơ bản (Standard Push-up)', icon: '💪', points: 30, group: 1 },
-  { id: '102', title: 'Hít đất hẹp tay (Diamond Push-up)', icon: '💎', points: 40, group: 1 },
-  { id: '201', title: 'Hít xà đơn (Pull-up)', icon: '🧗', points: 45, group: 2 },
-  { id: '202', title: 'Kéo lưng với dây kháng lực', icon: '〰️', points: 25, group: 2 },
-  { id: '501', title: 'Gập bụng (Crunches)', icon: '🔥', points: 25, group: 5 },
-  { id: '502', title: 'Plank', icon: '🧘', points: 35, group: 5 },
-  { id: '601', title: 'Squat cơ bản', icon: '🦵', points: 30, group: 6 },
-  { id: '602', title: 'Lunge (Chùng chân)', icon: '🏃', points: 35, group: 6 },
-  { id: '802', title: 'Muscle-up', icon: '🦍', points: 80, group: 8 },
+  { id: '101', title: 'Hít đất cơ bản (Standard Push-up)', points: 30, group: 1 },
+  { id: '102', title: 'Hít đất hẹp tay (Diamond Push-up)', points: 40, group: 1 },
+  { id: '201', title: 'Hít xà đơn (Pull-up)', points: 45, group: 2 },
+  { id: '202', title: 'Kéo lưng với dây kháng lực', points: 25, group: 2 },
+  { id: '501', title: 'Gập bụng (Crunches)', points: 25, group: 5 },
+  { id: '502', title: 'Plank', points: 35, group: 5 },
+  { id: '601', title: 'Squat cơ bản', points: 30, group: 6 },
+  { id: '602', title: 'Lunge (Chùng chân)', points: 35, group: 6 },
+  { id: '802', title: 'Muscle-up', points: 80, group: 8 },
 ];
 
 const CHECKIN_REWARDS = [
-  { day: 1, points: 10, label: 'Ngày 1', icon: '🎁' },
-  { day: 2, points: 15, label: 'Ngày 2', icon: '🎁' },
-  { day: 3, points: 20, label: 'Ngày 3', icon: '🎁' },
-  { day: 4, points: 25, label: 'Ngày 4', icon: '🎁' },
-  { day: 5, points: 30, label: 'Ngày 5', icon: '🎁' },
-  { day: 6, points: 40, label: 'Ngày 6', icon: '🎁' },
-  { day: 7, points: 100, label: 'Ngày 7', icon: '🏆' },
+  { day: 1, points: 10, label: 'Ngày 1' },
+  { day: 2, points: 15, label: 'Ngày 2' },
+  { day: 3, points: 20, label: 'Ngày 3' },
+  { day: 4, points: 25, label: 'Ngày 4' },
+  { day: 5, points: 30, label: 'Ngày 5' },
+  { day: 6, points: 40, label: 'Ngày 6' },
+  { day: 7, points: 100, label: 'Ngày 7' },
 ];
 
 const getTodayKey = () => {
@@ -41,16 +42,14 @@ const getDailyMissions = (dateKey) => {
     const hb = ((hash * 31 + b.id.charCodeAt(0)) % 1000);
     return ha - hb;
   });
-  return shuffled.slice(0, 3); // Lấy 3 nhiệm vụ mỗi ngày cho nhẹ nhàng
+  return shuffled.slice(0, 3);
 };
 
 export default function Daily() {
   const navigate = useNavigate();
   const [animateIn, setAnimateIn] = useState(false);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
-  const [checkinAnimation, setCheckinAnimation] = useState(false);
   
-  // Lấy dữ liệu bài tập thực tế đã hoàn thành trong ngày
   const [actualCompletedToday, setActualCompletedToday] = useState([]);
 
   const [dailyData, setDailyData] = useState(() => {
@@ -72,7 +71,6 @@ export default function Daily() {
   const claimedToday = dailyData.claimedMissions[todayKey] || [];
   const hasCheckedInToday = dailyData.checkinHistory.includes(todayKey);
 
-  // Sync với lịch tập (pet-schedule)
   useEffect(() => {
     const syncSchedule = () => {
       const scheduleSaved = localStorage.getItem('pet-schedule');
@@ -91,7 +89,6 @@ export default function Daily() {
   const saveData = (newData) => {
     setDailyData(newData);
     localStorage.setItem('pet-daily', JSON.stringify(newData));
-    // Thông báo cho component FloatingPet biết
     window.dispatchEvent(new Event('storage'));
   };
 
@@ -116,9 +113,34 @@ export default function Daily() {
     };
 
     saveData(newData);
-    setCheckinAnimation(true);
     setShowCheckinModal(true);
-    setTimeout(() => setCheckinAnimation(false), 1500);
+
+    const duration = 2000;
+    const end = Date.now() + duration;
+
+    const frame = () => {
+      confetti({
+        particleCount: 5,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#00ff88', '#00b4d8', '#ffffff'],
+        zIndex: 1060
+      });
+      confetti({
+        particleCount: 5,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#00ff88', '#00b4d8', '#ffffff'],
+        zIndex: 1060
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    };
+    frame();
   };
 
   const handleClaimMission = (mission) => {
@@ -135,68 +157,77 @@ export default function Daily() {
     };
 
     saveData(newData);
+    
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.8 },
+      colors: ['#00ff88', '#ffffff'],
+      zIndex: 1060
+    });
   };
 
   return (
     <div className="bg-surface-main" style={{ minHeight: '100vh', paddingTop: '30px', paddingBottom: '100px', position: 'relative', overflow: 'hidden' }}>
 
-      {/* Gradients nền */}
-      <div style={{ position: 'absolute', width: '80vw', height: '80vw', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.02) 0%, transparent 60%)', top: '-20vw', left: '-10vw', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
-      <div style={{ position: 'absolute', width: '60vw', height: '60vw', background: 'radial-gradient(circle, rgba(0,180,216,0.02) 0%, transparent 60%)', bottom: '-10vw', right: '-10vw', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
+      {/* Hiệu ứng nền nhẹ nhàng */}
+      <div style={{ position: 'absolute', width: '80vw', height: '80vw', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.08) 0%, transparent 60%)', top: '-20vw', left: '-10vw', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
+      <div style={{ position: 'absolute', width: '60vw', height: '60vw', background: 'radial-gradient(circle, rgba(0,180,216,0.05) 0%, transparent 60%)', bottom: '-10vw', right: '-10vw', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
 
       <Container style={{ position: 'relative', zIndex: 1, maxWidth: '960px' }}>
 
         {/* Hero Header */}
-        <div className="mb-5 position-relative overflow-hidden bg-surface-card border-surface" style={{
+        <div className="mb-5 position-relative overflow-hidden bg-surface-card border-surface gym-hero" style={{
           opacity: animateIn ? 1 : 0, transform: animateIn ? 'translateY(0)' : 'translateY(20px)', transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)',
           borderRadius: '24px', border: '1px solid', padding: '40px',
         }}>
-          <div className="position-relative" style={{ zIndex: 1 }}>
-            <h1 className="fw-bold text-primary-dynamic mb-2" style={{ fontSize: '2.5rem', letterSpacing: '-0.5px' }}>
-              Nhiệm Vụ <span style={{
-                background: 'linear-gradient(90deg, var(--brand-neon), #00ff88)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>& Điểm Danh</span>
-            </h1>
-            <p className="text-secondary" style={{ maxWidth: '500px', fontSize: '1rem', lineHeight: '1.6', marginBottom: 0 }}>
-              Hoàn thành các thử thách mỗi ngày và điểm danh đều đặn để tích lũy thật nhiều điểm EXP nuôi Thú Cưng.
-            </p>
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-2">
+            <div>
+              <div className="text-secondary fw-bold text-uppercase mb-2" style={{ letterSpacing: '2px', fontSize: '0.9rem' }}>TIÊU HAO CALO, TÍCH LŨY ĐIỂM SỐ</div>
+              <h1 className="text-primary-dynamic mb-0" style={{ fontSize: '2.5rem', letterSpacing: '-1px', fontWeight: '900', textTransform: 'uppercase' }}>
+                ĐIỂM DANH & <span style={{ color: 'var(--brand-neon)' }}>NHIỆM VỤ</span>
+              </h1>
+            </div>
+            <div className="mt-4 mt-md-0">
+              <div className="gym-streak-badge">
+                CHUỖI NGÀY: <span className="fw-black" style={{ color: '#000', fontSize: '1.2rem', marginLeft: '5px' }}>{dailyData.checkinStreak}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <Row className="g-4 mb-4" style={{ opacity: animateIn ? 1 : 0, transform: animateIn ? 'translateY(0)' : 'translateY(30px)', transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s' }}>
+        <Row className="g-4 mb-5" style={{ opacity: animateIn ? 1 : 0, transform: animateIn ? 'translateY(0)' : 'translateY(30px)', transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s' }}>
           
           {/* Check-in Card */}
           <Col lg={12}>
-            <div className="p-4 h-100 d-flex flex-column bg-surface-card border-surface" style={{
-              borderRadius: '24px', border: '1px solid',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
-            }}>
-              <div className="d-flex justify-content-between align-items-center mb-4">
-                <h5 className="fw-bold text-primary-dynamic mb-0" style={{ fontSize: '1.1rem' }}>Điểm Danh Tuần</h5>
-                <div style={{ color: '#ff6b9d', fontSize: '0.85rem', fontWeight: 'bold', background: 'rgba(255,107,157,0.1)', padding: '4px 12px', borderRadius: '20px' }}>
-                  🔥 {dailyData.checkinStreak} ngày liên tục
+            <div className="p-4 p-md-5 h-100 d-flex flex-column bg-surface-card border-surface gym-panel" style={{ borderRadius: '24px', border: '1px solid' }}>
+              <div className="d-flex justify-content-between align-items-center mb-5">
+                <h4 className="fw-bold text-primary-dynamic mb-0 text-uppercase" style={{ letterSpacing: '1px' }}>TIẾN ĐỘ TUẦN NÀY</h4>
+                <div className="px-3 py-1 rounded-pill border-surface text-secondary fw-bold" style={{ fontSize: '0.85rem' }}>
+                  TRẠNG THÁI: {hasCheckedInToday ? <span className="text-success">ĐÃ ĐIỂM DANH</span> : <span className="text-warning">CHƯA ĐIỂM DANH</span>}
                 </div>
               </div>
 
-              <div className="d-grid mb-auto" style={{ gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px' }}>
+              {/* Modern Fitness Pathway với Typography */}
+              <div className="d-flex align-items-center justify-content-between mb-5 position-relative" style={{ overflowX: 'auto', paddingBottom: '20px' }}>
+                <div className="gym-track-line border-surface"></div>
+                
                 {CHECKIN_REWARDS.map((reward, idx) => {
                   const isClaimed = hasCheckedInToday ? idx < ((dailyData.checkinStreak - 1) % 7 + 1) : idx < (dailyData.checkinStreak % 7);
                   const isCurrentDay = !hasCheckedInToday && idx === (dailyData.checkinStreak % 7);
 
                   return (
-                    <div key={idx} className="text-center p-3" style={{
-                      background: isClaimed ? 'rgba(var(--brand-neon-rgb),0.05)' : isCurrentDay ? 'rgba(var(--brand-neon-rgb),0.1)' : 'var(--bs-tertiary-bg, rgba(255,255,255,0.02))',
-                      borderRadius: '16px',
-                      border: isCurrentDay ? '1px solid rgba(var(--brand-neon-rgb),0.3)' : '1px solid transparent',
-                      opacity: (isClaimed || isCurrentDay) ? 1 : 0.4,
-                      transition: 'all 0.3s'
-                    }}>
-                      <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
-                        {isClaimed ? '✅' : reward.icon}
+                    <div key={idx} className="text-center" style={{ position: 'relative', zIndex: 1, minWidth: '70px', flex: '1' }}>
+                      <div className={`gym-node mx-auto ${isClaimed ? 'claimed' : ''} ${isCurrentDay ? 'current' : ''}`}>
+                        <div className="gym-node-content fw-black">
+                          {isClaimed ? '✓' : (idx + 1)}
+                        </div>
                       </div>
-                      <div className="text-secondary" style={{ fontSize: '0.8rem', fontWeight: 'bold', color: isClaimed ? 'var(--brand-neon)' : 'inherit' }}>
-                        {isClaimed ? 'Đã Nhận' : `+${reward.points} ⭐`}
+                      <div className={`mt-3 fw-bold ${isCurrentDay ? 'text-primary-dynamic' : 'text-secondary'}`} style={{ fontSize: '0.85rem', textTransform: 'uppercase' }}>
+                         {reward.label}
+                      </div>
+                      <div className="fw-bold" style={{ color: isClaimed ? 'var(--brand-neon)' : 'var(--bs-secondary-color)', fontSize: '0.8rem' }}>
+                        +{reward.points} EXP
                       </div>
                     </div>
                   );
@@ -206,16 +237,9 @@ export default function Daily() {
               <button
                 onClick={handleCheckin}
                 disabled={hasCheckedInToday}
-                className="btn w-100 mt-4 py-3 fw-bold"
-                style={{
-                  background: hasCheckedInToday ? 'var(--bs-tertiary-bg, rgba(255,255,255,0.03))' : 'var(--brand-neon)',
-                  color: hasCheckedInToday ? 'var(--bs-secondary-color, rgba(255,255,255,0.3))' : '#000',
-                  borderRadius: '16px', border: 'none',
-                  transition: 'all 0.3s',
-                  boxShadow: hasCheckedInToday ? 'none' : '0 4px 15px rgba(var(--brand-neon-rgb),0.3)'
-                }}
+                className="gym-btn w-100 py-3 mt-auto"
               >
-                {hasCheckedInToday ? 'Đã điểm danh hôm nay' : 'Điểm danh nhận thưởng ngay'}
+                {hasCheckedInToday ? 'ĐÃ HOÀN THÀNH ĐIỂM DANH HÔM NAY' : 'BẤM ĐỂ ĐIỂM DANH & NHẬN THƯỞNG'}
               </button>
             </div>
           </Col>
@@ -223,69 +247,55 @@ export default function Daily() {
 
         {/* Nhiệm vụ thực tế */}
         <div style={{ opacity: animateIn ? 1 : 0, transform: animateIn ? 'translateY(0)' : 'translateY(40px)', transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s' }}>
-          <div className="p-4 p-md-5 mb-5 bg-surface-card border-surface" style={{
-            borderRadius: '24px', border: '1px solid',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
-          }}>
-            <h4 className="fw-bold text-primary-dynamic mb-4 d-flex align-items-center" style={{ fontSize: '1.1rem' }}>Thử Thách Tập Luyện Hôm Nay</h4>
-            <p className="text-secondary" style={{ fontSize: '0.9rem', marginBottom: '24px' }}>
-              Hoàn thành bài tập thực tế qua AI Camera để được công nhận.
-            </p>
+          <h4 className="fw-bold text-primary-dynamic mb-4 text-uppercase" style={{ letterSpacing: '1px' }}>THỬ THÁCH TẬP LUYỆN HÔM NAY</h4>
+          
+          <div className="d-flex flex-column gap-3">
+            {todayMissions.map((mission, idx) => {
+              const isExercised = actualCompletedToday.includes(mission.title);
+              const isClaimed = claimedToday.includes(mission.id);
+              const taskNumber = String(idx + 1).padStart(2, '0');
 
-            <div className="d-flex flex-column gap-3">
-              {todayMissions.map((mission) => {
-                const isExercised = actualCompletedToday.includes(mission.title);
-                const isClaimed = claimedToday.includes(mission.id);
-
-                return (
-                  <div key={mission.id} className="d-flex align-items-center justify-content-between p-3 border-surface" style={{
-                    background: isClaimed ? 'rgba(var(--brand-neon-rgb),0.03)' : 'var(--bs-tertiary-bg, rgba(255,255,255,0.02))',
-                    borderRadius: '16px', border: isClaimed ? '1px solid rgba(var(--brand-neon-rgb),0.1)' : '1px solid transparent',
-                    transition: 'all 0.3s'
-                  }}>
-                    <div className="d-flex align-items-center gap-3">
-                      <div className="d-flex align-items-center justify-content-center" style={{
-                        width: '50px', height: '50px', fontSize: '1.5rem', background: '#1c1c1e', borderRadius: '14px'
-                      }}>
-                        {mission.icon}
+              return (
+                <div key={mission.id} className={`gym-quest-card bg-surface-card border-surface ${isClaimed ? 'claimed' : (isExercised ? 'completed' : '')}`}>
+                  <div className="d-flex align-items-center justify-content-between w-100 flex-wrap">
+                    <div className="d-flex align-items-center gap-4 mb-3 mb-md-0">
+                      
+                      {/* Dùng Typography Index Badge thay vì Emojis */}
+                      <div className="gym-quest-number-wrapper">
+                        {taskNumber}
                       </div>
+
                       <div>
-                        <div className="fw-bold text-primary-dynamic mb-1" style={{ fontSize: '1rem' }}>{mission.title}</div>
-                        <div style={{ color: '#ffd93d', fontSize: '0.85rem', fontWeight: '600' }}>Phần thưởng: +{mission.points} EXP</div>
+                        <div className="fw-bold text-primary-dynamic mb-1" style={{ fontSize: '1.1rem' }}>{mission.title}</div>
+                        <div className="fw-bold" style={{ color: 'var(--brand-neon)', fontSize: '0.9rem' }}>Phần thưởng: {mission.points} EXP</div>
                       </div>
                     </div>
 
-                    <div>
+                    <div className="gym-quest-action">
                       {!isExercised ? (
-                        <Button 
-                          variant="dark" 
-                          size="md" 
-                          className="rounded-pill px-4 fw-bold" 
-                          style={{ fontSize: '0.85rem', background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.1)' }}
+                        <button 
+                          className="gym-action-btn"
                           onClick={() => navigate(`/exercises/${mission.group}`)}
                         >
-                          Đến bài tập
-                        </Button>
+                          TẬP NGAY
+                        </button>
                       ) : !isClaimed ? (
-                        <Button 
-                          variant="success" 
-                          size="md" 
-                          className="rounded-pill px-4 fw-bold shadow-sm" 
-                          style={{ fontSize: '0.85rem', background: 'var(--brand-neon)', color: '#000', border: 'none' }}
+                        <button 
+                          className="gym-action-btn claim"
                           onClick={() => handleClaimMission(mission)}
                         >
-                          Nhận thưởng
-                        </Button>
+                          NHẬN THƯỞNG
+                        </button>
                       ) : (
-                        <Badge bg="transparent" className="border border-success text-success rounded-pill px-4 py-2" style={{ fontSize: '0.8rem' }}>
+                        <div className="fw-black text-success px-3 py-2 border border-success rounded-pill" style={{ fontSize: '0.85rem' }}>
                           ✓ ĐÃ NHẬN
-                        </Badge>
+                        </div>
                       )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -296,24 +306,230 @@ export default function Daily() {
         contentClassName="border-0 overflow-hidden"
         style={{ '--bs-modal-bg': 'transparent' }}
       >
-        <Modal.Body className="text-center p-5 position-relative" style={{ background: '#1c1c1e', borderRadius: '32px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 30px 60px rgba(0,0,0,0.5)' }}>
-          <div style={{ fontSize: '4rem', animation: 'checkinBounce 0.6s ease', marginBottom: '16px' }}>🎁</div>
-          <h4 className="fw-bold text-white mb-2">Điểm danh thành công!</h4>
-          <div className="fw-bold mb-4" style={{ color: 'var(--brand-neon)', fontSize: '2rem' }}>
-            +{CHECKIN_REWARDS[Math.max(0, dailyData.checkinStreak - 1) % 7].points} ⭐
+        <Modal.Body className="text-center p-5 position-relative bg-surface-card border-surface" style={{ borderRadius: '32px', border: '1px solid', boxShadow: '0 30px 60px rgba(0,0,0,0.3)' }}>
+          <div className="d-flex justify-content-center mb-4">
+            <div className="success-circle">✓</div>
           </div>
-          <Button className="rounded-pill fw-bold w-100 py-3" onClick={() => setShowCheckinModal(false)}
-            style={{ background: '#fff', color: '#000', border: 'none', fontSize: '1rem' }}>
-            Tuyệt vời
-          </Button>
+          <h3 className="fw-black text-primary-dynamic mb-2 text-uppercase">ĐIỂM DANH THÀNH CÔNG</h3>
+          <div className="fw-black mb-4" style={{ color: 'var(--brand-neon)', fontSize: '2.5rem' }}>
+            +{CHECKIN_REWARDS[Math.max(0, dailyData.checkinStreak - 1) % 7].points} EXP
+          </div>
+          <button className="gym-btn w-100 py-3" onClick={() => setShowCheckinModal(false)}>
+            TUYỆT VỜI
+          </button>
         </Modal.Body>
       </Modal>
 
       <style>{`
-        @keyframes checkinBounce {
-          0% { transform: scale(0.5); opacity: 0; }
-          60% { transform: scale(1.1); }
-          100% { transform: scale(1); opacity: 1; }
+        /* Modern Fitness Typographic Theme CSS */
+        .fw-black {
+          font-weight: 900;
+        }
+
+        .gym-hero {
+          box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        
+        .gym-streak-badge {
+          background: var(--brand-neon);
+          color: #000;
+          padding: 8px 24px;
+          border-radius: 30px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          box-shadow: 0 4px 15px rgba(var(--brand-neon-rgb), 0.3);
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .gym-panel {
+          box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+
+        .gym-track-line {
+          position: absolute;
+          top: 30px; /* middle of 60px node */
+          left: 5%;
+          right: 5%;
+          height: 6px;
+          background: var(--bs-border-color, rgba(128,128,128,0.2)); 
+          z-index: 0;
+          border-radius: 10px;
+        }
+
+        .gym-node {
+          width: 60px;
+          height: 60px;
+          background: var(--bs-body-bg);
+          border: 3px solid var(--bs-border-color, rgba(128,128,128,0.2));
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .gym-node-content {
+          font-size: 1.5rem;
+          color: var(--bs-secondary-color);
+        }
+
+        .gym-node.claimed {
+          background: var(--brand-neon);
+          border-color: var(--brand-neon);
+          box-shadow: 0 0 15px rgba(var(--brand-neon-rgb), 0.4);
+        }
+
+        .gym-node.claimed .gym-node-content {
+          color: #000;
+        }
+
+        .gym-node.current {
+          border-color: var(--brand-neon);
+          background: var(--bs-body-bg);
+          box-shadow: 0 0 0 6px rgba(var(--brand-neon-rgb), 0.2);
+          animation: gymPulse 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .gym-node.current .gym-node-content {
+          color: var(--brand-neon);
+        }
+
+        @keyframes gymPulse {
+          0% { box-shadow: 0 0 0 0 rgba(var(--brand-neon-rgb), 0.4); }
+          70% { box-shadow: 0 0 0 15px rgba(var(--brand-neon-rgb), 0); }
+          100% { box-shadow: 0 0 0 0 rgba(var(--brand-neon-rgb), 0); }
+        }
+
+        .gym-btn {
+          background: var(--bs-body-bg);
+          color: var(--text-primary-dynamic);
+          border: 2px solid var(--brand-neon);
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          border-radius: 16px;
+          transition: all 0.3s;
+        }
+
+        .gym-btn:hover:not(:disabled) {
+          background: var(--brand-neon);
+          color: #000;
+          box-shadow: 0 8px 25px rgba(var(--brand-neon-rgb), 0.4);
+          transform: translateY(-2px);
+        }
+
+        .gym-btn:disabled {
+          border-color: transparent;
+          background: var(--bs-tertiary-bg);
+          color: var(--bs-secondary-color);
+          cursor: not-allowed;
+        }
+
+        .gym-quest-card {
+          border-radius: 20px;
+          padding: 20px 25px;
+          transition: all 0.3s;
+          border-left: 6px solid transparent !important;
+        }
+
+        .gym-quest-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+          border-color: var(--brand-neon) !important;
+        }
+
+        .gym-quest-card.completed {
+          border-left-color: var(--brand-neon) !important;
+        }
+
+        .gym-quest-card.claimed {
+          opacity: 0.6;
+          border-left-color: transparent !important;
+        }
+
+        .gym-quest-number-wrapper {
+          width: 60px;
+          height: 60px;
+          background: transparent;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.6rem;
+          font-weight: 900;
+          color: var(--bs-secondary-color);
+          border: 2px solid var(--bs-border-color, rgba(128,128,128,0.2));
+          transition: all 0.3s;
+        }
+
+        .gym-quest-card:hover .gym-quest-number-wrapper {
+          border-color: var(--brand-neon);
+          color: var(--brand-neon);
+        }
+        
+        .gym-quest-card.completed .gym-quest-number-wrapper {
+          border-color: var(--brand-neon);
+          background: var(--brand-neon);
+          color: #000;
+        }
+
+        .gym-quest-card.claimed .gym-quest-number-wrapper {
+          border-color: transparent;
+          background: var(--bs-tertiary-bg);
+          color: var(--bs-secondary-color);
+        }
+
+        .gym-action-btn {
+          background: transparent;
+          color: var(--text-primary-dynamic);
+          border: 2px solid var(--text-primary-dynamic);
+          padding: 10px 24px;
+          border-radius: 30px;
+          font-weight: 800;
+          text-transform: uppercase;
+          font-size: 0.85rem;
+          transition: all 0.3s;
+        }
+
+        .gym-action-btn:hover {
+          background: var(--text-primary-dynamic);
+          color: var(--bs-body-bg);
+          transform: scale(1.05);
+        }
+
+        .gym-action-btn.claim {
+          background: var(--brand-neon);
+          color: #000;
+          border-color: var(--brand-neon);
+          box-shadow: 0 4px 15px rgba(var(--brand-neon-rgb), 0.3);
+        }
+          
+        .gym-action-btn.claim:hover {
+          background: var(--brand-neon);
+          color: #000;
+          transform: scale(1.05);
+        }
+
+        .success-circle {
+          width: 80px;
+          height: 80px;
+          background: var(--brand-neon);
+          color: #000;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 3.5rem;
+          font-weight: 900;
+          animation: checkinScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+          box-shadow: 0 10px 30px rgba(var(--brand-neon-rgb), 0.4);
+        }
+
+        @keyframes checkinScale {
+          0% { transform: scale(0); }
+          100% { transform: scale(1); }
         }
       `}</style>
     </div>
