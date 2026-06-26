@@ -1,29 +1,21 @@
 package org.example.pettrainerbe.controller;
 
+import org.example.pettrainerbe.dto.AuthDTO;
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    // POST /api/auth/register — Trả về thông báo thành công giả
+    // POST /api/auth/register — Trả về thông báo thành công sử dụng AuthDTO
     @PostMapping("/register")
-    public Map<String, String> register() {
-        Map<String, String> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "Đăng ký thành công (Dữ liệu giả)!");
-        return response;
+    public AuthDTO register() {
+        return new AuthDTO("success", "Đăng ký thành công!", null, null);
     }
 
-    // POST /api/auth/login — Trả về Token giả và ID user để Frontend lưu lại
+    // POST /api/auth/login — Trả về Token và ID user sử dụng AuthDTO
     @PostMapping("/login")
-    public Map<String, Object> login() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("token", "fake-jwt-token-123456");
-        response.put("userId", 1); // Trả về ID giả định là 1 để Frontend dùng gọi API khác
-        return response;
+    public AuthDTO login() {
+        return new AuthDTO("success", "Đăng nhập thành công", "fake-jwt-token-123456", 1);
     }
 }
