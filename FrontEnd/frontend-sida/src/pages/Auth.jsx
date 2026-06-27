@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const GoogleIcon = () => (
   <svg className="me-2" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -15,6 +16,7 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleGoogleSignIn = () => {
     setLoading(true);
@@ -204,12 +206,12 @@ export default function Auth() {
               {/* Card Form */}
               <Card className="auth-card">
                 <h1 className="fw-extrabold fs-2 mb-2 text-white">
-                  {isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}
+                  {isLogin ? t('auth.login_title') : t('auth.register_title')}
                 </h1>
                 <p className="text-muted mb-4 small">
                   {isLogin 
-                    ? 'Chào mừng bạn quay trở lại với huấn luyện viên cá nhân P.E.T.'
-                    : 'Bắt đầu hành trình tập luyện thông minh với AI ngay hôm nay.'}
+                    ? t('auth.login_welcome')
+                    : t('auth.register_welcome')}
                 </p>
 
                 {/* Google Sign In Button */}
@@ -220,13 +222,13 @@ export default function Auth() {
                 >
                   <GoogleIcon />
                   {loading 
-                    ? 'Đang xử lý...' 
-                    : isLogin ? 'Tiếp tục với Google' : 'Đăng ký bằng Google'}
+                    ? t('auth.processing') 
+                    : isLogin ? t('auth.continue_google') : t('auth.register_google')}
                 </Button>
 
                 <div className="text-center mt-3">
                   <span className="text-muted small">
-                    {isLogin ? 'Bạn chưa có tài khoản? ' : 'Bạn đã có tài khoản? '}
+                    {isLogin ? t('auth.no_account') : t('auth.has_account')}
                   </span>
                   <a 
                     href="#toggle" 
@@ -236,7 +238,7 @@ export default function Auth() {
                     }}
                     className="toggle-link small"
                   >
-                    {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
+                    {isLogin ? t('auth.register_now') : t('auth.login_now')}
                   </a>
                 </div>
               </Card>
@@ -248,11 +250,11 @@ export default function Auth() {
             <div className="mx-auto" style={{ maxWidth: '600px' }}>
               <div className="mb-5">
                 <span className="badge bg-neon text-dark px-3 py-2 rounded-pill fw-bold mb-3" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>
-                  XU HƯỚNG TẬP LUYỆN TƯƠNG LAI
+                  {t('auth.badge_future')}
                 </span>
                 <h2 className="display-5 fw-extrabold text-white lh-base">
-                  Khám phá phiên bản <br />
-                  <span className="text-neon">tốt nhất của bạn</span> cùng P.E.T
+                  {t('auth.discover')} <br />
+                  <span className="text-neon">{t('auth.best_version')}</span>{t('auth.with_pet')}
                 </h2>
               </div>
 
@@ -266,9 +268,9 @@ export default function Auth() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="feature-title">Huấn luyện viên Động tác AI</h3>
+                    <h3 className="feature-title">{t('auth.feature_1_title')}</h3>
                     <p className="feature-desc">
-                      Nhận phản hồi thời gian thực qua camera để điều chỉnh đúng tư thế, giảm thiểu chấn thương tối đa.
+                      {t('auth.feature_1_desc')}
                     </p>
                   </div>
                 </div>
@@ -284,9 +286,9 @@ export default function Auth() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="feature-title">Lộ trình cá nhân hóa</h3>
+                    <h3 className="feature-title">{t('auth.feature_2_title')}</h3>
                     <p className="feature-desc">
-                      Hệ thống tự động thiết lập và cập nhật kế hoạch tập luyện phù hợp nhất với chỉ số thể trạng của bạn.
+                      {t('auth.feature_2_desc')}
                     </p>
                   </div>
                 </div>
@@ -301,9 +303,9 @@ export default function Auth() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="feature-title">Theo dõi tiến trình thông minh</h3>
+                    <h3 className="feature-title">{t('auth.feature_3_title')}</h3>
                     <p className="feature-desc">
-                      Thống kê lượng calo tiêu thụ và phân tích hiệu quả tập luyện trực quan qua biểu đồ sinh động.
+                      {t('auth.feature_3_desc')}
                     </p>
                   </div>
                 </div>

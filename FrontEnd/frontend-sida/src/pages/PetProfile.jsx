@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Modal, Button, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import petChatbot from '../assets/pet_chatbot.png';
 import petBgImage from '../assets/pet_bg.png'; // File background ảnh thật
 
@@ -17,6 +18,7 @@ const PET_LEVELS = [
 
 export default function PetProfile() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [petData, setPetData] = useState({
     pet_name: 'P.E.T',
@@ -35,9 +37,10 @@ export default function PetProfile() {
   const [showDonation, setShowDonation] = useState(false);
   
   const [showChat, setShowChat] = useState(false);
-  const [chatMessages, setChatMessages] = useState([{ sender: 'ai', text: 'Chào đằng ấy! Cần mình tư vấn gì về lịch tập hay dinh dưỡng không?' }]);
+  const [chatMessages, setChatMessages] = useState([{ sender: 'ai', text: t('pet_profile.hello_ai') }]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [hearts, setHearts] = useState([]);
 
   useEffect(() => {
     // 1. Load Daily EXP & Streak
@@ -71,16 +74,16 @@ export default function PetProfile() {
     const trainedArray = dailySaved ? JSON.parse(dailySaved).exercisesTrained || [] : [];
     
     let loadedTasks = [
-      { id: 1, name: 'Đăng nhập vào ứng dụng', expReward: 10, completed: true },
-      { id: 2, name: 'Hoàn thành 1 bài tập bất kỳ', expReward: 20, completed: trainedArray.length > 0 },
-      { id: 3, name: 'Thực hiện ít nhất 3 bài tập', expReward: 50, completed: trainedArray.length >= 3 }
+      { id: 1, name: t('pet_profile.task_login'), expReward: 10, completed: true },
+      { id: 2, name: t('pet_profile.task_complete_1'), expReward: 20, completed: trainedArray.length > 0 },
+      { id: 3, name: t('pet_profile.task_complete_3'), expReward: 50, completed: trainedArray.length >= 3 }
     ];
 
     if (trainedArray.length > 0) {
       trainedArray.slice(0, 2).forEach((ex, idx) => {
         loadedTasks.push({
           id: 4 + idx,
-          name: `Hoàn thành bài tập ${ex}`,
+          name: t('pet_profile.task_complete_ex', { ex }),
           expReward: 15,
           completed: true
         });
@@ -114,9 +117,28 @@ export default function PetProfile() {
     setIsTyping(true);
 
     setTimeout(() => {
-      setChatMessages(prev => [...prev, { sender: 'ai', text: 'Đây là câu trả lời tự động từ AI (Gắn API thực tế sau nhé!). Bạn cứ tập trung đẩy tạ đi!' }]);
+      setChatMessages(prev => [...prev, { sender: 'ai', text: t('pet_profile.auto_reply') }]);
       setIsTyping(false);
     }, 1500);
+  };
+
+  const handlePetClick = (e) => {
+    const rect = e.target.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const newHeart = {
+      id: Date.now(),
+      x: x + (Math.random() * 40 - 20),
+      y: y + (Math.random() * 20 - 10)
+    };
+    
+    setHearts(prev => [...prev, newHeart]);
+    
+    // Xóa tim sau khi animation kết thúc (khoảng 1s)
+    setTimeout(() => {
+      setHearts(prev => prev.filter(h => h.id !== newHeart.id));
+    }, 1000);
   };
 
   return (
@@ -151,7 +173,7 @@ export default function PetProfile() {
               {/* Premium Artistic Progress Bar */}
               <div className="mb-4">
                 <div className="d-flex justify-content-between align-items-end fw-black mb-2 px-1">
-                  <span style={{ color: '#6c757d', fontSize: '1rem', letterSpacing: '0.5px' }}>CẤP ĐỘ {petData.level}</span>
+                  <span style={{ color: '#6c757d', fontSize: '1rem', letterSpacing: '0.5px' }}>{t('pet_profile.level')} {petData.level}</span>
                   <span style={{ color: '#00b4d8', fontSize: '1.2rem', textShadow: '0 2px 4px rgba(0,180,216,0.2)' }}>{petData.total_exp} / {maxExp} <span style={{ fontSize: '0.8rem' }}>EXP</span></span>
                 </div>
                 
@@ -186,26 +208,26 @@ export default function PetProfile() {
                   </div>
                 </div>
                 
-                <div className="mt-3 text-center fw-bold" style={{ fontSize: '0.9rem', color: '#0077b6', opacity: 0.9 }}>✨ Chăm chỉ hoàn thành nhiệm vụ để thăng cấp nhé!</div>
+                <div className="mt-3 text-center fw-bold" style={{ fontSize: '0.9rem', color: '#0077b6', opacity: 0.9 }}>{t('pet_profile.work_hard')}</div>
               </div>
 
               {/* Action Buttons */}
               <div className="d-flex flex-wrap gap-2 justify-content-center mb-4">
                 <button onClick={() => setShowOutfit(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: '#f8f9fa', color: '#0077b6', border: '1px solid rgba(0,119,182,0.2)' }}>
-                  👕 Trang phục
+                  👕 {t('pet_profile.outfit')}
                 </button>
                 <button onClick={() => setShowChat(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: '#f8f9fa', color: '#023e8a', border: '1px solid rgba(2,62,138,0.2)' }}>
-                  💬 Chat AI
+                  💬 {t('pet_profile.ai_chat')}
                 </button>
                 <button onClick={() => setShowDonation(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: '#f8f9fa', color: '#e63946', border: '1px solid rgba(230,57,70,0.2)' }}>
-                  💖 Quyên góp
+                  💖 {t('pet_profile.donation')}
                 </button>
               </div>
 
               {/* Task Card */}
               <Card className="border shadow-sm rounded-4 mb-4 bg-white text-dark">
                 <Card.Body className="p-4">
-                  <h5 className="fw-black mb-4">Nhiệm vụ Thú cưng</h5>
+                  <h5 className="fw-black mb-4">{t('pet_profile.pet_missions')}</h5>
                   <div className="d-flex flex-column gap-3">
                     {tasks.map(task => (
                       <div key={task.id} className="d-flex align-items-center gap-3">
@@ -225,7 +247,7 @@ export default function PetProfile() {
               {/* Streak Card */}
               <Card className="border shadow-sm rounded-4 mb-5 bg-white text-dark">
                 <Card.Body className="p-4">
-                  <h5 className="fw-black mb-4">Huy hiệu Streak</h5>
+                  <h5 className="fw-black mb-4">{t('pet_profile.streak_badges')}</h5>
                   <div className="d-flex justify-content-between align-items-center position-relative">
                     <div className="position-absolute" style={{ top: '35%', left: '10%', right: '10%', height: '2px', background: '#e9ecef', zIndex: 0 }}></div>
                     {[3, 10, 30, 100, 200].map(days => {
@@ -255,17 +277,34 @@ export default function PetProfile() {
             {/* Animated Glow behind Pet (Giữ lại để pet nổi bật trên nền) */}
             <div className="position-absolute rounded-circle" style={{ width: '40vw', height: '40vw', maxWidth: '500px', maxHeight: '500px', background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)', filter: 'blur(20px)', animation: 'pulseGlow 4s infinite alternate' }}></div>
 
-            <div className="z-2 text-center">
+            <div className="z-2 text-center position-relative" onClick={handlePetClick} style={{ cursor: 'pointer' }}>
               {petData.level === 1 ? (
                 <span style={{ fontSize: '15vw', animation: 'petFloat 3s ease-in-out infinite', display: 'inline-block', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.2))' }}>🥚</span>
               ) : (
                 <img src={petChatbot} alt="Pet" className="pet-img" style={{ width: '40vw', maxWidth: '400px', minWidth: '200px', height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 25px 35px rgba(0,0,0,0.3))', animation: 'petFloat 3s ease-in-out infinite' }} />
               )}
+              {/* Hiển thị các trái tim */}
+              {hearts.map(heart => (
+                <div 
+                  key={heart.id} 
+                  style={{
+                    position: 'absolute',
+                    left: `${heart.x}px`,
+                    top: `${heart.y}px`,
+                    fontSize: '2rem',
+                    pointerEvents: 'none',
+                    animation: 'floatUpHeart 1s ease-out forwards',
+                    zIndex: 10
+                  }}
+                >
+                  ❤️
+                </div>
+              ))}
             </div>
 
             {/* Lời thoại động dễ thương */}
             <div className="position-absolute z-2 bg-white rounded-pill px-4 py-2 shadow fw-bold text-primary" style={{ top: '20%', right: '20%', transform: 'rotate(5deg)', animation: 'petFloat 4s ease-in-out infinite' }}>
-              Chăm chỉ lên nha! 💪
+              {t('pet_profile.keep_working')}
             </div>
 
           </Col>
@@ -277,20 +316,20 @@ export default function PetProfile() {
       {/* 1. Edit Name Modal */}
       <Modal show={showEditName} onHide={() => setShowEditName(false)} centered>
         <Modal.Body className="text-center p-4">
-          <h5 className="fw-black mb-3">Đổi tên Pet</h5>
-          <Form.Control type="text" value={editNameValue} onChange={(e) => setEditNameValue(e.target.value)} className="mb-3 text-center fw-bold" placeholder="Nhập tên mới..." autoFocus />
-          <Button className="w-100 fw-bold rounded-pill" onClick={handleNameSave} style={{ background: '#00b4d8', border: 'none' }}>LƯU TÊN</Button>
+          <h5 className="fw-black mb-3">{t('pet_profile.rename_pet')}</h5>
+          <Form.Control type="text" value={editNameValue} onChange={(e) => setEditNameValue(e.target.value)} className="mb-3 text-center fw-bold" placeholder={t('pet_profile.enter_new_name')} autoFocus />
+          <Button className="w-100 fw-bold rounded-pill" onClick={handleNameSave} style={{ background: '#00b4d8', border: 'none' }}>{t('pet_profile.save_name')}</Button>
         </Modal.Body>
       </Modal>
 
       {/* 2. Outfit Shop Modal */}
       <Modal show={showOutfit} onHide={() => setShowOutfit(false)} centered>
         <Modal.Header closeButton className="border-0 pb-0">
-          <Modal.Title className="fw-black text-primary">👕 Cửa Hàng Trang Phục</Modal.Title>
+          <Modal.Title className="fw-black text-primary">👕 {t('pet_profile.outfit_store')}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4 text-center">
           <div className="mb-4">
-            <span className="fw-bold text-secondary">EXP của bạn: </span>
+            <span className="fw-bold text-secondary">{t('pet_profile.your_exp')}</span>
             <span className="fw-black text-primary fs-5">{petData.total_exp}</span>
           </div>
           <div className="d-flex gap-3 justify-content-center flex-wrap">
@@ -311,18 +350,18 @@ export default function PetProfile() {
       {/* 3. Donation Modal */}
       <Modal show={showDonation} onHide={() => setShowDonation(false)} centered>
         <Modal.Header closeButton className="border-0 pb-0">
-          <Modal.Title className="fw-black text-danger">💖 Quyên Góp Từ Thiện</Modal.Title>
+          <Modal.Title className="fw-black text-danger">💖 {t('pet_profile.charity_donation')}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4 text-center">
-          <p className="text-muted fw-bold mb-4">Sử dụng điểm tập luyện của bạn để làm những việc có ích cho cộng đồng.</p>
+          <p className="text-muted fw-bold mb-4">{t('pet_profile.charity_desc')}</p>
           <div className="d-flex flex-column gap-3">
             <Card className="border-0 bg-light">
               <Card.Body className="d-flex align-items-center justify-content-between p-3">
                 <div className="d-flex align-items-center gap-3">
                   <div className="fs-1">🌳</div>
                   <div className="text-start">
-                    <div className="fw-bold">Góp cây xanh</div>
-                    <div className="text-muted small">Dự án Hạnh Phúc Xanh</div>
+                    <div className="fw-bold">{t('pet_profile.donate_tree')}</div>
+                    <div className="text-muted small">{t('pet_profile.tree_project')}</div>
                   </div>
                 </div>
                 <Button variant="danger" className="fw-bold rounded-pill px-3">500 EXP</Button>
@@ -333,8 +372,8 @@ export default function PetProfile() {
                 <div className="d-flex align-items-center gap-3">
                   <div className="fs-1">🍱</div>
                   <div className="text-start">
-                    <div className="fw-bold">Bữa ăn cho em</div>
-                    <div className="text-muted small">Dự án Nuôi Em</div>
+                    <div className="fw-bold">{t('pet_profile.donate_meal')}</div>
+                    <div className="text-muted small">{t('pet_profile.meal_project')}</div>
                   </div>
                 </div>
                 <Button variant="danger" className="fw-bold rounded-pill px-3">1000 EXP</Button>
@@ -349,7 +388,7 @@ export default function PetProfile() {
         <Modal.Header closeButton className="border-bottom">
           <Modal.Title className="fw-black text-primary d-flex align-items-center gap-2">
             <img src={petChatbot} alt="AI" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-            Chuyên gia {petData.pet_name}
+            {t('pet_profile.expert')} {petData.pet_name}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="p-4 d-flex flex-column" style={{ height: '60vh', background: '#f8f9fa' }}>
@@ -367,7 +406,7 @@ export default function PetProfile() {
             {isTyping && (
               <div className="d-flex justify-content-start">
                 <div className="p-3 rounded-4 bg-white text-muted border shadow-sm" style={{ borderBottomLeftRadius: '4px' }}>
-                  <span className="typing-dots">Đang gõ...</span>
+                  <span className="typing-dots">{t('pet_profile.typing')}</span>
                 </div>
               </div>
             )}
@@ -375,7 +414,7 @@ export default function PetProfile() {
           <div className="d-flex gap-2">
             <Form.Control 
               type="text" 
-              placeholder="Hỏi AI về lịch tập, dinh dưỡng..." 
+              placeholder={t('pet_profile.ask_ai')} 
               className="rounded-pill px-4 shadow-sm border-0 py-3"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
@@ -407,6 +446,10 @@ export default function PetProfile() {
         @keyframes pulse {
           0%, 100% { opacity: 0.5; }
           50% { opacity: 1; }
+        }
+        @keyframes floatUpHeart {
+          0% { transform: translateY(0) scale(1); opacity: 1; }
+          100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
         }
         
         /* Chỉnh tỷ lệ pet trên Desktop */

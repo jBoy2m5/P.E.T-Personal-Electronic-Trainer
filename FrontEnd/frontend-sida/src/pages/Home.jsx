@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Badge, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import Tilt from 'react-parallax-tilt';
 import heroBanner from '../assets/hero_banner.png';
 import petChatbot from '../assets/pet_chatbot.png';
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [userData, setUserData] = useState({
     user_id: 1,
     email: 'user@example.com',
@@ -14,6 +18,8 @@ export default function Home() {
     bmi: 23.5,
     fitness_goal: 'Tăng cơ nạc'
   });
+
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   const [burnedCalories, setBurnedCalories] = useState(0);
 
@@ -55,14 +61,14 @@ export default function Home() {
 
   // Mock data 8 nhóm cơ theo thiết kế Figma
   const muscleGroups = [
-    { id: 1, name: "NGỰC", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT2KdiiCQ-3r8D3eOw0taiTQ7d4UwJHpXinF71rGL25jb01RZC_GzcB5ayg&s=10" },
-    { id: 2, name: "LƯNG", img: "https://images.unsplash.com/photo-1603287681836-b174ce5074c2?q=80&w=600" },
-    { id: 3, name: "VAI", img: "https://n7media.coolmate.me/image/June2025/cac-bai-tap-gym-co-vai-cho-nam-gymer-358_225.jpg" },
-    { id: 4, name: "TAY", img: "https://file.hstatic.net/200001007715/article/bai-tap-tang-co-tay_thumb_848a93e9f8404e63888b26e7e52cc412.webp" },
-    { id: 5, name: "BỤNG / CORE", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6NGm438DYyvcuFwavjUKe1PM24x3JrdS2ddXbcQ8h0g&s=10" },
-    { id: 6, name: "CHÂN", img: "https://thanhnien.mediacdn.vn/Uploaded/ngocquy/2022_03_14/1-tap-dui-shutterstock-7679.jpg" },
-    { id: 7, name: "MÔNG", img: "https://thammy.vn/wp-content/uploads/2019/02/assman4.jpg" },
-    { id: 8, name: "SKILLS", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4KdsSVoUyajhhke9Dr6XNT0_7h9J12fZcNV8seyxT_NqptCkbAmrKF_M&s=10" },
+    { id: 1, name: t('home.muscles.chest'), img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT2KdiiCQ-3r8D3eOw0taiTQ7d4UwJHpXinF71rGL25jb01RZC_GzcB5ayg&s=10" },
+    { id: 2, name: t('home.muscles.back'), img: "https://images.unsplash.com/photo-1603287681836-b174ce5074c2?q=80&w=600" },
+    { id: 3, name: t('home.muscles.shoulder'), img: "https://n7media.coolmate.me/image/June2025/cac-bai-tap-gym-co-vai-cho-nam-gymer-358_225.jpg" },
+    { id: 4, name: t('home.muscles.arm'), img: "https://file.hstatic.net/200001007715/article/bai-tap-tang-co-tay_thumb_848a93e9f8404e63888b26e7e52cc412.webp" },
+    { id: 5, name: t('home.muscles.core'), img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR6NGm438DYyvcuFwavjUKe1PM24x3JrdS2ddXbcQ8h0g&s=10" },
+    { id: 6, name: t('home.muscles.leg'), img: "https://thanhnien.mediacdn.vn/Uploaded/ngocquy/2022_03_14/1-tap-dui-shutterstock-7679.jpg" },
+    { id: 7, name: t('home.muscles.glute'), img: "https://thammy.vn/wp-content/uploads/2019/02/assman4.jpg" },
+    { id: 8, name: t('home.muscles.skills'), img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4KdsSVoUyajhhke9Dr6XNT0_7h9J12fZcNV8seyxT_NqptCkbAmrKF_M&s=10" },
   ];
 
   return (
@@ -81,46 +87,48 @@ export default function Home() {
           <Row className="align-items-center">
             {/* Cột trái: Text & CTA */}
             <Col lg={6} className="text-start">
-              <h2 className="fw-bold text-primary-dynamic mb-3">Hôm nay tập gì?</h2>
-              <h1 className="fw-bold text-primary-dynamic mb-4" style={{ fontSize: '4.5rem', lineHeight: '1.1', letterSpacing: '-1px' }}>
-                Khai Phá Giới Hạn <br />
-                <span className="text-neon">Bản Thân Bạn</span>
-              </h1>
-              <p className="text-primary-dynamic mb-5" style={{ fontSize: '1.2rem', opacity: 0.8, maxWidth: '500px', lineHeight: '1.6' }}>
-                P.E.T tự động thiết kế lộ trình tập luyện và dinh dưỡng chuẩn xác dựa trên chỉ số sinh học và mục tiêu của riêng bạn. Một nền tảng duy nhất để xây dựng vóc dáng.
-              </p>
+              <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
+                <h2 className="fw-bold text-primary-dynamic mb-3">{t('home.hero_subtitle')}</h2>
+                <h1 className="fw-bold text-primary-dynamic mb-4" style={{ fontSize: '4.5rem', lineHeight: '1.1', letterSpacing: '-1px' }}>
+                  {t('home.hero_title_1')} <br />
+                  <span className="text-neon">{t('home.hero_title_2')}</span>
+                </h1>
+                <p className="text-primary-dynamic mb-5" style={{ fontSize: '1.2rem', opacity: 0.8, maxWidth: '500px', lineHeight: '1.6' }}>
+                  {t('home.hero_desc')}
+                </p>
 
-              <div className="d-flex gap-3 mb-4">
-                <button
-                  className="btn fw-bold px-4 py-3 rounded-pill"
-                  style={{
-                    backgroundColor: 'var(--brand-neon)',
-                    color: '#000',
-                    border: 'none',
-                    fontSize: '1rem',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={e => { e.target.style.backgroundColor = '#b3e600'; e.target.style.transform = 'translateY(-2px)'; }}
-                  onMouseOut={e => { e.target.style.backgroundColor = 'var(--brand-neon)'; e.target.style.transform = 'translateY(0)'; }}
-                >
-                  Bắt đầu ngay
-                </button>
-                <button
-                  className="btn text-primary-dynamic fw-bold px-4 py-3 rounded-pill"
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    fontSize: '1rem',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={e => { e.target.style.backgroundColor = 'rgba(255,255,255,0.1)'; e.target.style.transform = 'translateY(-2px)'; }}
-                  onMouseOut={e => { e.target.style.backgroundColor = 'rgba(255,255,255,0.05)'; e.target.style.transform = 'translateY(0)'; }}
-                >
-                  Tìm hiểu thêm
-                </button>
-              </div>
-
-
+                <div className="d-flex gap-3 mb-4">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate('/roadmap')}
+                    className="btn fw-bold px-4 py-3 rounded-pill glass-panel"
+                    style={{
+                      backgroundColor: 'var(--brand-neon)',
+                      color: '#000',
+                      border: 'none',
+                      fontSize: '1rem',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={e => { e.target.style.backgroundColor = '#b3e600'; }}
+                    onMouseOut={e => { e.target.style.backgroundColor = 'var(--brand-neon)'; }}
+                  >
+                    {t('home.start_now')}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowInfoModal(true)}
+                    className="btn text-primary-dynamic fw-bold px-4 py-3 rounded-pill glass-panel"
+                    style={{
+                      fontSize: '1rem',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {t('home.learn_more')}
+                  </motion.button>
+                </div>
+              </motion.div>
             </Col>
 
             {/* Cột phải: Hình ảnh minh họa */}
@@ -160,14 +168,30 @@ export default function Home() {
 
         {/* PHẦN 2: LƯỚI CÁC NHÓM CƠ */}
         <div className="mt-5">
-          <h3 className="fw-bold mb-4 text-primary-dynamic">DANH SÁCH BÀI TẬP</h3>
+          <motion.h3 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="fw-bold mb-4 text-primary-dynamic"
+          >
+            {t('home.exercise_list')}
+          </motion.h3>
           <Row className="g-4">
-            {muscleGroups.map((muscle) => (
+            {muscleGroups.map((muscle, index) => (
               <Col md={6} lg={3} key={muscle.id}>
-                <div className="muscle-card" onClick={() => navigate(`/exercises/${muscle.id}`)} style={{ cursor: 'pointer' }}>
-                  <img src={muscle.img} alt={muscle.name} />
-                  <div className="muscle-title">{muscle.name}</div>
-                </div>
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Tilt tiltMaxAngleX={10} tiltMaxAngleY={10} scale={1.05} transitionSpeed={2500}>
+                    <div className="muscle-card glass-panel" onClick={() => navigate(`/exercises/${muscle.id}`)} style={{ cursor: 'pointer', borderRadius: '16px' }}>
+                      <img src={muscle.img} alt={muscle.name} style={{ borderRadius: '16px' }} />
+                      <div className="muscle-title">{muscle.name}</div>
+                    </div>
+                  </Tilt>
+                </motion.div>
               </Col>
             ))}
           </Row>
@@ -186,11 +210,11 @@ export default function Home() {
           <Row className="align-items-center position-relative z-1">
             <Col md={6} className="d-flex flex-column justify-content-center">
               <Badge bg="dark" className="text-neon border border-secondary mb-3 align-self-start px-3 py-2 rounded-pill">
-                🔥 THEO DÕI NĂNG LƯỢNG (KCAL)
+                {t('home.calorie_badge')}
               </Badge>
-              <h3 className="fw-bold text-primary-dynamic mb-2" style={{ fontSize: '2rem' }}>Bạn Đã Đốt Cháy Bao Nhiêu?</h3>
+              <h3 className="fw-bold text-primary-dynamic mb-2" style={{ fontSize: '2rem' }}>{t('home.calorie_title')}</h3>
               <p className="text-secondary mb-4" style={{ fontSize: '1.05rem', lineHeight: '1.6' }}>
-                Hệ thống AI tự động phân tích mức tiêu hao calo dựa trên độ chuẩn xác và cường độ bài tập. Mọi chỉ số đều được tính toán gắt gao.
+                {t('home.calorie_desc')}
               </p>
             </Col>
 
@@ -226,7 +250,7 @@ export default function Home() {
 
                 <div className="position-absolute top-50 start-50 translate-middle text-center w-100" style={{ zIndex: 2 }}>
                   <div className="fw-bold text-primary-dynamic mb-0" style={{ fontSize: '3.5rem', lineHeight: '1', textShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>{burnedCalories}</div>
-                  <div className="text-neon fw-bold mt-1" style={{ fontSize: '0.9rem', letterSpacing: '2px' }}>KCAL ĐỐT</div>
+                  <div className="text-neon fw-bold mt-1" style={{ fontSize: '0.9rem', letterSpacing: '2px' }}>{t('home.kcal_burned')}</div>
                 </div>
               </div>
             </Col>
@@ -240,6 +264,26 @@ export default function Home() {
             `}</style>
         </div>
       </Container>
+
+      {/* TÌM HIỂU THÊM MODAL */}
+      <Modal show={showInfoModal} onHide={() => setShowInfoModal(false)} centered>
+        <Modal.Header closeButton className="bg-surface-card border-bottom border-secondary">
+          <Modal.Title className="text-primary-dynamic fw-bold">{t('home.modal_title')}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="bg-surface-card text-primary-dynamic" style={{ lineHeight: '1.6' }}>
+          <p className="mb-3">
+            {t('home.modal_p1')}
+          </p>
+          <ul className="mb-3 ps-3">
+            <li className="mb-2">{t('home.modal_li1')}</li>
+            <li className="mb-2">{t('home.modal_li2')}</li>
+            <li className="mb-0">{t('home.modal_li3')}</li>
+          </ul>
+          <p className="mb-0 text-neon fw-bold">
+            {t('home.modal_p2')}
+          </p>
+        </Modal.Body>
+      </Modal>
 
     </div>
   );
