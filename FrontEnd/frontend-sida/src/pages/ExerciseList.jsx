@@ -1,25 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Modal, ProgressBar } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const getTodayKey = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const markDayAsTrained = (exerciseTitle) => {
+const markDayAsTrained = () => {
     const key = getTodayKey();
     const saved = localStorage.getItem('pet-schedule');
     const scheduleData = saved ? JSON.parse(saved) : {};
 
     const existing = scheduleData[key] || { trained: false, note: '', completedExercises: [] };
     existing.trained = true;
-
-    if (!existing.completedExercises) existing.completedExercises = [];
-    if (!existing.completedExercises.includes(exerciseTitle)) {
-        existing.completedExercises.push(exerciseTitle);
-    }
-    existing.note = `Đã hoàn thành: ${existing.completedExercises.join(', ')}`;
+    
+    // Trong ExerciseList (Tập tự do), chúng ta chỉ đánh dấu ngày là đã có tập (trained: true)
+    // KHÔNG đẩy tên bài tập vào completedExercises để tránh trùng/ảnh hưởng tới Lộ trình (Roadmap).
 
     scheduleData[key] = existing;
     localStorage.setItem('pet-schedule', JSON.stringify(scheduleData));
@@ -28,18 +26,10 @@ const markDayAsTrained = (exerciseTitle) => {
     window.dispatchEvent(new Event('storage'));
 };
 
-const getCompletedToday = () => {
-    const key = getTodayKey();
-    const saved = localStorage.getItem('pet-schedule');
-    if (!saved) return [];
-    const data = JSON.parse(saved);
-    return data[key]?.completedExercises || [];
-};
-
 export default function ExerciseList() {
     const navigate = useNavigate();
     const { id } = useParams();
-    const [completedExercises, setCompletedExercises] = useState(getCompletedToday());
+    const { t } = useTranslation();
 
     // States cho AI Camera Modal
     const [showAIModal, setShowAIModal] = useState(false);
@@ -63,6 +53,26 @@ export default function ExerciseList() {
     const [manualTotalTime, setManualTotalTime] = useState(0);
     const [manualCurrentSet, setManualCurrentSet] = useState(1);
     const [manualIsResting, setManualIsResting] = useState(false);
+
+    // States cho Workout Summary Modal
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+    const [summaryData, setSummaryData] = useState(null);
+
+    const triggerConfetti = () => {
+        const duration = 3 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+        const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+        const interval = setInterval(function() {
+            const timeLeft = animationEnd - Date.now();
+            if (timeLeft <= 0) return clearInterval(interval);
+            const particleCount = 50 * (timeLeft / duration);
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+        }, 250);
+    };
 
     const muscleGroupData = {
         1: { name: 'NGỰC (CHEST)', desc: 'Phát triển toàn diện vòng 1. AI sẽ tự động chấm điểm form tập của bạn.', exercises: [
@@ -105,7 +115,6 @@ export default function ExerciseList() {
 
     // Mở chi tiết bài tập
     const handleOpenDetail = (exercise) => {
-        if (completedExercises.includes(exercise.name)) return;
         setSelectedDetail(exercise);
         setWorkoutMode('reps');
         setCustomTarget(parseInt(exercise.reps));
@@ -180,10 +189,49 @@ export default function ExerciseList() {
     };
 
     const handleFinishManual = () => {
-        markDayAsTrained(currentExercise.name);
-        setCompletedExercises(prev => [...prev, currentExercise.name]);
+        markDayAsTrained();
         setShowManualModal(false);
-        confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 }, colors: ['#00ff88', '#ffffff'], zIndex: 1060 });
+        
+        const kcal = Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets) || 25;
+        let expGained = Math.max(1, Math.round(kcal * 0.1));
+        
+        // Giới hạn điểm mỗi ngày (300 EXP)
+        const dailySaved = localStorage.getItem('pet-daily');
+        const dailyParsed = dailySaved ? JSON.parse(dailySaved) : { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: getTodayKey() };
+        
+        const todayStr = getTodayKey();
+        if (dailyParsed.date !== todayStr) {
+            dailyParsed.date = todayStr;
+            dailyParsed.pointsEarnedToday = 0;
+        }
+        
+        const MAX_DAILY_EXP = 300;
+        if (dailyParsed.pointsEarnedToday + expGained > MAX_DAILY_EXP) {
+            expGained = Math.max(0, MAX_DAILY_EXP - dailyParsed.pointsEarnedToday);
+        }
+
+        setSummaryData({
+            exerciseName: currentExercise.name,
+            exerciseId: currentExercise.exercise_id,
+            reps: targetReps,
+            sets: targetSets,
+            kcal: kcal,
+            exp: expGained,
+            isCapped: dailyParsed.pointsEarnedToday + expGained >= MAX_DAILY_EXP
+        });
+        
+        // Thêm điểm vào LocalStorage
+        dailyParsed.pointsEarnedToday += expGained;
+        dailyParsed.totalPoints = (dailyParsed.totalPoints || 0) + expGained;
+        if(!dailyParsed.exercisesTrained) dailyParsed.exercisesTrained = [];
+        if(!dailyParsed.exercisesTrained.includes(currentExercise.name)) {
+            dailyParsed.exercisesTrained.push(currentExercise.name);
+        }
+        localStorage.setItem('pet-daily', JSON.stringify(dailyParsed));
+        window.dispatchEvent(new Event('storage')); // Cập nhật FloatingPet
+
+        setShowSummaryModal(true);
+        triggerConfetti();
     };
 
     // Logic giả lập AI đếm reps
@@ -219,9 +267,49 @@ export default function ExerciseList() {
                                     localStorage.setItem('workout-sessions', JSON.stringify(savedSessions));
 
                                     setTimeout(() => {
-                                        markDayAsTrained(currentExercise.name);
-                                        setCompletedExercises(prev => [...prev, currentExercise.name]);
+                                        markDayAsTrained();
                                         setShowAIModal(false);
+
+                                        const kcal = sessionData.total_calories_burned;
+                                        let expGained = Math.max(1, Math.round(kcal * 0.1));
+                                        
+                                        // Giới hạn điểm mỗi ngày (300 EXP)
+                                        const dailySaved = localStorage.getItem('pet-daily');
+                                        const dailyParsed = dailySaved ? JSON.parse(dailySaved) : { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: getTodayKey() };
+                                        
+                                        const todayStr = getTodayKey();
+                                        if (dailyParsed.date !== todayStr) {
+                                            dailyParsed.date = todayStr;
+                                            dailyParsed.pointsEarnedToday = 0;
+                                        }
+                                        
+                                        const MAX_DAILY_EXP = 300;
+                                        if (dailyParsed.pointsEarnedToday + expGained > MAX_DAILY_EXP) {
+                                            expGained = Math.max(0, MAX_DAILY_EXP - dailyParsed.pointsEarnedToday);
+                                        }
+
+                                        setSummaryData({
+                                            exerciseName: currentExercise.name,
+                                            exerciseId: currentExercise.exercise_id,
+                                            reps: targetReps,
+                                            sets: targetSets,
+                                            kcal: kcal,
+                                            exp: expGained,
+                                            isCapped: dailyParsed.pointsEarnedToday + expGained >= MAX_DAILY_EXP
+                                        });
+
+                                        // Thêm điểm vào LocalStorage
+                                        dailyParsed.pointsEarnedToday += expGained;
+                                        dailyParsed.totalPoints = (dailyParsed.totalPoints || 0) + expGained;
+                                        if(!dailyParsed.exercisesTrained) dailyParsed.exercisesTrained = [];
+                                        if(!dailyParsed.exercisesTrained.includes(currentExercise.name)) {
+                                            dailyParsed.exercisesTrained.push(currentExercise.name);
+                                        }
+                                        localStorage.setItem('pet-daily', JSON.stringify(dailyParsed));
+                                        window.dispatchEvent(new Event('storage'));
+
+                                        setShowSummaryModal(true);
+                                        triggerConfetti();
                                     }, 1500);
                                     return prevSets;
                                 } else {
@@ -251,41 +339,32 @@ export default function ExerciseList() {
                 className="text-secondary text-decoration-none p-0 mb-4 d-flex align-items-center fw-bold"
                 onClick={() => navigate(-1)}
             >
-                <span className="fs-4 me-2">←</span> QUAY LẠI
+                <span className="fs-4 me-2">←</span> {t('exercise_list.back')}
             </Button>
 
             <div className="mb-5">
                 <h2 className="fw-black mb-1 text-primary-dynamic text-uppercase">
-                    BÀI TẬP <span style={{ color: 'var(--brand-neon)' }}>{groupData.name}</span>
+                    {t('exercise_list.exercises')} <span style={{ color: 'var(--brand-neon)' }}>{t(`exercises.group_${id}_name`, groupData.name)}</span>
                 </h2>
-                <p className="text-secondary fw-bold">{groupData.desc}</p>
+                <p className="text-secondary fw-bold">{t(`exercises.group_${id}_desc`, groupData.desc)}</p>
             </div>
 
             <Row className="g-4">
                 {exercises.map((ex) => {
-                    const isDone = completedExercises.includes(ex.name);
                     return (
                         <Col md={6} lg={4} key={ex.exercise_id}>
                             <Card className="h-100 shadow-sm border-surface bg-surface-card overflow-hidden"
-                                style={{ transition: 'transform 0.2s', cursor: isDone ? 'default' : 'pointer', opacity: isDone ? 0.7 : 1, borderRadius: '20px' }}
-                                onClick={() => !isDone && handleOpenDetail(ex)}
-                                onMouseOver={(e) => !isDone && (e.currentTarget.style.transform = 'translateY(-5px)')}
+                                style={{ transition: 'transform 0.2s', cursor: 'pointer', borderRadius: '20px' }}
+                                onClick={() => handleOpenDetail(ex)}
+                                onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-5px)')}
                                 onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
 
                                 <div style={{ height: '220px', overflow: 'hidden', position: 'relative' }}>
                                     <Card.Img variant="top" src={ex.img}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    <Badge bg="dark" className="position-absolute top-0 end-0 m-3 opacity-75 fs-6">
-                                        {ex.level}
-                                    </Badge>
-                                    {isDone && (
-                                        <div className="position-absolute top-0 start-0 m-3 px-3 py-2 rounded-pill fw-black"
-                                            style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '0.8rem' }}>
-                                            ✓ ĐÃ HOÀN THÀNH
-                                        </div>
-                                    )}
                                     <div className="position-absolute bottom-0 start-0 w-100 p-3" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}>
-                                        <Card.Title className="fw-black text-white fs-5 mb-0">{ex.name}</Card.Title>
+                                        <h5 className="fw-black text-white mb-0 fs-5">{t(`exercises.${ex.exercise_id}`, ex.name)}</h5>
+                                        <Badge bg="dark" className="ms-2 opacity-75">{ex.level === 'Cơ bản' ? t('exercises.level_basic') : ex.level === 'Trung bình' ? t('exercises.level_intermediate') : t('exercises.level_advanced')}</Badge>
                                     </div>
                                 </div>
 
@@ -312,7 +391,7 @@ export default function ExerciseList() {
                                 <div className="rounded-circle d-flex align-items-center justify-content-center mb-2" style={{ width: '70px', height: '70px', background: 'var(--brand-neon)', cursor: 'pointer', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.5)' }}>
                                     <span style={{ color: '#000', fontSize: '2rem', marginLeft: '6px' }}>▶</span>
                                 </div>
-                                <span className="text-white fw-bold">VIDEO HƯỚNG DẪN</span>
+                                <span className="text-white fw-bold">{t('exercise_list.tutorial_video')}</span>
                             </div>
                             <Button variant="link" className="position-absolute top-0 end-0 text-white m-3 text-decoration-none" onClick={() => setShowDetailModal(false)}>
                                 <span className="fs-2 fw-bold text-shadow">&times;</span>
@@ -321,9 +400,9 @@ export default function ExerciseList() {
                         <Modal.Body className="p-4 p-md-5">
                             <div className="d-flex justify-content-between align-items-start mb-4">
                                 <div>
-                                    <h3 className="fw-black text-primary-dynamic mb-1">{selectedDetail.name}</h3>
+                                    <h3 className="fw-black text-primary-dynamic mb-1">{t(`exercises.${selectedDetail.exercise_id}`, selectedDetail.name)}</h3>
                                     <div className="text-secondary fw-bold text-uppercase" style={{ fontSize: '0.85rem', letterSpacing: '1px' }}>
-                                        Nhóm cơ: <span style={{ color: 'var(--brand-neon)' }}>{groupData.name}</span>
+                                        {t('exercise_list.muscle_group')} <span style={{ color: 'var(--brand-neon)' }}>{t(`exercises.group_${id}_name`, groupData.name)}</span>
                                     </div>
                                 </div>
                                 <div className="text-warning fs-4" style={{ letterSpacing: '2px' }}>
@@ -334,21 +413,21 @@ export default function ExerciseList() {
                             <Row className="mb-4">
                                 <Col md={6} className="mb-4 mb-md-0">
                                     <div className="mb-4">
-                                        <h6 className="fw-black text-secondary text-uppercase mb-2" style={{ fontSize: '0.85rem' }}>Mô Tả & Tác Dụng</h6>
+                                        <h6 className="fw-black text-secondary text-uppercase mb-2" style={{ fontSize: '0.85rem' }}>{t('exercise_list.desc_benefits')}</h6>
                                         <p className="text-primary-dynamic mb-0" style={{ fontSize: '0.95rem', lineHeight: '1.6' }}>
-                                            {selectedDetail.technical_description || `Bài tập lý tưởng để phát triển ${groupData.name.toLowerCase()}, giúp xây dựng sức mạnh cơ bắp và cải thiện sức bền toàn diện. Phù hợp cho mọi cấp độ.`}
+                                            {t(`exercises.desc_${selectedDetail.exercise_id}`, selectedDetail.technical_description)}
                                         </p>
                                     </div>
                                     <div>
-                                        <h6 className="fw-black text-secondary text-uppercase mb-2" style={{ fontSize: '0.85rem' }}>Lưu ý an toàn</h6>
+                                        <h6 className="fw-black text-secondary text-uppercase mb-2" style={{ fontSize: '0.85rem' }}>{t('exercise_list.safety_notes')}</h6>
                                         <p className="text-danger fw-bold mb-0" style={{ fontSize: '0.9rem' }}>
-                                            {selectedDetail.safety_notes || 'Giữ tư thế chuẩn, không khóa khớp hoàn toàn khi thực hiện động tác để tránh chấn thương.'}
+                                            {t(`exercises.safety_${selectedDetail.exercise_id}`, selectedDetail.safety_notes) || t('exercise_list.safety_notes')}
                                         </p>
                                     </div>
                                 </Col>
                                 <Col md={6}>
                                     <div className="bg-surface-main p-4 rounded-4 border-surface h-100 d-flex flex-column">
-                                        <h6 className="fw-black text-primary-dynamic mb-3 text-uppercase text-center">Tùy Chỉnh Chế Độ Tập</h6>
+                                        <h6 className="fw-black text-primary-dynamic mb-3 text-uppercase text-center">{t('exercise_list.customize_workout')}</h6>
                                         
                                         <div className="d-flex gap-2 mb-4">
                                             <Button 
@@ -357,7 +436,7 @@ export default function ExerciseList() {
                                                 style={workoutMode === 'reps' ? { background: 'var(--brand-neon)', color: '#000' } : {}}
                                                 onClick={() => { setWorkoutMode('reps'); setCustomTarget(parseInt(selectedDetail.reps)); }}
                                             >
-                                                THEO REPS
+                                                {t('exercise_list.by_reps')}
                                             </Button>
                                             <Button 
                                                 variant={workoutMode === 'time' ? 'success' : 'outline-secondary'} 
@@ -365,7 +444,7 @@ export default function ExerciseList() {
                                                 style={workoutMode === 'time' ? { background: 'var(--brand-neon)', color: '#000' } : {}}
                                                 onClick={() => { setWorkoutMode('time'); setCustomTarget(60); }}
                                             >
-                                                THỜI GIAN
+                                                {t('exercise_list.time')}
                                             </Button>
                                         </div>
 
@@ -385,7 +464,7 @@ export default function ExerciseList() {
                                                 <Button variant="link" className="text-secondary text-decoration-none fw-bold fs-3 px-3" onClick={() => setCustomTarget(prev => Math.max(1, prev - (workoutMode === 'time' ? 10 : 1)))}>-</Button>
                                                 <div className="text-center d-flex align-items-baseline gap-2">
                                                     <span className="fw-black text-primary-dynamic" style={{ fontSize: '1.8rem' }}>{customTarget}</span>
-                                                    <span className="text-secondary fw-bold text-uppercase" style={{ fontSize: '0.85rem' }}>{workoutMode === 'reps' ? 'Reps' : 'Giây'}</span>
+                                                    <span className="text-secondary fw-bold text-uppercase" style={{ fontSize: '0.85rem' }}>{workoutMode === 'reps' ? 'Reps' : t('exercise_list.secs')}</span>
                                                 </div>
                                                 <Button variant="link" className="text-secondary text-decoration-none fw-bold fs-3 px-3" onClick={() => setCustomTarget(prev => prev + (workoutMode === 'time' ? 10 : 1))}>+</Button>
                                             </div>
@@ -401,7 +480,7 @@ export default function ExerciseList() {
                                     style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
                                     onClick={() => handleStartFromDetail(true)}
                                 >
-                                    ⚡ TẬP VỚI AI
+                                    {t('exercise_list.ai_workout')}
                                 </Button>
                                 <Button 
                                     className="flex-fill py-3 fw-black rounded-pill border-2 bg-transparent"
@@ -410,7 +489,7 @@ export default function ExerciseList() {
                                     onMouseOver={(e) => { e.currentTarget.style.background = 'var(--brand-neon)'; e.currentTarget.style.color = '#000'; }}
                                     onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--brand-neon)'; }}
                                 >
-                                    TẬP CƠ BẢN
+                                    {t('exercise_list.basic_workout')}
                                 </Button>
                             </div>
                         </Modal.Body>
@@ -442,7 +521,7 @@ export default function ExerciseList() {
                         <div className="d-flex justify-content-between align-items-start">
                             <div className="text-start">
                                 <Badge bg="danger" className="mb-2 fw-bold px-3 py-2 rounded-pill" style={{ animation: 'blink-anim 1s infinite' }}>🔴 AI DETECTING</Badge>
-                                <h4 className="fw-black text-white mb-0 text-uppercase text-shadow">{currentExercise?.name}</h4>
+                                <h4 className="fw-black text-white mb-0 text-uppercase text-shadow">{currentExercise && t(`exercises.${currentExercise.exercise_id}`, currentExercise.name)}</h4>
                                 <div style={{ color: 'var(--brand-neon)', fontSize: '1rem', fontWeight: '900', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
                                     {aiStatus}
                                 </div>
@@ -479,7 +558,7 @@ export default function ExerciseList() {
             <Modal show={showManualModal} backdrop="static" keyboard={false} centered
                 contentClassName="border-surface bg-surface-card rounded-4 overflow-hidden shadow-lg">
                 <Modal.Body className="p-4 p-md-5 text-center">
-                    <h4 className="fw-black text-primary-dynamic mb-2 text-uppercase">{currentExercise?.name}</h4>
+                    <h4 className="fw-black text-primary-dynamic mb-2 text-uppercase">{currentExercise && t(`exercises.${currentExercise.exercise_id}`, currentExercise.name)}</h4>
                     <div className="mb-4">
                         <Badge bg="success" className="fs-6 px-3 py-2 rounded-pill">
                             SET {manualCurrentSet} / {targetSets}
@@ -487,13 +566,13 @@ export default function ExerciseList() {
                     </div>
 
                     <p className="text-secondary fw-bold mb-4" style={{ fontSize: '0.95rem' }}>
-                        {workoutMode === 'reps' ? `Mục tiêu: ${targetReps} Reps.` : `Mục tiêu: ${targetReps} giây.`}
+                        {workoutMode === 'reps' ? `${t('exercise_list.target')} ${targetReps} Reps.` : `${t('exercise_list.target')} ${targetReps} ${t('exercise_list.secs')}.`}
                         <br/>
                         {!manualIsResting ? (
                             <span className="text-primary-dynamic">
-                                {workoutMode === 'reps' ? 'Tập theo tốc độ của bạn. Bấm xác nhận khi xong.' : 'Hoàn thành đếm ngược để kết thúc Set.'}
+                                {workoutMode === 'reps' ? t('exercise_list.pace_msg') : t('exercise_list.time_msg')}
                             </span>
-                        ) : <span className="text-success">Hoàn thành Set xuất sắc! Nghỉ ngơi một lát nhé.</span>}
+                        ) : <span className="text-success">{t('exercise_list.set_completed')}</span>}
                     </p>
 
                     <div className="d-flex justify-content-center align-items-center mb-5" style={{ position: 'relative', width: '220px', height: '220px', margin: '0 auto' }}>
@@ -513,9 +592,10 @@ export default function ExerciseList() {
                                     <>
                                         <div className="fw-black text-primary-dynamic" style={{ fontSize: '4.5rem', lineHeight: '1' }}>{manualTimeLeft}</div>
                                         <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>Giây</div>
+                                        <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>{t('exercise_list.secs')}</div>
                                     </>
                                 ) : (
-                                    <div className="fw-black text-success" style={{ fontSize: '2.5rem' }}>XONG!</div>
+                                    <div className="fw-black text-success" style={{ fontSize: '2.5rem' }}>{t('exercise_list.done')}</div>
                                 )
                             ) : (
                                 !manualIsResting ? (
@@ -524,7 +604,7 @@ export default function ExerciseList() {
                                         <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>Reps</div>
                                     </>
                                 ) : (
-                                    <div className="fw-black text-success" style={{ fontSize: '2.5rem' }}>XONG!</div>
+                                    <div className="fw-black text-success" style={{ fontSize: '2.5rem' }}>{t('exercise_list.done')}</div>
                                 )
                             )}
                         </div>
@@ -539,11 +619,11 @@ export default function ExerciseList() {
                                         style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
                                         onClick={() => setManualIsResting(true)}
                                     >
-                                        ✓ ĐÃ TẬP XONG SET NÀY
+                                        {t('exercise_list.set_done')}
                                     </Button>
                                 )}
                                 <Button variant="outline-danger" className="fw-bold py-3 rounded-pill" onClick={() => setShowManualModal(false)}>
-                                    HỦY BÀI TẬP
+                                    {t('exercise_list.cancel_workout')}
                                 </Button>
                             </>
                         ) : (
@@ -553,23 +633,81 @@ export default function ExerciseList() {
                                     style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
                                     onClick={handleNextSet}
                                 >
-                                    BẮT ĐẦU SET {manualCurrentSet + 1}
+                                    {t('exercise_list.start_set')} {manualCurrentSet + 1}
                                 </Button>
                             ) : (
                                 <Button 
-                                    className="w-100 py-3 fw-black border-0 rounded-pill btn-success text-white"
-                                    style={{ fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(25,135,84, 0.4)' }}
+                                    className="w-100 py-3 fw-black border-0 rounded-pill"
+                                    style={{ background: '#00b4d8', color: '#fff', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(0,180,216, 0.4)' }}
                                     onClick={handleFinishManual}
                                 >
-                                    HOÀN THÀNH TOÀN BỘ & NHẬN THƯỞNG
+                                    🏆 {t('exercise_list.finish_workout')}
                                 </Button>
                             )
                         )}
                         {manualIsResting && (
                             <Button variant="link" className="text-secondary text-decoration-none fw-bold" onClick={() => setShowManualModal(false)}>
-                                DỪNG SỚM (KHÔNG LƯU)
+                                {t('exercise_list.stop_early')}
                             </Button>
                         )}
+                    </div>
+                </Modal.Body>
+            </Modal>
+
+            {/* Workout Summary Modal */}
+            <Modal show={showSummaryModal} onHide={() => setShowSummaryModal(false)} centered backdrop="static"
+                contentClassName="border-0 bg-transparent overflow-hidden shadow-none">
+                <Modal.Body className="p-0 text-center">
+                    <div className="bg-surface-card rounded-5 p-5 position-relative overflow-hidden shadow-lg" style={{ border: '2px solid var(--brand-neon)' }}>
+                        {/* Glow background */}
+                        <div className="position-absolute top-50 start-50 translate-middle rounded-circle" style={{ width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.3) 0%, transparent 70%)', filter: 'blur(30px)', zIndex: 0 }}></div>
+                        
+                        <div className="position-relative z-1">
+                            <h2 className="fw-black text-white text-uppercase mb-1" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{t('exercise_list.workout_summary')} 🎉</h2>
+                            <p className="text-neon fw-bold mb-4">{summaryData && t(`exercises.${summaryData.exerciseId}`, summaryData.exerciseName)}</p>
+                            
+                            <Row className="g-3 mb-4">
+                                <Col xs={6}>
+                                    <div className="bg-body rounded-4 p-3 border-surface">
+                                        <div className="text-secondary fw-bold small text-uppercase">{t('exercise_list.reps')}</div>
+                                        <div className="fs-2 fw-black text-primary-dynamic">{summaryData?.reps}</div>
+                                    </div>
+                                </Col>
+                                <Col xs={6}>
+                                    <div className="bg-body rounded-4 p-3 border-surface">
+                                        <div className="text-secondary fw-bold small text-uppercase">{t('exercise_list.sets')}</div>
+                                        <div className="fs-2 fw-black text-primary-dynamic">{summaryData?.sets}</div>
+                                    </div>
+                                </Col>
+                                <Col xs={6}>
+                                    <div className="bg-body rounded-4 p-3 border-surface">
+                                        <div className="text-secondary fw-bold small text-uppercase">KCAL</div>
+                                        <div className="fs-2 fw-black text-warning">🔥 {summaryData?.kcal}</div>
+                                    </div>
+                                </Col>
+                                <Col xs={6}>
+                                    <div className="bg-body rounded-4 p-3 border-surface position-relative">
+                                        <div className="text-secondary fw-bold small text-uppercase">EXP</div>
+                                        <div className="fs-2 fw-black text-info">⭐ +{summaryData?.exp}</div>
+                                        {summaryData?.isCapped && (
+                                            <div className="position-absolute bottom-0 start-0 w-100 bg-warning text-dark fw-bold p-1" style={{ fontSize: '0.65rem' }}>
+                                                {t('exercise_list.exp_limit_reached')}
+                                            </div>
+                                        )}
+                                    </div>
+                                </Col>
+                            </Row>
+                            
+                            <div className="mt-4 pt-3 border-top border-secondary">
+                                <Button 
+                                    className="w-100 py-3 fw-black rounded-pill border-0" 
+                                    style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.4)' }}
+                                    onClick={() => setShowSummaryModal(false)}
+                                >
+                                    {t('exercise_list.continue')}
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 </Modal.Body>
             </Modal>

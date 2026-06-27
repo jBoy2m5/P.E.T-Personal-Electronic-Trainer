@@ -74,19 +74,18 @@ export default function Onboarding() {
     return (
       <div
         onClick={() => handleSelect(field, value)}
-        className="p-3 p-md-4 rounded-4 text-center h-100 d-flex align-items-center justify-content-center"
+        className="p-3 p-md-4 rounded-4 text-center h-100 d-flex align-items-center justify-content-center bg-surface-card border-surface"
         style={{
           cursor: 'pointer',
-          backgroundColor: isSelected ? 'rgba(204,255,0,0.1)' : '#1a1a1a',
-          border: isSelected ? '3px solid #ccff00' : '3px solid #444',
+          border: isSelected ? '3px solid var(--brand-neon)' : '',
           transition: 'all 0.2s ease',
-          boxShadow: isSelected ? '0 0 20px rgba(204,255,0,0.2)' : 'none',
+          boxShadow: isSelected ? '0 0 20px rgba(var(--brand-neon-rgb),0.2)' : 'none',
           transform: isSelected ? 'scale(1.02)' : 'scale(1)'
         }}
         onMouseOver={e => { if (!isSelected) e.currentTarget.style.borderColor = '#666'; e.currentTarget.style.transform = 'scale(1.02)'; }}
         onMouseOut={e => { if (!isSelected) e.currentTarget.style.borderColor = '#444'; e.currentTarget.style.transform = isSelected ? 'scale(1.02)' : 'scale(1)'; }}
       >
-        <span className={`fw-bold fs-5 ${isSelected ? 'text-neon' : 'text-white'}`}>{label}</span>
+        <span className={`fw-bold fs-5 ${isSelected ? 'text-neon' : 'text-primary-dynamic'}`}>{label}</span>
       </div>
     );
   };
@@ -155,7 +154,7 @@ export default function Onboarding() {
         </Col>
 
         {/* Right Side: Form Wizard */}
-        <Col xs={12} lg={7} xl={6} className="d-flex flex-column justify-content-center p-4 p-md-5" style={{ backgroundColor: '#000' }}>
+        <Col xs={12} lg={7} xl={6} className="d-flex flex-column justify-content-center p-4 p-md-5 bg-surface-main">
 
           <div className="w-100 mx-auto" style={{ maxWidth: '600px' }}>
 
@@ -175,7 +174,7 @@ export default function Onboarding() {
             {/* Step 1: Giới tính */}
             {step === 1 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Giới tính của bạn là gì?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Giới tính của bạn là gì?</h2>
                 <Row className="g-3">
                   <Col xs={12}><OptionCard field="gender" value="Nam" label="Nam" /></Col>
                   <Col xs={12}><OptionCard field="gender" value="Nữ" label="Nữ" /></Col>
@@ -188,7 +187,7 @@ export default function Onboarding() {
             {/* Step 2: Mục tiêu */}
             {step === 2 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Mục tiêu chính của bạn?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Mục tiêu chính của bạn?</h2>
                 <Row className="g-3">
                   <Col xs={6}><OptionCard field="goal" value="Giữ dáng" label="Giữ dáng" /></Col>
                   <Col xs={6}><OptionCard field="goal" value="Xây dựng cơ bắp" label="Tăng cơ" /></Col>
@@ -202,7 +201,7 @@ export default function Onboarding() {
             {/* Step 3: Tần suất */}
             {step === 3 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Tần suất tập luyện hiện tại?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Tần suất tập luyện hiện tại?</h2>
                 <Row className="g-3">
                   <Col xs={6}><OptionCard field="frequency" value="Ít" label="Rất ít khi" /></Col>
                   <Col xs={6}><OptionCard field="frequency" value="Hiếm khi" label="1-2 lần/tháng" /></Col>
@@ -216,7 +215,7 @@ export default function Onboarding() {
             {/* Step 4: Thể trạng */}
             {step === 4 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Đánh giá thể trạng hiện tại?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Đánh giá thể trạng hiện tại?</h2>
                 <Row className="g-3">
                   <Col xs={6}><OptionCard field="fitnessLevel" value="Mới bắt đầu" label="Mới bắt đầu" /></Col>
                   <Col xs={6}><OptionCard field="fitnessLevel" value="Đã có nền tảng" label="Có nền tảng" /></Col>
@@ -230,7 +229,7 @@ export default function Onboarding() {
             {/* Step 5: Số buổi tập */}
             {step === 5 && (
               <div className="animate-fade-in text-center">
-                <h2 className="display-6 fw-bold text-white mb-5">Bạn có thể tập bao nhiêu buổi 1 tuần?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Bạn có thể tập bao nhiêu buổi 1 tuần?</h2>
                 <div className="display-1 text-neon fw-bold mb-5">{formData.sessionsPerWeek}</div>
                 <Form.Range
                   name="sessionsPerWeek"
@@ -248,11 +247,11 @@ export default function Onboarding() {
             {/* Step 6: Chiều cao & Cân nặng */}
             {step === 6 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Chỉ số cơ thể của bạn</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Chỉ số cơ thể của bạn</h2>
 
-                <div className="mb-5 p-4 rounded-4" style={{ backgroundColor: '#111', border: '1px solid #333' }}>
+                <div className="mb-5 p-4 rounded-4 bg-surface-card border-surface">
                   <div className="d-flex justify-content-between align-items-end mb-4">
-                    <span className="text-light fw-bold text-uppercase" style={{ letterSpacing: '1px' }}>Chiều cao</span>
+                    <span className="text-primary-dynamic fw-bold text-uppercase" style={{ letterSpacing: '1px' }}>Chiều cao</span>
                     <span className="text-neon display-4 fw-bold">{formData.height} <span className="fs-5 text-muted">cm</span></span>
                   </div>
                   <Form.Range
@@ -264,9 +263,9 @@ export default function Onboarding() {
                   />
                 </div>
 
-                <div className="mb-5 p-4 rounded-4" style={{ backgroundColor: '#111', border: '1px solid #333' }}>
+                <div className="mb-5 p-4 rounded-4 bg-surface-card border-surface">
                   <div className="d-flex justify-content-between align-items-end mb-4">
-                    <span className="text-light fw-bold text-uppercase" style={{ letterSpacing: '1px' }}>Cân nặng</span>
+                    <span className="text-primary-dynamic fw-bold text-uppercase" style={{ letterSpacing: '1px' }}>Cân nặng</span>
                     <span className="text-neon display-4 fw-bold">{formData.weight} <span className="fs-5 text-muted">kg</span></span>
                   </div>
                   <Form.Range

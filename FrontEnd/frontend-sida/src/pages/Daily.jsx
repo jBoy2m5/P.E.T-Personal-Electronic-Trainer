@@ -2,51 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Modal, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
+import { useTranslation } from 'react-i18next';
 
-// Loại bỏ toàn bộ icon/emoji để giao diện trông chuyên nghiệp và trực quan hơn (Typographic style)
-const ALL_MISSIONS = [
-  { id: '101', title: 'Hít đất cơ bản (Standard Push-up)', points: 30, group: 1 },
-  { id: '102', title: 'Hít đất hẹp tay (Diamond Push-up)', points: 40, group: 1 },
-  { id: '201', title: 'Hít xà đơn (Pull-up)', points: 45, group: 2 },
-  { id: '202', title: 'Kéo lưng với dây kháng lực', points: 25, group: 2 },
-  { id: '501', title: 'Gập bụng (Crunches)', points: 25, group: 5 },
-  { id: '502', title: 'Plank', points: 35, group: 5 },
-  { id: '601', title: 'Squat cơ bản', points: 30, group: 6 },
-  { id: '602', title: 'Lunge (Chùng chân)', points: 35, group: 6 },
-  { id: '802', title: 'Muscle-up', points: 80, group: 8 },
-];
+import { ALL_MISSIONS, getTodayKey, getDailyMissions } from '../services/rewards';
 
 const CHECKIN_REWARDS = [
-  { day: 1, points: 10, label: 'Ngày 1' },
-  { day: 2, points: 15, label: 'Ngày 2' },
-  { day: 3, points: 20, label: 'Ngày 3' },
-  { day: 4, points: 25, label: 'Ngày 4' },
-  { day: 5, points: 30, label: 'Ngày 5' },
-  { day: 6, points: 40, label: 'Ngày 6' },
-  { day: 7, points: 100, label: 'Ngày 7' },
+  { day: 1, points: 10 },
+  { day: 2, points: 15 },
+  { day: 3, points: 20 },
+  { day: 4, points: 25 },
+  { day: 5, points: 30 },
+  { day: 6, points: 40 },
+  { day: 7, points: 100 },
 ];
 
-const getTodayKey = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-const getDailyMissions = (dateKey) => {
-  let hash = 0;
-  for (let i = 0; i < dateKey.length; i++) {
-    hash = ((hash << 5) - hash) + dateKey.charCodeAt(i);
-    hash |= 0;
-  }
-  const shuffled = [...ALL_MISSIONS].sort((a, b) => {
-    const ha = ((hash * 31 + a.id.charCodeAt(0)) % 1000);
-    const hb = ((hash * 31 + b.id.charCodeAt(0)) % 1000);
-    return ha - hb;
-  });
-  return shuffled.slice(0, 3);
-};
+// Loại bỏ toàn bộ icon/emoji để giao diện trông chuyên nghiệp và trực quan hơn (Typographic style)
 
 export default function Daily() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [animateIn, setAnimateIn] = useState(false);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
   
@@ -183,14 +157,14 @@ export default function Daily() {
         }}>
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-2">
             <div>
-              <div className="text-secondary fw-bold text-uppercase mb-2" style={{ letterSpacing: '2px', fontSize: '0.9rem' }}>TIÊU HAO CALO, TÍCH LŨY ĐIỂM SỐ</div>
+              <div className="text-secondary fw-bold text-uppercase mb-2" style={{ letterSpacing: '2px', fontSize: '0.9rem' }}>{t('daily.subtitle')}</div>
               <h1 className="text-primary-dynamic mb-0" style={{ fontSize: '2.5rem', letterSpacing: '-1px', fontWeight: '900', textTransform: 'uppercase' }}>
-                ĐIỂM DANH & <span style={{ color: 'var(--brand-neon)' }}>NHIỆM VỤ</span>
+                {t('daily.title_1')} <span style={{ color: 'var(--brand-neon)' }}>{t('daily.title_2')}</span>
               </h1>
             </div>
             <div className="mt-4 mt-md-0">
               <div className="gym-streak-badge">
-                CHUỖI NGÀY: <span className="fw-black" style={{ color: '#000', fontSize: '1.2rem', marginLeft: '5px' }}>{dailyData.checkinStreak}</span>
+                {t('daily.streak')} <span className="fw-black" style={{ color: '#000', fontSize: '1.2rem', marginLeft: '5px' }}>{dailyData.checkinStreak}</span>
               </div>
             </div>
           </div>
@@ -202,9 +176,9 @@ export default function Daily() {
           <Col lg={12}>
             <div className="p-4 p-md-5 h-100 d-flex flex-column bg-surface-card border-surface gym-panel" style={{ borderRadius: '24px', border: '1px solid' }}>
               <div className="d-flex justify-content-between align-items-center mb-5">
-                <h4 className="fw-bold text-primary-dynamic mb-0 text-uppercase" style={{ letterSpacing: '1px' }}>TIẾN ĐỘ TUẦN NÀY</h4>
+                <h4 className="fw-bold text-primary-dynamic mb-0 text-uppercase" style={{ letterSpacing: '1px' }}>{t('daily.week_progress')}</h4>
                 <div className="px-3 py-1 rounded-pill border-surface text-secondary fw-bold" style={{ fontSize: '0.85rem' }}>
-                  TRẠNG THÁI: {hasCheckedInToday ? <span className="text-success">ĐÃ ĐIỂM DANH</span> : <span className="text-warning">CHƯA ĐIỂM DANH</span>}
+                  {t('daily.status')} {hasCheckedInToday ? <span className="text-success">{t('daily.checked_in')}</span> : <span className="text-warning">{t('daily.not_checked_in')}</span>}
                 </div>
               </div>
 
@@ -224,7 +198,7 @@ export default function Daily() {
                         </div>
                       </div>
                       <div className={`mt-3 fw-bold ${isCurrentDay ? 'text-primary-dynamic' : 'text-secondary'}`} style={{ fontSize: '0.85rem', textTransform: 'uppercase' }}>
-                         {reward.label}
+                         {t('daily.day')} {reward.day}
                       </div>
                       <div className="fw-bold" style={{ color: isClaimed ? 'var(--brand-neon)' : 'var(--bs-secondary-color)', fontSize: '0.8rem' }}>
                         +{reward.points} EXP
@@ -239,7 +213,7 @@ export default function Daily() {
                 disabled={hasCheckedInToday}
                 className="gym-btn w-100 py-3 mt-auto"
               >
-                {hasCheckedInToday ? 'ĐÃ HOÀN THÀNH ĐIỂM DANH HÔM NAY' : 'BẤM ĐỂ ĐIỂM DANH & NHẬN THƯỞNG'}
+                {hasCheckedInToday ? t('daily.completed_checkin') : t('daily.click_checkin')}
               </button>
             </div>
           </Col>
@@ -247,7 +221,7 @@ export default function Daily() {
 
         {/* Nhiệm vụ thực tế */}
         <div style={{ opacity: animateIn ? 1 : 0, transform: animateIn ? 'translateY(0)' : 'translateY(40px)', transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s' }}>
-          <h4 className="fw-bold text-primary-dynamic mb-4 text-uppercase" style={{ letterSpacing: '1px' }}>THỬ THÁCH TẬP LUYỆN HÔM NAY</h4>
+          <h4 className="fw-bold text-primary-dynamic mb-4 text-uppercase" style={{ letterSpacing: '1px' }}>{t('daily.challenges')}</h4>
           
           <div className="d-flex flex-column gap-3">
             {todayMissions.map((mission, idx) => {
@@ -266,8 +240,8 @@ export default function Daily() {
                       </div>
 
                       <div>
-                        <div className="fw-bold text-primary-dynamic mb-1" style={{ fontSize: '1.1rem' }}>{mission.title}</div>
-                        <div className="fw-bold" style={{ color: 'var(--brand-neon)', fontSize: '0.9rem' }}>Phần thưởng: {mission.points} EXP</div>
+                        <div className="fw-bold text-primary-dynamic mb-1" style={{ fontSize: '1.1rem' }}>{t(`exercises.${mission.id}`, mission.title)}</div>
+                        <div className="fw-bold" style={{ color: 'var(--brand-neon)', fontSize: '0.9rem' }}>{t('daily.reward')}: {mission.points} EXP</div>
                       </div>
                     </div>
 
@@ -277,18 +251,18 @@ export default function Daily() {
                           className="gym-action-btn"
                           onClick={() => navigate(`/exercises/${mission.group}`)}
                         >
-                          TẬP NGAY
+                          {t('daily.workout_now')}
                         </button>
                       ) : !isClaimed ? (
                         <button 
                           className="gym-action-btn claim"
                           onClick={() => handleClaimMission(mission)}
                         >
-                          NHẬN THƯỞNG
+                          {t('daily.claim_reward')}
                         </button>
                       ) : (
                         <div className="fw-black text-success px-3 py-2 border border-success rounded-pill" style={{ fontSize: '0.85rem' }}>
-                          ✓ ĐÃ NHẬN
+                          {t('daily.claimed')}
                         </div>
                       )}
                     </div>
@@ -310,12 +284,12 @@ export default function Daily() {
           <div className="d-flex justify-content-center mb-4">
             <div className="success-circle">✓</div>
           </div>
-          <h3 className="fw-black text-primary-dynamic mb-2 text-uppercase">ĐIỂM DANH THÀNH CÔNG</h3>
+          <h3 className="fw-black text-primary-dynamic mb-2 text-uppercase">{t('daily.success_title')}</h3>
           <div className="fw-black mb-4" style={{ color: 'var(--brand-neon)', fontSize: '2.5rem' }}>
             +{CHECKIN_REWARDS[Math.max(0, dailyData.checkinStreak - 1) % 7].points} EXP
           </div>
           <button className="gym-btn w-100 py-3" onClick={() => setShowCheckinModal(false)}>
-            TUYỆT VỜI
+            {t('daily.awesome')}
           </button>
         </Modal.Body>
       </Modal>

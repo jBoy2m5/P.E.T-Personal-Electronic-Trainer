@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Card, Row, Col, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // Dữ liệu mock mapping để lấy thông tin bài tập từ exercise_id
 const exerciseMockDB = {
@@ -25,6 +26,7 @@ const exerciseMockDB = {
 
 export default function CalorieTracker() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [burnedCalories, setBurnedCalories] = useState(0);
     const [todaySessions, setTodaySessions] = useState([]);
     const [todayDetails, setTodayDetails] = useState([]);
@@ -68,7 +70,7 @@ export default function CalorieTracker() {
                     >
                         <span className="fs-5">←</span>
                     </button>
-                    <h2 className="fw-bold text-primary-dynamic mb-0" style={{ letterSpacing: '1px' }}>QUẢN LÝ CALO</h2>
+                    <h2 className="fw-bold text-primary-dynamic mb-0" style={{ letterSpacing: '1px' }}>{t('calorie_tracker.title')}</h2>
                 </div>
 
                 <Row className="g-4 mb-5">
@@ -76,7 +78,7 @@ export default function CalorieTracker() {
                     <Col lg={5}>
                         <Card className="bg-surface-card-gradient border-surface p-4 text-center h-100 d-flex flex-column justify-content-center" style={{ borderRadius: '32px' }}>
 
-                            <h5 className="text-muted fw-bold mb-4" style={{ letterSpacing: '1px' }}>HÔM NAY</h5>
+                            <h5 className="text-muted fw-bold mb-4" style={{ letterSpacing: '1px' }}>{t('calorie_tracker.today')}</h5>
 
                             <div className="position-relative d-inline-block mx-auto mb-4" style={{ width: '220px', height: '220px' }}>
                                 <svg viewBox="0 0 100 100" className="w-100 h-100" style={{ filter: 'drop-shadow(0 0 10px rgba(204,255,0,0.3))' }}>
@@ -97,7 +99,7 @@ export default function CalorieTracker() {
                                 </svg>
                                 <div className="position-absolute top-50 start-50 translate-middle w-100">
                                     <div className="fw-bold text-primary-dynamic" style={{ fontSize: '3rem', lineHeight: '1' }}>{burnedCalories}</div>
-                                    <div className="text-neon fw-bold mt-1" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>KCAL ĐỐT</div>
+                                    <div className="text-neon fw-bold mt-1" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>{t('calorie_tracker.kcal_burned')}</div>
                                 </div>
                             </div>
                         </Card>
@@ -106,29 +108,29 @@ export default function CalorieTracker() {
                     {/* Chi Tiết Tập Luyện */}
                     <Col lg={7}>
                         <Card className="bg-surface-card border-surface p-4 h-100" style={{ borderRadius: '32px' }}>
-                            <h5 className="text-primary-dynamic fw-bold mb-4" style={{ fontSize: '1.1rem' }}>CHI TIẾT TIÊU HAO</h5>
+                            <h5 className="text-primary-dynamic fw-bold mb-4" style={{ fontSize: '1.1rem' }}>{t('calorie_tracker.details')}</h5>
 
                             {todayDetails.length === 0 ? (
                                 <div className="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
                                     <div className="fs-1 mb-2">😴</div>
-                                    <p className="mb-0">Chưa có dữ liệu bài tập hôm nay.</p>
-                                    <p className="small">Hãy bắt đầu tập luyện để AI ghi nhận!</p>
+                                    <p className="mb-0">{t('calorie_tracker.no_data')}</p>
+                                    <p className="small">{t('calorie_tracker.start_workout')}</p>
                                 </div>
                             ) : (
                                 <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '10px' }} className="custom-scroll">
                                     {todayDetails.map((detail, index) => {
                                         // Tìm session tương ứng để lấy calo của bài đó
                                         const parentSession = todaySessions.find(s => s.session_id === detail.session_id);
-                                        const exData = exerciseMockDB[detail.exercise_id] || { name: 'Bài tập ẩn danh', img: '' };
+                                        const exData = exerciseMockDB[detail.exercise_id] || { name: t('calorie_tracker.anonymous_exercise'), img: '' };
                                         
                                         // Thời gian tập (mô phỏng từ start/end time của session)
-                                        let durationStr = "1 phút";
+                                        let durationStr = `1 ${t('calorie_tracker.mins')}`;
                                         if (parentSession && parentSession.start_time && parentSession.end_time) {
                                             const start = new Date(parentSession.start_time);
                                             const end = new Date(parentSession.end_time);
                                             const diffMs = end - start;
                                             const diffMins = Math.max(1, Math.round(diffMs / 60000));
-                                            durationStr = `${diffMins} phút`;
+                                            durationStr = `${diffMins} ${t('calorie_tracker.mins')}`;
                                         }
 
                                         return (
