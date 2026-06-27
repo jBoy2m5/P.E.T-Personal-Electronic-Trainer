@@ -1,0 +1,11 @@
+# Bỏ qua môi trường ảo (Virtual Environments)
+myenv/
+venv/
+env/
+
+# Bỏ qua bộ nhớ đệm của Python (Python Cache)
+__pycache__/
+*.pyc
+
+# Bỏ qua cấu hình editor
+.vscode/
