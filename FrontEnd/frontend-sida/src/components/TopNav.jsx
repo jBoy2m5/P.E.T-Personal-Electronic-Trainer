@@ -22,16 +22,49 @@ export default function TopNav() {
   const [showNotif, setShowNotif] = useState(false);
   const [unclaimedTasks, setUnclaimedTasks] = useState(0);
   const [userData, setUserData] = useState(() => {
-    const data = localStorage.getItem('user-data');
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem('user-data');
+      if (data && data !== "null" && data !== "undefined") {
+        const parsed = JSON.parse(data);
+        if (parsed && typeof parsed === 'object' && parsed.email) {
+          return parsed;
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('user-data'));
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      const data = localStorage.getItem('user-data');
+      if (data && data !== "null" && data !== "undefined") {
+        const parsed = JSON.parse(data);
+        return !!(parsed && typeof parsed === 'object' && parsed.email);
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     const handleStorageChange = () => {
-      const data = localStorage.getItem('user-data');
-      setUserData(data ? JSON.parse(data) : null);
-      setIsAuthenticated(!!data);
+      try {
+        const data = localStorage.getItem('user-data');
+        let parsed = null;
+        if (data && data !== "null" && data !== "undefined") {
+          const parsedData = JSON.parse(data);
+          if (parsedData && typeof parsedData === 'object' && parsedData.email) {
+            parsed = parsedData;
+          }
+        }
+        setUserData(parsed);
+        setIsAuthenticated(!!parsed);
+      } catch {
+        setUserData(null);
+        setIsAuthenticated(false);
+      }
     };
     window.addEventListener('storage', handleStorageChange);
     const interval = setInterval(handleStorageChange, 1000); // Check every second to respond inside the same tab
@@ -209,7 +242,7 @@ export default function TopNav() {
                         className="d-flex align-items-center py-2 text-danger"
                         onClick={() => {
                           localStorage.removeItem('user-data');
-                          window.location.href = '/login'; 
+                          window.location.href = '/'; 
                         }}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="me-2" viewBox="0 0 16 16">

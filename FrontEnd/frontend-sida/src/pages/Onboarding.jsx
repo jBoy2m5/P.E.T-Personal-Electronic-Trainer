@@ -9,6 +9,7 @@ export default function Onboarding() {
   // State lưu trữ dữ liệu
   const [step, setStep] = useState(1);
   const totalSteps = 6;
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [formData, setFormData] = useState({
     gender: '',
@@ -38,19 +39,30 @@ export default function Onboarding() {
 
   const handleSubmit = async () => {
     try {
+      setIsGenerating(true);
       // Gọi API gửi dữ liệu Onboarding lên backend
       const res = await axiosClient.put('/users/onboarding', formData);
       
       if (res.status === 'success') {
         // Cập nhật lại thông tin user trong localStorage
         localStorage.setItem('user-data', JSON.stringify(res.user));
-        navigate('/');
+        
+        // Gọi API Gemini AI tạo lộ trình 28 ngày
+        const aiRes = await axiosClient.post('/roadmaps/generate');
+        if (aiRes.status === 'success') {
+           navigate('/roadmap');
+        } else {
+           alert("Có lỗi khi tạo lộ trình: " + (aiRes.message || 'Lỗi AI'));
+           setIsGenerating(false);
+        }
       } else {
         alert("Có lỗi xảy ra: " + (res.message || 'Không xác định'));
+        setIsGenerating(false);
       }
     } catch (error) {
       console.error("Lỗi cập nhật onboarding:", error);
       alert("Cập nhật thất bại. Vui lòng thử lại.");
+      setIsGenerating(false);
     }
   };
 
@@ -134,6 +146,14 @@ export default function Onboarding() {
 
   return (
     <Container fluid className="p-0 bg-black min-vh-100 d-flex align-items-center">
+      {isGenerating && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center" style={{ backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 9999 }}>
+           <div className="spinner-border text-neon mb-4" style={{ width: '4rem', height: '4rem' }} role="status"></div>
+           <h3 className="text-neon fw-bold mb-2 animate-fade-in" style={{ letterSpacing: '2px' }}>P.E.T ĐANG PHÂN TÍCH...</h3>
+           <p className="text-light fw-bold">Thiết lập lộ trình 28 ngày dành riêng cho bạn!</p>
+        </div>
+      )}
+
       <style type="text/css">
         {`
           .bg-success { background-color: #ccff00 !important; }

@@ -61,6 +61,11 @@ public class AuthController {
                     userRepository.save(user);
                     needsOnboarding = true;
                 } else {
+                    // Update name and picture in case they changed or were null
+                    user.setName(name);
+                    user.setPictureUrl(pictureUrl);
+                    userRepository.save(user);
+
                     if (user.getHeight() == null || user.getWeight() == null || user.getFitnessGoal() == null) {
                         needsOnboarding = true;
                     }

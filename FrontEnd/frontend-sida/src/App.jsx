@@ -19,24 +19,23 @@ const DailyWorkout = lazy(() => import('./pages/DailyWorkout'));
 function Layout() {
   const location = useLocation();
   const userDataString = localStorage.getItem('user-data');
-  const userData = userDataString ? JSON.parse(userDataString) : null;
+  let userData = null;
+  try {
+    if (userDataString && userDataString !== "null" && userDataString !== "undefined") {
+      const parsed = JSON.parse(userDataString);
+      if (parsed && typeof parsed === 'object' && parsed.email) {
+        userData = parsed;
+      }
+    }
+  } catch (e) {
+    userData = null;
+  }
   const isAuthenticated = !!userData;
   
   // Check if user still needs onboarding
   const needsOnboarding = isAuthenticated && (!userData.height || !userData.weight);
 
-  // Điều hướng nếu chưa đăng nhập
-  if (!isAuthenticated && location.pathname !== '/login' && location.pathname !== '/') {
-    // Note: Cho phép truy cập '/' nếu muốn trang chủ là public, hoặc chặn hết. 
-    // Theo yêu cầu trước: chưa đăng nhập thì chỉ được vào trang chủ. 
-    // Nhưng yêu cầu mới nhất: "Kiểm tra cờ needsOnboarding: Nếu true, ép chuyển hướng sang trang /onboarding và chặn không cho vào trang chủ. Nếu false, đẩy thẳng vào trang chủ."
-    // Vậy trang chủ YÊU CẦU đăng nhập hay KHÔNG?
-    // User nói: "Nếu false, đẩy thẳng vào trang chủ." ngụ ý trang chủ là trang sau khi login. 
-    // Tôi sẽ bắt buộc đăng nhập để vào các trang tính năng.
-    // Dựa theo code cũ: `location.pathname !== '/'` -> trang chủ là public.
-    // Tôi sẽ giữ nguyên logic: trang chủ là public, các trang khác cần login.
-  }
-
+  // Cho phép người dùng chưa đăng nhập xem trang chủ (/), còn các trang khác bắt buộc phải đăng nhập
   if (!isAuthenticated && location.pathname !== '/' && location.pathname !== '/login') {
     return <Navigate to="/login" replace />;
   }
