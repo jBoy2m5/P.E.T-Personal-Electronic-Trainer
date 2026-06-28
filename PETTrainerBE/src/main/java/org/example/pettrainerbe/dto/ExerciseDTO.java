@@ -11,4 +11,9 @@ public class ExerciseDTO {
     private String mediaUrl;
     private String standardAngles;
     private Float estimatedCaloriesPerRep;
+    private Integer reps;
+    private Integer sets;
+    private Integer level;
+    private String videoUrl;
+    private Float kcal;
 }

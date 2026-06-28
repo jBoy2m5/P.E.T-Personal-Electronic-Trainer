@@ -25,6 +25,10 @@ public class Exercise {
     private String mediaUrl;
     private String standardAngles;
     private Float estimatedCaloriesPerRep;
+    private Integer reps;
+    private Integer sets;
+    private Integer level;
+    private String videoUrl;
 
     @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("exercise") // Chặn vòng lặp với WorkoutDetail

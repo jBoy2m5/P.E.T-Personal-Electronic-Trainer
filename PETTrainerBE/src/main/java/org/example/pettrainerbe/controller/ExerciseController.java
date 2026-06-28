@@ -47,6 +47,10 @@ public class ExerciseController {
                     exercise.setMediaUrl(exerciseDetails.getMediaUrl());
                     exercise.setStandardAngles(exerciseDetails.getStandardAngles());
                     exercise.setEstimatedCaloriesPerRep(exerciseDetails.getEstimatedCaloriesPerRep());
+                    exercise.setReps(exerciseDetails.getReps());
+                    exercise.setSets(exerciseDetails.getSets());
+                    exercise.setLevel(exerciseDetails.getLevel());
+                    exercise.setVideoUrl(exerciseDetails.getVideoUrl());
                     if (exerciseDetails.getMuscleGroup() != null) {
                         exercise.setMuscleGroup(exerciseDetails.getMuscleGroup());
                     }
@@ -73,6 +77,16 @@ public class ExerciseController {
         dto.setMediaUrl(exercise.getMediaUrl());
         dto.setStandardAngles(exercise.getStandardAngles());
         dto.setEstimatedCaloriesPerRep(exercise.getEstimatedCaloriesPerRep());
+        dto.setReps(exercise.getReps());
+        dto.setSets(exercise.getSets());
+        dto.setLevel(exercise.getLevel());
+        dto.setVideoUrl(exercise.getVideoUrl());
+        Float kcal =
+                exercise.getEstimatedCaloriesPerRep()
+                        * exercise.getReps()
+                        * exercise.getSets();
+
+        dto.setKcal(kcal);
         return dto;
     }
 }
