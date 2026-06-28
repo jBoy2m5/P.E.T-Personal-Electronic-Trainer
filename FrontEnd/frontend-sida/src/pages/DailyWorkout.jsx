@@ -26,7 +26,7 @@ const markDayAsTrained = (exerciseTitle) => {
 
     scheduleData[key] = existing;
     localStorage.setItem('pet-schedule', JSON.stringify(scheduleData));
-    
+
     window.dispatchEvent(new Event('storage'));
 };
 
@@ -79,7 +79,7 @@ export default function DailyWorkout() {
 
         const randomInRange = (min, max) => Math.random() * (max - min) + min;
 
-        const interval = setInterval(function() {
+        const interval = setInterval(function () {
             const timeLeft = animationEnd - Date.now();
 
             if (timeLeft <= 0) {
@@ -136,13 +136,15 @@ export default function DailyWorkout() {
         const translatedGroup = t(`roadmap_data.${mgKey}`, dayInfo.muscleGroup);
         const translatedGoal = t(`daily_workout.${goalTranslations[goal] || 'goal_muscle'}`, goal);
 
-        // Mock exercises for this day
-        const mockExercises = [
-            { exercise_id: 101, name: 'Hít đất cơ bản (Standard Push-up)', reps: '15', sets: '3', kcal: 45, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Giúp săn chắc toàn bộ cơ ngực, vai và tay sau.', safety_notes: 'Không võng lưng', estimated_calories_per_rep: 1.0 },
-            { exercise_id: 501, name: 'Gập bụng (Crunches)', reps: '20', sets: '3', kcal: 50, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: 'Giúp săn chắc cơ bụng thẳng.', safety_notes: '', estimated_calories_per_rep: 0.8 },
-            { exercise_id: 601, name: 'Squat cơ bản', reps: '15', sets: '4', kcal: 70, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', technical_description: 'Bài tập Vua cho thân dưới, phát triển đùi trước, đùi sau và mông.', safety_notes: '', estimated_calories_per_rep: 1.2 },
-            { exercise_id: 201, name: 'Hít xà đơn (Pull-up)', reps: '8', sets: '3', kcal: 60, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Bài tập kinh điển phát triển cơ xô, cơ lưng giữa và bắp tay trước.', safety_notes: '', estimated_calories_per_rep: 2.0 },
-        ];
+        let dailyExercises = dayInfo.exercises || [];
+
+        // Fallback just in case roadmap hasn't regenerated yet
+        if (dailyExercises.length === 0 && !dayInfo.isRestDay) {
+            dailyExercises = [
+                { exercise_id: 101, name: 'Hít đất cơ bản', reps: '15', sets: '3', kcal: 45, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Giúp săn chắc toàn bộ cơ ngực, vai và tay sau.', safety_notes: 'Không võng lưng', estimated_calories_per_rep: 1.0 },
+                { exercise_id: 501, name: 'Gập bụng (Crunches)', reps: '20', sets: '3', kcal: 50, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: 'Giúp săn chắc cơ bụng thẳng.', safety_notes: '', estimated_calories_per_rep: 0.8 },
+            ];
+        }
 
         setDailyData({
             ...dayInfo,
@@ -150,7 +152,7 @@ export default function DailyWorkout() {
             translatedGoal: translatedGoal,
             translatedGroup: translatedGroup,
             benefits: t('daily_workout.benefits_default', { group: translatedGroup.toLowerCase() }),
-            exercises: mockExercises,
+            exercises: dailyExercises,
             difficulty: dayInfo.muscleGroup === 'Full Body' ? 4 : 3
         });
     }, [dayId, t]);
@@ -167,7 +169,7 @@ export default function DailyWorkout() {
     const handleStartFromDetail = (useAI) => {
         if (!selectedDetail) return;
         setCurrentExercise(selectedDetail);
-        
+
         let reps = customTarget;
         let sets = customSets;
 
@@ -178,11 +180,11 @@ export default function DailyWorkout() {
             setTargetReps(customTarget);
             setTargetSets(sets);
         }
-        
+
         setSimReps(0);
         setSimSets(1);
         setShowDetailModal(false);
-        
+
         if (useAI) {
             setAiStatus(t('exercise_list.ai_starting', 'Đang khởi động Camera AI...'));
             setShowAIModal(true);
@@ -225,7 +227,7 @@ export default function DailyWorkout() {
         markDayAsTrained(currentExercise.name);
         setCompletedExercises(prev => [...prev, currentExercise.name]);
         setShowManualModal(false);
-        
+
         const kcal = Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets) || 25;
         const result = addExp(kcal, currentExercise.name);
 
@@ -257,7 +259,7 @@ export default function DailyWorkout() {
                                 if (newSets > targetSets) {
                                     clearInterval(timer);
                                     setAiStatus(t('exercise_list.ai_done', 'Hoàn thành xuất sắc! Đang lưu dữ liệu...'));
-                                    
+
                                     const sessionId = Math.floor(Math.random() * 1000000);
                                     const sessionData = {
                                         session_id: sessionId, user_id: 1,
@@ -323,10 +325,10 @@ export default function DailyWorkout() {
                 <div className="position-absolute" style={{ top: '-20px', left: '10px', fontSize: '6rem', color: 'rgba(var(--brand-neon-rgb), 0.1)', lineHeight: 1, fontFamily: 'serif' }}>"</div>
                 <h5 className="fw-bold text-white fst-italic position-relative z-1 mb-2 px-md-4" style={{ lineHeight: 1.6 }}>
                     {dayId % 5 === 1 ? t('daily_workout.quote_1') :
-                     dayId % 5 === 2 ? t('daily_workout.quote_2') :
-                     dayId % 5 === 3 ? t('daily_workout.quote_3') :
-                     dayId % 5 === 4 ? t('daily_workout.quote_4') :
-                     t('daily_workout.quote_5')}
+                        dayId % 5 === 2 ? t('daily_workout.quote_2') :
+                            dayId % 5 === 3 ? t('daily_workout.quote_3') :
+                                dayId % 5 === 4 ? t('daily_workout.quote_4') :
+                                    t('daily_workout.quote_5')}
                 </h5>
                 <div className="text-secondary fw-bold small text-uppercase" style={{ letterSpacing: '2px' }}>{t('daily_workout.pet_system')}</div>
             </div>
@@ -334,7 +336,7 @@ export default function DailyWorkout() {
             {/* Daily Overview Header */}
             <div className="bg-surface-card border-surface rounded-4 p-4 p-md-5 mb-5 position-relative overflow-hidden shadow-lg">
                 <div className="position-absolute rounded-circle" style={{ width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.1) 0%, transparent 70%)', top: '-100px', right: '-100px', filter: 'blur(40px)' }}></div>
-                
+
                 <Row className="position-relative z-1">
                     <Col lg={7}>
                         <Badge bg="dark" className="text-neon border border-secondary mb-3 px-3 py-2 rounded-pill fs-6 text-uppercase">
@@ -344,7 +346,7 @@ export default function DailyWorkout() {
                             {dailyData.translatedGroup}
                         </h1>
                         <p className="text-secondary fw-bold fs-5 mb-4">{t('daily_workout.your_goal')} <span className="text-white">{dailyData.translatedGoal}</span></p>
-                        
+
                         <div className="d-flex flex-wrap gap-4 mb-4">
                             <div>
                                 <div className="text-muted text-uppercase fw-bold small mb-1">{t('daily_workout.duration')}</div>
@@ -374,7 +376,7 @@ export default function DailyWorkout() {
             </div>
 
             <h3 className="fw-black text-primary-dynamic mb-4 text-uppercase">{t('daily_workout.exercise_list')}</h3>
-            
+
             {/* Vertical List View */}
             <div className="d-flex flex-column gap-3 pb-4">
                 {dailyData.exercises.map((ex) => {
@@ -433,7 +435,7 @@ export default function DailyWorkout() {
                                     <h3 className="fw-black text-primary-dynamic mb-1">{t(`exercises.${selectedDetail.exercise_id}`, selectedDetail.name)}</h3>
                                 </div>
                             </div>
-                            
+
                             <Row className="mb-4">
                                 <Col md={6} className="mb-4 mb-md-0">
                                     <div className="mb-4">
@@ -452,7 +454,7 @@ export default function DailyWorkout() {
                                 <Col md={6}>
                                     <div className="bg-surface-main p-4 rounded-4 border-surface h-100 d-flex flex-column">
                                         <h6 className="fw-black text-primary-dynamic mb-3 text-uppercase text-center">{t('exercise_list.customize_workout')}</h6>
-                                        
+
                                         <div className="d-flex gap-2 mb-4">
                                             <Button variant={workoutMode === 'reps' ? 'success' : 'outline-secondary'} className={`flex-grow-1 fw-bold rounded-pill ${workoutMode === 'reps' ? 'border-0' : ''}`} style={workoutMode === 'reps' ? { background: 'var(--brand-neon)', color: '#000' } : {}} onClick={() => { setWorkoutMode('reps'); setCustomTarget(parseInt(selectedDetail.reps)); }}>{t('exercise_list.by_reps')}</Button>
                                             <Button variant={workoutMode === 'time' ? 'success' : 'outline-secondary'} className={`flex-grow-1 fw-bold rounded-pill ${workoutMode === 'time' ? 'border-0' : ''}`} style={workoutMode === 'time' ? { background: 'var(--brand-neon)', color: '#000' } : {}} onClick={() => { setWorkoutMode('time'); setCustomTarget(60); }}>{t('exercise_list.time')}</Button>
@@ -483,14 +485,14 @@ export default function DailyWorkout() {
 
                             {/* Đồng bộ 2 nút tập */}
                             <div className="d-flex gap-3 mt-4">
-                                <Button 
+                                <Button
                                     className="flex-fill py-3 fw-black rounded-pill border-0"
                                     style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
                                     onClick={() => handleStartFromDetail(true)}
                                 >
                                     {t('exercise_list.ai_workout')}
                                 </Button>
-                                <Button 
+                                <Button
                                     className="flex-fill py-3 fw-black rounded-pill border-2 bg-transparent"
                                     style={{ borderColor: 'var(--brand-neon)', color: 'var(--brand-neon)', fontSize: '1rem' }}
                                     onClick={() => handleStartFromDetail(false)}
@@ -551,7 +553,7 @@ export default function DailyWorkout() {
                     <div className="mb-4"><Badge bg="success" className="fs-6 px-3 py-2 rounded-pill">SET {manualCurrentSet} / {targetSets}</Badge></div>
 
                     <p className="text-secondary fw-bold mb-4" style={{ fontSize: '0.95rem' }}>
-                        {workoutMode === 'reps' ? `${t('exercise_list.target')} ${targetReps} Reps.` : `${t('exercise_list.target')} ${targetReps} ${t('exercise_list.secs')}.`}<br/>
+                        {workoutMode === 'reps' ? `${t('exercise_list.target')} ${targetReps} Reps.` : `${t('exercise_list.target')} ${targetReps} ${t('exercise_list.secs')}.`}<br />
                         {!manualIsResting ? <span className="text-primary-dynamic">{workoutMode === 'reps' ? t('exercise_list.pace_msg') : t('exercise_list.time_msg')}</span> : <span className="text-success">{t('exercise_list.set_completed')}</span>}
                     </p>
 
@@ -596,13 +598,13 @@ export default function DailyWorkout() {
                     <div className="bg-surface-card rounded-5 p-5 position-relative overflow-hidden shadow-lg" style={{ border: '2px solid var(--brand-neon)' }}>
                         {/* Glow background */}
                         <div className="position-absolute top-50 start-50 translate-middle rounded-circle" style={{ width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.3) 0%, transparent 70%)', filter: 'blur(30px)', zIndex: 0 }}></div>
-                        
+
                         <div className="position-relative z-1">
                             <h2 className="fw-black text-white text-uppercase mb-1" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{t('daily_workout.awesome')}</h2>
                             <p className="text-neon fw-bold mb-4">{t('daily_workout.completed_msg')}</p>
-                            
+
                             <h4 className="fw-bold text-white mb-4 bg-dark py-2 px-3 rounded-pill d-inline-block border border-secondary">{summaryData && t(`exercises.${summaryData.exerciseId}`, summaryData.exerciseName)}</h4>
-                            
+
                             <Row className="g-3 mb-4">
                                 <Col xs={6}>
                                     <div className="bg-body rounded-4 p-3 border-surface">
@@ -617,17 +619,17 @@ export default function DailyWorkout() {
                                     </div>
                                 </Col>
                             </Row>
-                            
+
                             <div className="mt-4 pt-3 border-top border-secondary">
-                                        {summaryData?.isCapped ? (
-                                            <div className="alert alert-warning mb-3 fw-bold small text-dark py-2">
-                                                {t('daily_workout.exp_limit_warning')}
-                                            </div>
-                                        ) : (
-                                            <p className="text-white opacity-75 small fw-bold mb-3">{t('daily_workout.exp_received')}</p>
-                                        )}
-                                <Button 
-                                    className="w-100 py-3 fw-black rounded-pill border-0" 
+                                {summaryData?.isCapped ? (
+                                    <div className="alert alert-warning mb-3 fw-bold small text-dark py-2">
+                                        {t('daily_workout.exp_limit_warning')}
+                                    </div>
+                                ) : (
+                                    <p className="text-white opacity-75 small fw-bold mb-3">{t('daily_workout.exp_received')}</p>
+                                )}
+                                <Button
+                                    className="w-100 py-3 fw-black rounded-pill border-0"
                                     style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.4)' }}
                                     onClick={() => setShowSummaryModal(false)}
                                 >

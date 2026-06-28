@@ -15,6 +15,7 @@ const PetProfile = lazy(() => import('./pages/PetProfile'));
 const CalorieTracker = lazy(() => import('./pages/CalorieTracker'));
 const Roadmap = lazy(() => import('./pages/Roadmap'));
 const DailyWorkout = lazy(() => import('./pages/DailyWorkout'));
+const UserProfile = lazy(() => import('./pages/UserProfile'));
 
 function Layout() {
   const location = useLocation();
@@ -66,6 +67,7 @@ function Layout() {
             <Route path="/daily" element={<Daily />} />
             <Route path="/daily-workout/:dayId" element={<DailyWorkout />} />
             <Route path="/pet" element={<PetProfile />} />
+            <Route path="/profile" element={<UserProfile />} />
             <Route path="/calories" element={<CalorieTracker />} />
             <Route path="/roadmap" element={<Roadmap />} />
           </Routes>

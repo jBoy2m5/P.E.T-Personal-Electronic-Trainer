@@ -10,14 +10,7 @@ import petChatbot from '../assets/pet_chatbot.png';
 export default function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [userData, setUserData] = useState({
-    user_id: 1,
-    email: 'user@example.com',
-    height: 175,
-    weight: 72,
-    bmi: 23.5,
-    fitness_goal: 'Tăng cơ nạc'
-  });
+  const [userData, setUserData] = useState(null);
 
   const [showInfoModal, setShowInfoModal] = useState(false);
 
@@ -25,20 +18,9 @@ export default function Home() {
 
   useEffect(() => {
     // 1. Load User Data
-    let currentUserData = {
-      user_id: 1,
-      email: 'user@example.com',
-      height: 175,
-      weight: 72,
-      bmi: 23.5,
-      fitness_goal: 'Tăng cơ nạc'
-    };
     const saved = localStorage.getItem('user-data');
     if (saved) {
-      currentUserData = JSON.parse(saved);
-      setUserData(currentUserData);
-    } else {
-      localStorage.setItem('user-data', JSON.stringify(currentUserData));
+      setUserData(JSON.parse(saved));
     }
 
     // 3. Load Calories

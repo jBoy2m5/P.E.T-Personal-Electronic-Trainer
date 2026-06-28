@@ -186,7 +186,6 @@ export default function Onboarding() {
                 <Row className="g-3">
                   <Col xs={12}><OptionCard field="gender" value="Nam" label="Nam" /></Col>
                   <Col xs={12}><OptionCard field="gender" value="Nữ" label="Nữ" /></Col>
-                  <Col xs={12}><OptionCard field="gender" value="Khác" label="Khác" /></Col>
                 </Row>
                 <StepNavigation showNext={true} disableNext={!formData.gender} />
               </div>

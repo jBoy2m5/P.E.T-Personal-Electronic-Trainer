@@ -311,5 +311,24 @@
     "save_note": "✓ Lưu ghi chú",
     "tooltip_trained": "💪 Đã tập",
     "tooltip_exercises": "({{count}} bài)"
+  },
+  "profile": {
+    "title": "Hồ Sơ Của Bạn",
+    "back": "QUAY LẠI",
+    "kcal_burned": "KCAL ĐÃ ĐỐT",
+    "workouts_done": "BUỔI TẬP",
+    "streak": "CHUỖI NGÀY",
+    "body_metrics": "Chỉ Số Cơ Thể",
+    "update": "CẬP NHẬT",
+    "height": "Chiều cao",
+    "weight": "Cân nặng",
+    "workout_plan": "Kế Hoạch Tập Luyện",
+    "goal": "Mục tiêu",
+    "frequency": "Tần suất",
+    "level": "Kinh nghiệm",
+    "underweight": "Thiếu cân",
+    "normal": "Bình thường",
+    "overweight": "Thừa cân",
+    "obese": "Béo phì"
   }
 }

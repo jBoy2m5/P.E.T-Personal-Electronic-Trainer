@@ -311,5 +311,24 @@
     "save_note": "✓ Save note",
     "tooltip_trained": "💪 Trained",
     "tooltip_exercises": "({{count}} exercises)"
+  },
+  "profile": {
+    "title": "Your Profile",
+    "back": "BACK",
+    "kcal_burned": "KCAL BURNED",
+    "workouts_done": "WORKOUTS",
+    "streak": "STREAK",
+    "body_metrics": "Body Metrics",
+    "update": "UPDATE",
+    "height": "Height",
+    "weight": "Weight",
+    "workout_plan": "Workout Plan",
+    "goal": "Goal",
+    "frequency": "Frequency",
+    "level": "Experience Level",
+    "underweight": "Underweight",
+    "normal": "Normal",
+    "overweight": "Overweight",
+    "obese": "Obese"
   }
 }
