@@ -21,6 +21,19 @@ export default function TopNav() {
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
   const [unclaimedTasks, setUnclaimedTasks] = useState(0);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('jwt-token'));
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setIsAuthenticated(!!localStorage.getItem('jwt-token'));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(handleStorageChange, 1000); // Check every second to respond inside the same tab
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
@@ -119,58 +132,77 @@ export default function TopNav() {
                 <div className={`nav-divider d-none d-lg-block mx-2 ${!isDark && 'bg-secondary'}`}></div>
 
                 {/* Notification Bell */}
-                <div className="position-relative d-flex align-items-center mt-2 mt-lg-0 me-3">
+                {isAuthenticated && (
+                  <div className="position-relative d-flex align-items-center mt-2 mt-lg-0 me-3">
+                    <button 
+                      className="tool-btn position-relative" 
+                      onClick={() => {
+                        setShowNotif(!showNotif);
+                        if (!showNotif && unreadCount > 0) markAllAsRead();
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
+                      </svg>
+                      {unreadCount > 0 && (
+                        <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.6rem' }}>
+                          {unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {showNotif && (
+                      <div 
+                        className={`position-absolute top-100 end-0 mt-2 rounded-3 shadow-lg ${isDark ? 'bg-dark border-secondary' : 'bg-white border-light'}`} 
+                        style={{ width: '300px', zIndex: 1050, border: '1px solid', overflow: 'hidden' }}
+                      >
+                        <div className={`p-3 border-bottom fw-bold ${isDark ? 'text-white border-secondary' : 'text-dark border-light'}`}>
+                          {t('nav.notifications')}
+                        </div>
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                          {notifications.length === 0 ? (
+                            <div className="p-4 text-center text-muted small">{t('nav.no_notifications')}</div>
+                          ) : (
+                            notifications.map(n => (
+                              <div key={n.id} className={`p-3 border-bottom ${isDark ? 'border-secondary' : 'border-light'} hover-bg`} style={{ cursor: 'pointer' }}>
+                                <div className={`small fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>{n.message}</div>
+                                <div className="text-muted" style={{ fontSize: '0.7rem' }}>{new Date(n.time).toLocaleString()}</div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isAuthenticated ? (
                   <button 
-                    className="tool-btn position-relative" 
+                    className="btn-login bg-danger border-0 text-white" 
+                    style={{ fontSize: '0.85rem' }}
                     onClick={() => {
-                      setShowNotif(!showNotif);
-                      if (!showNotif && unreadCount > 0) markAllAsRead();
+                      localStorage.removeItem('jwt-token');
+                      window.location.href = '/';
                     }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
-                    </svg>
-                    {unreadCount > 0 && (
-                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.6rem' }}>
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {showNotif && (
-                    <div 
-                      className={`position-absolute top-100 end-0 mt-2 rounded-3 shadow-lg ${isDark ? 'bg-dark border-secondary' : 'bg-white border-light'}`} 
-                      style={{ width: '300px', zIndex: 1050, border: '1px solid', overflow: 'hidden' }}
-                    >
-                      <div className={`p-3 border-bottom fw-bold ${isDark ? 'text-white border-secondary' : 'text-dark border-light'}`}>
-                        {t('nav.notifications')}
-                      </div>
-                      <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                        {notifications.length === 0 ? (
-                          <div className="p-4 text-center text-muted small">{t('nav.no_notifications')}</div>
-                        ) : (
-                          notifications.map(n => (
-                            <div key={n.id} className={`p-3 border-bottom ${isDark ? 'border-secondary' : 'border-light'} hover-bg`} style={{ cursor: 'pointer' }}>
-                              <div className={`small fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>{n.message}</div>
-                              <div className="text-muted" style={{ fontSize: '0.7rem' }}>{new Date(n.time).toLocaleString()}</div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <Nav.Link as={Link} to="/login" className="p-0 mt-2 mt-lg-0">
-                  <button className="btn-login" style={{ fontSize: '0.85rem' }}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" className="me-2">
-                      <path fillRule="evenodd" d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 0-1 0v2A1.5 1.5 0 0 0 6.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-8A1.5 1.5 0 0 0 5 3.5v2a.5.5 0 0 0 1 0z"/>
-                      <path fillRule="evenodd" d="M11.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H1.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+                      <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+                      <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
                     </svg>
-                    {t('nav.login')}
+                    {t('nav.logout', 'ĐĂNG XUẤT')}
                   </button>
-                </Nav.Link>
+                ) : (
+                  <Nav.Link as={Link} to="/login" className="p-0 mt-2 mt-lg-0">
+                    <button className="btn-login" style={{ fontSize: '0.85rem' }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" className="me-2">
+                        <path fillRule="evenodd" d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 0-1 0v2A1.5 1.5 0 0 0 6.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-8A1.5 1.5 0 0 0 5 3.5v2a.5.5 0 0 0 1 0z"/>
+                        <path fillRule="evenodd" d="M11.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H1.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+                      </svg>
+                      {t('nav.login')}
+                    </button>
+                  </Nav.Link>
+                )}
               </Nav>
             </Navbar.Collapse>
           </>

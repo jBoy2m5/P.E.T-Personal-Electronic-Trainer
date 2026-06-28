@@ -6,7 +6,8 @@
     "missions": "NHIỆM VỤ",
     "notifications": "Thông Báo",
     "no_notifications": "Chưa có thông báo nào",
-    "login": "ĐĂNG NHẬP"
+    "login": "ĐĂNG NHẬP",
+    "logout": "ĐĂNG XUẤT"
   },
   "home": {
     "hero_subtitle": "Hôm nay tập gì?",

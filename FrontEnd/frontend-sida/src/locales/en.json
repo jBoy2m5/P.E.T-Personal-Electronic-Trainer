@@ -6,7 +6,8 @@
     "missions": "MISSIONS",
     "notifications": "Notifications",
     "no_notifications": "No new notifications",
-    "login": "LOGIN"
+    "login": "LOGIN",
+    "logout": "LOGOUT"
   },
   "home": {
     "hero_subtitle": "What's the workout today?",

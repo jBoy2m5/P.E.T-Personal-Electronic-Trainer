@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import TopNav from './components/TopNav';
 import BottomNav from './components/BottomNav';
 import FloatingPet from './components/FloatingPet';
@@ -18,6 +18,14 @@ const DailyWorkout = lazy(() => import('./pages/DailyWorkout'));
 
 function Layout() {
   const location = useLocation();
+  const token = localStorage.getItem('jwt-token');
+  const isAuthenticated = !!token;
+
+  // Điều hướng nếu chưa đăng nhập và truy cập trang khác ngoài "/" và "/login"
+  if (!isAuthenticated && location.pathname !== '/' && location.pathname !== '/login') {
+    return <Navigate to="/login" replace />;
+  }
+
   // Khai báo các đường dẫn không muốn hiển thị Navbar và Floating Pet
   const isPetPage = location.pathname === '/pet';
 

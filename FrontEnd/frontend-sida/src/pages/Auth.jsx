@@ -23,6 +23,7 @@ export default function Auth() {
     // Giả lập xử lý đăng nhập Google
     setTimeout(() => {
       setLoading(false);
+      localStorage.setItem('jwt-token', 'fake-jwt-token-123456');
       navigate('/');
     }, 1200);
   };
