@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar, Nav, Container } from 'react-bootstrap';
+import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import logo from '../assets/logo.png'; 
@@ -21,11 +21,17 @@ export default function TopNav() {
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
   const [unclaimedTasks, setUnclaimedTasks] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('jwt-token'));
+  const [userData, setUserData] = useState(() => {
+    const data = localStorage.getItem('user-data');
+    return data ? JSON.parse(data) : null;
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('user-data'));
 
   useEffect(() => {
     const handleStorageChange = () => {
-      setIsAuthenticated(!!localStorage.getItem('jwt-token'));
+      const data = localStorage.getItem('user-data');
+      setUserData(data ? JSON.parse(data) : null);
+      setIsAuthenticated(!!data);
     };
     window.addEventListener('storage', handleStorageChange);
     const interval = setInterval(handleStorageChange, 1000); // Check every second to respond inside the same tab
@@ -178,30 +184,52 @@ export default function TopNav() {
                 )}
 
                 {isAuthenticated ? (
-                  <button 
-                    className="btn-login bg-danger border-0 text-white" 
-                    style={{ fontSize: '0.85rem' }}
-                    onClick={() => {
-                      localStorage.removeItem('jwt-token');
-                      window.location.href = '/';
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" className="me-2">
-                      <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
-                      <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
-                    </svg>
-                    {t('nav.logout', 'ĐĂNG XUẤT')}
-                  </button>
+                  <Dropdown align="end" className="mt-2 mt-lg-0 ms-lg-2">
+                    <Dropdown.Toggle as="div" className="d-flex align-items-center bg-transparent border-0 p-0" style={{ cursor: 'pointer' }}>
+                      <img 
+                        src={userData?.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData?.name || 'User')}&background=random`} 
+                        alt="Profile" 
+                        className="rounded-circle border border-2 border-success" 
+                        style={{ width: '38px', height: '38px', objectFit: 'cover' }} 
+                      />
+                      <span className={`ms-2 d-none d-lg-block fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>
+                        {userData?.name || 'Người dùng'}
+                      </span>
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu className={`shadow-lg mt-2 ${isDark ? 'dropdown-menu-dark border-secondary' : 'border-light'}`} style={{ minWidth: '200px' }}>
+                      <Dropdown.Item as={Link} to="/profile" className="d-flex align-items-center py-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="me-2" viewBox="0 0 16 16">
+                          <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                        </svg>
+                        Trang cá nhân
+                      </Dropdown.Item>
+                      <Dropdown.Divider className={isDark ? 'border-secondary' : ''} />
+                      <Dropdown.Item 
+                        className="d-flex align-items-center py-2 text-danger"
+                        onClick={() => {
+                          localStorage.removeItem('user-data');
+                          window.location.href = '/login'; 
+                        }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="me-2" viewBox="0 0 16 16">
+                          <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+                          <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+                        </svg>
+                        {t('nav.logout', 'ĐĂNG XUẤT')}
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown>
                 ) : (
-                  <Nav.Link as={Link} to="/login" className="p-0 mt-2 mt-lg-0">
-                    <button className="btn-login" style={{ fontSize: '0.85rem' }}>
+                  <Link to="/login" className="text-decoration-none mt-2 mt-lg-0">
+                    <button className="btn-login p-2 px-3 rounded-3" style={{ fontSize: '0.85rem', fontWeight: '600' }}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" className="me-2">
                         <path fillRule="evenodd" d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 0-1 0v2A1.5 1.5 0 0 0 6.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-8A1.5 1.5 0 0 0 5 3.5v2a.5.5 0 0 0 1 0z"/>
                         <path fillRule="evenodd" d="M11.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H1.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
                       </svg>
                       {t('nav.login')}
                     </button>
-                  </Nav.Link>
+                  </Link>
                 )}
               </Nav>
             </Navbar.Collapse>

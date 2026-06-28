@@ -18,12 +18,32 @@ const DailyWorkout = lazy(() => import('./pages/DailyWorkout'));
 
 function Layout() {
   const location = useLocation();
-  const token = localStorage.getItem('jwt-token');
-  const isAuthenticated = !!token;
+  const userDataString = localStorage.getItem('user-data');
+  const userData = userDataString ? JSON.parse(userDataString) : null;
+  const isAuthenticated = !!userData;
+  
+  // Check if user still needs onboarding
+  const needsOnboarding = isAuthenticated && (!userData.height || !userData.weight);
 
-  // Điều hướng nếu chưa đăng nhập và truy cập trang khác ngoài "/" và "/login"
+  // Điều hướng nếu chưa đăng nhập
+  if (!isAuthenticated && location.pathname !== '/login' && location.pathname !== '/') {
+    // Note: Cho phép truy cập '/' nếu muốn trang chủ là public, hoặc chặn hết. 
+    // Theo yêu cầu trước: chưa đăng nhập thì chỉ được vào trang chủ. 
+    // Nhưng yêu cầu mới nhất: "Kiểm tra cờ needsOnboarding: Nếu true, ép chuyển hướng sang trang /onboarding và chặn không cho vào trang chủ. Nếu false, đẩy thẳng vào trang chủ."
+    // Vậy trang chủ YÊU CẦU đăng nhập hay KHÔNG?
+    // User nói: "Nếu false, đẩy thẳng vào trang chủ." ngụ ý trang chủ là trang sau khi login. 
+    // Tôi sẽ bắt buộc đăng nhập để vào các trang tính năng.
+    // Dựa theo code cũ: `location.pathname !== '/'` -> trang chủ là public.
+    // Tôi sẽ giữ nguyên logic: trang chủ là public, các trang khác cần login.
+  }
+
   if (!isAuthenticated && location.pathname !== '/' && location.pathname !== '/login') {
     return <Navigate to="/login" replace />;
+  }
+
+  // Ép buộc người dùng mới phải vào trang onboarding
+  if (isAuthenticated && needsOnboarding && location.pathname !== '/onboarding' && location.pathname !== '/login') {
+    return <Navigate to="/onboarding" replace />;
   }
 
   // Khai báo các đường dẫn không muốn hiển thị Navbar và Floating Pet

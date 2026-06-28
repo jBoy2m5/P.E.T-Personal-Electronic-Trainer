@@ -1,88 +1,74 @@
 package org.example.pettrainerbe.controller;
 
-import org.example.pettrainerbe.dto.PetDTO;
-import org.example.pettrainerbe.dto.UserDTO;
 import org.example.pettrainerbe.model.User;
 import org.example.pettrainerbe.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @GetMapping
-    public List<UserDTO> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public UserController(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable Integer id) {
-        return userRepository.findById(id)
-                .map(user -> ResponseEntity.ok(convertToDTO(user)))
-                .orElse(ResponseEntity.notFound().build());
-    }
+    @PutMapping("/onboarding")
+    public ResponseEntity<?> updateOnboarding(@RequestBody Map<String, Object> payload) {
+        try {
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            User user = userRepository.findByEmail(email);
 
-    @PostMapping
-    public ResponseEntity<UserDTO> createUser(@RequestBody User user) {
-        User savedUser = userRepository.save(user);
-        return ResponseEntity.ok(convertToDTO(savedUser));
-    }
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+            }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable Integer id, @RequestBody User userDetails) {
-        return userRepository.findById(id)
-                .map(user -> {
-                    user.setEmail(userDetails.getEmail());
-                    user.setFitnessGoal(userDetails.getFitnessGoal());
-                    user.setWeight(userDetails.getWeight());
-                    user.setHeight(userDetails.getHeight());
-                    user.setBmi(userDetails.getBmi());
-                    return ResponseEntity.ok(convertToDTO(userRepository.save(user)));
-                })
-                .orElse(ResponseEntity.notFound().build());
-    }
+            if (payload.containsKey("gender")) user.setGender((String) payload.get("gender"));
+            if (payload.containsKey("fitnessLevel")) user.setFitnessLevel((String) payload.get("fitnessLevel"));
+            if (payload.containsKey("goal")) user.setFitnessGoal((String) payload.get("goal"));
+            
+            if (payload.containsKey("height")) {
+                user.setHeight(Float.valueOf(payload.get("height").toString()));
+            }
+            if (payload.containsKey("weight")) {
+                user.setWeight(Float.valueOf(payload.get("weight").toString()));
+            }
+            if (payload.containsKey("sessionsPerWeek")) {
+                user.setSessionsPerWeek(Integer.valueOf(payload.get("sessionsPerWeek").toString()));
+            }
+            
+            if (user.getHeight() != null && user.getWeight() != null && user.getHeight() > 0) {
+                float heightM = user.getHeight() / 100.0f;
+                float bmi = user.getWeight() / (heightM * heightM);
+                user.setBmi(bmi);
+            }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
-        if (userRepository.existsById(id)) {
-            userRepository.deleteById(id);
-            return ResponseEntity.ok().build();
+            userRepository.save(user);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Cập nhật dữ liệu onboarding thành công");
+            
+            Map<String, Object> userMap = new HashMap<>();
+            userMap.put("userId", user.getUserId());
+            userMap.put("email", user.getEmail());
+            userMap.put("name", user.getName());
+            userMap.put("pictureUrl", user.getPictureUrl());
+            userMap.put("height", user.getHeight());
+            userMap.put("weight", user.getWeight());
+            response.put("user", userMap);
+
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
         }
-        return ResponseEntity.notFound().build();
-    }
-
-    // --- MAPPING ---
-    private UserDTO convertToDTO(User user) {
-        UserDTO dto = new UserDTO();
-        dto.setUserId(user.getUserId());
-        dto.setEmail(user.getEmail());
-        dto.setHeight(user.getHeight());
-        dto.setWeight(user.getWeight());
-        dto.setBmi(user.getBmi());
-        dto.setFitnessGoal(user.getFitnessGoal());
-        dto.setGoogleOauthId(user.getGoogleOauthId());
-
-        if (user.getPet() != null) {
-            PetDTO petDto = new PetDTO();
-            petDto.setPetId(user.getPet().getPetId());
-            petDto.setAppearanceType(user.getPet().getAppearanceType());
-            petDto.setEmotionalState(user.getPet().getEmotionalState());
-            petDto.setTotalExp(user.getPet().getTotalExp());
-            petDto.setLevel(user.getPet().getLevel());
-            petDto.setLastUpdated(user.getPet().getLastUpdated());
-            petDto.setUserId(user.getUserId());
-            dto.setPet(petDto);
-        }
-        return dto;
     }
 }

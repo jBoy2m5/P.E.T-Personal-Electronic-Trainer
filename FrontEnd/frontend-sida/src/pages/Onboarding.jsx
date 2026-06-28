@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button, ProgressBar, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import axiosClient from '../api/axiosClient';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -35,15 +36,22 @@ export default function Onboarding() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    console.log("=== DỮ LIỆU ONBOARDING MỚI ===");
-    console.log(formData);
-
-    const heightM = formData.height / 100;
-    const bmi = (formData.weight / (heightM * heightM)).toFixed(1);
-    console.log("Chỉ số BMI:", bmi);
-
-    navigate('/');
+  const handleSubmit = async () => {
+    try {
+      // Gọi API gửi dữ liệu Onboarding lên backend
+      const res = await axiosClient.put('/users/onboarding', formData);
+      
+      if (res.status === 'success') {
+        // Cập nhật lại thông tin user trong localStorage
+        localStorage.setItem('user-data', JSON.stringify(res.user));
+        navigate('/');
+      } else {
+        alert("Có lỗi xảy ra: " + (res.message || 'Không xác định'));
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật onboarding:", error);
+      alert("Cập nhật thất bại. Vui lòng thử lại.");
+    }
   };
 
   // Logic lấy ảnh động dựa theo bước và lựa chọn

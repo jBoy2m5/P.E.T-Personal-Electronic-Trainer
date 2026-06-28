@@ -14,12 +14,19 @@ public class User {
     private Integer userId;
 
     private String email;
+    private String name;
+    private String pictureUrl;
     private String passwordHash;
     private Float height;
     private Float weight;
     private Float bmi;
     private String fitnessGoal;
     private String googleOauthId;
+    
+    // Onboarding additional fields
+    private String gender;
+    private String fitnessLevel;
+    private Integer sessionsPerWeek;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL) 
     private Pet pet;
