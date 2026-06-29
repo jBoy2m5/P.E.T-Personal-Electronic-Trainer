@@ -21,6 +21,8 @@ class FitnessTracker:
         
         # Biến lưu trữ trạng thái thông báo cuối cùng (Tránh nhấp nháy)
         self.last_feedback = "WAITING FOR DETECTIONS..."
+        # THÊM DÒNG NÀY (Biến lưu tọa độ vai lúc treo người)
+        self.hang_shoulder_y = 0
 
     def _reset_state(self):
         self.counter = 0
@@ -30,6 +32,9 @@ class FitnessTracker:
         self.is_planking = False
         self.last_feedback = "READY"
 
+        # THÊM DÒNG NÀY 
+        self.hang_shoulder_y = 0
+        
     def _calculate_angle(self, a, b, c):
         a, b, c = np.array(a), np.array(b), np.array(c)
         radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
@@ -82,16 +87,24 @@ class FitnessTracker:
             # KIỂM TRA TẦM NHÌN (VISIBILITY CHECK)
             # ==========================================
             is_visible = False
+            
+            # 1. Nhóm TOÀN THÂN (Bắt buộc thấy cả Vai, Hông, Gối, Cổ chân)
             if app_mode == "SQUAT":
                 is_visible = self._check_visibility(landmarks, [LEFT_SH, RIGHT_SH, LEFT_HIP, LEFT_KN, LEFT_AN, RIGHT_AN])
-            elif app_mode in ["PUSH-UP", "HANDSTAND", "PULL-UP"]: # Thêm PULL-UP vào đây
+            elif app_mode in ["PUSH-UP", "PLANK"]:
                 is_visible = self._check_visibility(landmarks, [LEFT_SH, LEFT_EL, LEFT_WR, LEFT_HIP, LEFT_AN])
-            elif app_mode == "PLANK":
-                is_visible = self._check_visibility(landmarks, [LEFT_SH, LEFT_HIP, LEFT_AN])
+                
+            # 2. Nhóm THÂN TRÊN (Chỉ cần thấy từ Cổ tay đến Hông - BỎ QUA CHÂN)
+            elif app_mode in ["PULL-UP", "HANDSTAND"]:
+                is_visible = self._check_visibility(landmarks, [LEFT_SH, RIGHT_SH, LEFT_EL, LEFT_WR, LEFT_HIP])
 
             if not is_visible:
-                self.last_feedback = "PLEASE SHOW FULL BODY!"
-                # Nếu đang plank mà mất hình, tạm dừng đồng hồ
+                # Thông báo cũng được làm cho thông minh hơn tùy theo bài tập
+                if app_mode in ["PULL-UP", "HANDSTAND"]:
+                    self.last_feedback = "SHOW UPPER BODY (WAIST UP)!"
+                else:
+                    self.last_feedback = "PLEASE SHOW FULL BODY!"
+                    
                 if self.is_planking:
                     self.is_planking = False
                     self.total_plank_time += (time.time() - self.plank_start_time)
@@ -214,28 +227,42 @@ class FitnessTracker:
                                     self.counter += 1
                                 self.stage = "down"
                                 
+                                # CHỐT MỎ NEO: Ghi nhớ lại tọa độ Y của vai lúc đang treo người
+                                self.hang_shoulder_y = shoulder[1]
                             # Pha 2: Kéo người lên (Bắt đầu gập khuỷu tay)
                             elif arm_angle < 110:
-                                # KIỂM TRA ĐỘ SÂU: Cằm (đại diện bởi mũi) phải vượt qua thanh xà
-                                # (Cộng thêm 0.05 để bù trừ khoảng cách từ Mũi xuống Cằm)
-                                if nose.y <= bar_y + 0.05:
-                                    self.stage = "up"
-                                    if self.last_feedback == "FORM: GOOD": 
-                                        self.last_feedback = "CHIN OVER BAR!"
-                                elif self.stage != 'up':
-                                    if self.last_feedback == "FORM: GOOD":
-                                        self.last_feedback = "PULL HIGHER!"
-
-
+                            
+                                # LỚP BẢO VỆ MỚI: CHỐNG KÉO XÀ KHÔNG KHÍ (Air Pull-up)
+                                # Trục Y của camera hướng từ trên xuống. Đi lên nghĩa là Y hiện tại phải NHỎ HƠN Y lúc treo.
+                                body_lift_distance = self.hang_shoulder_y - shoulder[1]
+                            
+                                if body_lift_distance < 0.04:
+                                    # Nếu vai không di chuyển lên trên ít nhất 4% chiều cao khung hình -> Ăn gian!
+                                    self.last_feedback = "NO AIR PULL-UPS! LIFT YOUR BODY."
+                                    self.stage = None # Hủy ngay trạng thái
+                                else:
+                                    # Nếu đã vượt qua bài test gian lận, mới kiểm tra xem cằm qua xà chưa
+                                    if nose.y <= bar_y + 0.05:
+                                        self.stage = "up"
+                                        if self.last_feedback == "FORM: GOOD": 
+                                            self.last_feedback = "CHIN OVER BAR!"
+                                    elif self.stage != 'up':
+                                        if self.last_feedback == "FORM: GOOD":
+                                            self.last_feedback = "PULL HIGHER!"
+# ==========================================
+                # 4. LOGIC: HANDSTAND PUSH-UP (THÂN TRÊN)
+                # ==========================================
                 elif app_mode == "HANDSTAND":
                     arm_angle = self._calculate_angle(shoulder, elbow, wrist)
-                    body_angle = self._calculate_angle(shoulder, hip, ankle)
+                    # Tính góc của trục thân trên (Vai - Hông) so với phương thẳng đứng (Trục Y)
+                    torso_angle = self._calculate_angle(shoulder, hip, [hip[0], 0.0])
                     
                     if hip[1] > shoulder[1]:
                         self.last_feedback = "KICK UP INTO HANDSTAND!"
                         self.stage = None
-                    elif body_angle < 160:
-                        self.last_feedback = "KEEP CORE TIGHT!"
+                    elif torso_angle > 25:
+                        # Nếu người dùng bị cong lưng hoặc ngã đổ quá 25 độ so với phương thẳng đứng
+                        self.last_feedback = "KEEP CORE TIGHT & VERTICAL!"
                         self.stage = None
                     else:
                         self.last_feedback = "FORM: GOOD"
