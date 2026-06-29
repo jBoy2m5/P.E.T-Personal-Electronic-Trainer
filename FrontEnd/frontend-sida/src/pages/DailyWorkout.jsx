@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import usePetStore from '../store/usePetStore';
 import { useTranslation } from 'react-i18next';
+import axiosClient from '../api/axiosClient';
 
 const getTodayKey = () => {
     const d = new Date();
@@ -72,6 +73,7 @@ export default function DailyWorkout() {
     // States cho Manual Workout Tracker
     const [showManualModal, setShowManualModal] = useState(false);
     const [manualTimeLeft, setManualTimeLeft] = useState(0);
+    const [manualTotalTime, setManualTotalTime] = useState(0);
     const [manualCurrentSet, setManualCurrentSet] = useState(1);
     const [manualIsResting, setManualIsResting] = useState(false);
 
@@ -116,7 +118,8 @@ export default function DailyWorkout() {
         }
 
         const savedUser = localStorage.getItem('user-data');
-        const goal = savedUser ? JSON.parse(savedUser).fitness_goal : 'Tăng cơ nạc';
+        const parsedUser = savedUser ? JSON.parse(savedUser) : {};
+        const goal = parsedUser.goal || parsedUser.fitness_goal || 'Tăng cơ nạc';
 
         const mgTranslations = {
             'NGỰC (CHEST)': 'mg_chest',
@@ -228,13 +231,22 @@ export default function DailyWorkout() {
         setManualIsResting(false);
     };
 
+    const toLocalISOString = (date) => date.toISOString().slice(0, 19);
+
     const handleFinishManual = () => {
         markDayAsTrained(currentExercise.name);
         setCompletedExercises(prev => [...prev, currentExercise.name]);
         setShowManualModal(false);
-        
+
         const kcal = Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets) || 25;
         const result = addExp(kcal, currentExercise.name);
+
+        axiosClient.post('/workout-sessions', {
+            start_time: toLocalISOString(new Date(Date.now() - targetReps * targetSets * 2000)),
+            end_time: toLocalISOString(new Date()),
+            total_calories_burned: kcal,
+            total_valid_reps: targetReps * targetSets
+        }).catch(err => console.error('Could not save workout session:', err));
 
         setSummaryData({
             exerciseName: currentExercise.name,
@@ -295,14 +307,15 @@ export default function DailyWorkout() {
                     if (newSets > targetSets) {
                         setAiStatus(t('exercise_list.ai_done', 'Hoàn thành xuất sắc! Đang lưu dữ liệu...'));
                         
-                        const sessionId = Math.floor(Math.random() * 1000000);
+                        const sessionCalories = Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets);
                         const sessionData = {
-                            session_id: sessionId, user_id: 1,
-                            start_time: new Date(Date.now() - 60000).toISOString(),
-                            end_time: new Date().toISOString(),
-                            total_calories_burned: Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets),
+                            start_time: new Date(Date.now() - 60000).toISOString().slice(0, 19),
+                            end_time: new Date().toISOString().slice(0, 19),
+                            total_calories_burned: sessionCalories,
                             total_valid_reps: targetReps * targetSets
                         };
+                        axiosClient.post('/workout-sessions', sessionData)
+                            .catch(err => console.error('Could not save workout session:', err));
                         const savedSessions = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
                         savedSessions.push(sessionData);
                         localStorage.setItem('workout-sessions', JSON.stringify(savedSessions));

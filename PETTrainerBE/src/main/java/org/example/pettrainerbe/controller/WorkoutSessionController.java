@@ -4,10 +4,14 @@ import org.example.pettrainerbe.dto.ErrorLogDTO;
 import org.example.pettrainerbe.dto.ExerciseDTO;
 import org.example.pettrainerbe.dto.WorkoutDetailDTO;
 import org.example.pettrainerbe.dto.WorkoutSessionDTO;
+import org.example.pettrainerbe.model.User;
 import org.example.pettrainerbe.model.WorkoutSession;
+import org.example.pettrainerbe.repository.UserRepository;
 import org.example.pettrainerbe.repository.WorkoutSessionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +23,9 @@ public class WorkoutSessionController {
 
     @Autowired
     private WorkoutSessionRepository workoutSessionRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping
     public List<WorkoutSessionDTO> getAllSessions() {
@@ -36,6 +43,12 @@ public class WorkoutSessionController {
 
     @PostMapping
     public ResponseEntity<WorkoutSessionDTO> createSession(@RequestBody WorkoutSession session) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        session.setUser(user);
         WorkoutSession savedSession = workoutSessionRepository.save(session);
         return ResponseEntity.ok(convertToDTO(savedSession));
     }

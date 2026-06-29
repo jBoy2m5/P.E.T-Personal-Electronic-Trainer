@@ -4,7 +4,7 @@ import json
 import base64
 import numpy as np
 import cv2
-from ai_core import FitnessTracker
+from upload.ai_core import FitnessTracker
 
 async def handle_client(websocket):
     tracker = FitnessTracker()

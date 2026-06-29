@@ -88,6 +88,11 @@ public class AuthController {
                 userMap.put("pictureUrl", user.getPictureUrl());
                 userMap.put("height", user.getHeight());
                 userMap.put("weight", user.getWeight());
+                userMap.put("bmi", user.getBmi());
+                userMap.put("goal", user.getFitnessGoal());
+                userMap.put("gender", user.getGender());
+                userMap.put("fitnessLevel", user.getFitnessLevel());
+                userMap.put("sessionsPerWeek", user.getSessionsPerWeek());
                 responseBody.put("user", userMap);
 
                 return ResponseEntity.ok(responseBody);
