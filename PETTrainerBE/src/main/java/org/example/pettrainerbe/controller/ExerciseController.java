@@ -81,12 +81,15 @@ public class ExerciseController {
         dto.setSets(exercise.getSets());
         dto.setLevel(exercise.getLevel());
         dto.setVideoUrl(exercise.getVideoUrl());
-        Float kcal =
-                exercise.getEstimatedCaloriesPerRep()
-                        * exercise.getReps()
-                        * exercise.getSets();
-
-        dto.setKcal(kcal);
+        dto.setIsJump(exercise.getIsJump());
+        if (exercise.getMuscleGroup() != null) {
+            dto.setMuscleGroupId(exercise.getMuscleGroup().getGroupId());
+            dto.setMuscleGroupName(exercise.getMuscleGroup().getName());
+        }
+        Float kcalPerRep = exercise.getEstimatedCaloriesPerRep() != null ? exercise.getEstimatedCaloriesPerRep() : 0f;
+        Integer reps = exercise.getReps() != null ? exercise.getReps() : 0;
+        Integer sets = exercise.getSets() != null ? exercise.getSets() : 0;
+        dto.setKcal(kcalPerRep * reps * sets);
         return dto;
     }
 }

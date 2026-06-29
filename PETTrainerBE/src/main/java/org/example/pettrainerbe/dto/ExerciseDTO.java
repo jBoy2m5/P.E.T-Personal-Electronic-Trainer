@@ -13,7 +13,10 @@ public class ExerciseDTO {
     private Float estimatedCaloriesPerRep;
     private Integer reps;
     private Integer sets;
-    private Integer level;
+    private String level;
     private String videoUrl;
     private Float kcal;
+    private Boolean isJump;
+    private Integer muscleGroupId;
+    private String muscleGroupName;
 }

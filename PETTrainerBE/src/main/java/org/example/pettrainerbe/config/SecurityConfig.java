@@ -37,7 +37,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable()) // Tắt CSRF để test API dễ dàng
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().authenticated() // Yêu cầu xác thực cho TẤT CẢ các lệnh (GET, POST...)
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/seed").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/exercises/**", "/api/muscle-groups/**").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults()); // Bật chế độ kiểm tra Tài khoản & Mật khẩu (Basic Auth)
 

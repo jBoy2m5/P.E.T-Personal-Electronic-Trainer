@@ -1,5 +1,6 @@
 package org.example.pettrainerbe.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
@@ -28,9 +29,11 @@ public class User {
     private String fitnessLevel;
     private Integer sessionsPerWeek;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL) 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties("user")
     private Pet pet;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties("user")
     private List<WorkoutSession> workoutSessions;
 }

@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Modal, ProgressBar } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getMuscleGroupById } from '../api/exerciseApi';
+
+const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
 import confetti from 'canvas-confetti';
 
 const getTodayKey = () => {
@@ -31,6 +34,34 @@ export default function ExerciseList() {
     const navigate = useNavigate();
     const { id } = useParams();
     const { t } = useTranslation();
+
+    const [groupData, setGroupData] = useState({ name: '', desc: '', exercises: [] });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchGroup = async () => {
+            setLoading(true);
+            try {
+                const data = await getMuscleGroupById(id);
+                setGroupData({
+                    name: data.name || '',
+                    desc: data.description || '',
+                    exercises: (data.exercises || []).map(ex => ({
+                        ...ex,
+                        img: ex.media_url || DEFAULT_IMG,
+                        reps: ex.reps != null ? String(ex.reps) : '12',
+                        sets: ex.sets != null ? ex.sets : 3,
+                        kcal: ex.kcal != null ? Math.round(ex.kcal) : Math.round((ex.estimated_calories_per_rep || 1) * (ex.reps || 12) * (ex.sets || 3))
+                    }))
+                });
+            } catch (err) {
+                console.error('Không thể tải bài tập:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchGroup();
+    }, [id]);
 
     // States cho AI Camera Modal
     const [showAIModal, setShowAIModal] = useState(false);
@@ -82,43 +113,6 @@ export default function ExerciseList() {
         }, 250);
     };
 
-    const muscleGroupData = {
-        1: { name: 'NGỰC (CHEST)', desc: 'Phát triển toàn diện vòng 1. AI sẽ tự động chấm điểm form tập của bạn.', exercises: [
-            { exercise_id: 101, name: 'Hít đất cơ bản (Standard Push-up)', reps: '15', sets: '3', kcal: 45, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Giúp săn chắc toàn bộ cơ ngực, vai và tay sau. Cải thiện sức bền thân trên.', safety_notes: 'Không võng lưng', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.0 },
-            { exercise_id: 102, name: 'Hít đất hẹp tay (Diamond Push-up)', reps: '10', sets: '3', kcal: 55, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: 'Tập trung sâu vào cơ ngực trong và cơ tay sau (tricep).', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.2 },
-            { exercise_id: 103, name: 'Đẩy ngực với tạ đơn (Dumbbell Press)', reps: '12', sets: '4', kcal: 65, level: 'Nâng cao', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', technical_description: 'Tăng cường khối lượng cơ bắp vùng ngực, cân bằng sức mạnh hai bên cơ thể.', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.5 }
-        ]},
-        2: { name: 'LƯNG (BACK)', desc: 'Lưng xô cắt nét, rèn luyện tư thế vững chắc.', exercises: [
-            { exercise_id: 201, name: 'Hít xà đơn (Pull-up)', reps: '8', sets: '3', kcal: 60, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Bài tập kinh điển phát triển cơ xô, cơ lưng giữa và bắp tay trước.', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 2.0 },
-            { exercise_id: 202, name: 'Kéo lưng với dây kháng lực', reps: '15', sets: '3', kcal: 40, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: 'Cải thiện tư thế gù lưng, làm săn chắc vùng lưng trên.', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 0.8 }
-        ]},
-        3: { name: 'VAI (SHOULDERS)', desc: 'Vai rộng chuẩn form, cải thiện sức mạnh thân trên.', exercises: [
-            { exercise_id: 301, name: 'Đẩy vai tạ đơn (Dumbbell Shoulder Press)', reps: '12', sets: '4', kcal: 50, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', technical_description: '', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.0 },
-            { exercise_id: 302, name: 'Nâng vai ngang (Lateral Raise)', reps: '15', sets: '3', kcal: 45, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: '', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.0 }
-        ]},
-        4: { name: 'TAY (ARMS)', desc: 'Bắp tay cuồn cuộn, săn chắc mạnh mẽ.', exercises: [
-            { exercise_id: 401, name: 'Cuốn tạ đơn (Bicep Curls)', reps: '15', sets: '3', kcal: 40, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: '', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 0.8 },
-            { exercise_id: 402, name: 'Đẩy tay sau (Tricep Dips)', reps: '12', sets: '3', kcal: 45, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', technical_description: '', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.2 }
-        ]},
-        5: { name: 'BỤNG / CORE (ABS)', desc: 'Cơ cốt lõi vững chắc, rèn luyện 6 múi.', exercises: [
-            { exercise_id: 501, name: 'Gập bụng (Crunches)', reps: '20', sets: '3', kcal: 50, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Giúp săn chắc cơ bụng thẳng, giảm mỡ vùng eo nếu kết hợp cardio tốt.', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 0.8 },
-            { exercise_id: 502, name: 'Plank', reps: '60', sets: '3', kcal: 40, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: 'Phát triển toàn diện cơ cốt lõi (Core), tăng cường sức chịu đựng của cột sống.', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 0.5 }
-        ]},
-        6: { name: 'CHÂN (LEGS)', desc: 'Đôi chân linh hoạt, sức mạnh bức phá.', exercises: [
-            { exercise_id: 601, name: 'Squat cơ bản', reps: '15', sets: '4', kcal: 70, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', technical_description: 'Bài tập Vua cho thân dưới, phát triển đùi trước, đùi sau và mông.', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.2 },
-            { exercise_id: 602, name: 'Lunge (Chùng chân)', reps: '12', sets: '3', kcal: 65, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Cải thiện khả năng giữ thăng bằng và sức mạnh đơn chân.', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.8 }
-        ]},
-        7: { name: 'MÔNG (GLUTES)', desc: 'Phát triển vòng 3 săn chắc, quyến rũ.', exercises: [
-            { exercise_id: 701, name: 'Glute Bridge (Nâng mông)', reps: '15', sets: '3', kcal: 50, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: '', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.0 },
-            { exercise_id: 702, name: 'Kickback', reps: '15', sets: '3', kcal: 45, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', technical_description: '', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 1.0 }
-        ]},
-        8: { name: 'SKILLS', desc: 'Thử thách cơ thể với những kỹ năng nâng cao.', exercises: [
-            { exercise_id: 801, name: 'Handstand (Trồng chuối)', reps: '30', sets: '3', kcal: 60, level: 'Nâng cao', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Kỹ năng thăng bằng đỉnh cao, cực tốt cho cơ vai và khả năng kiểm soát cơ thể.', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 2.0 },
-            { exercise_id: 802, name: 'Muscle-up', reps: '5', sets: '3', kcal: 80, level: 'Nâng cao', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: 'Sức mạnh bùng nổ, kết hợp giữa kéo xà và đẩy tay sau.', safety_notes: '', media_url: '', standard_angles: {}, estimated_calories_per_rep: 5.0 }
-        ]}
-    };
-
-    const groupData = muscleGroupData[id] || muscleGroupData[1];
     const exercises = groupData.exercises;
 
     // Mở chi tiết bài tập
@@ -363,6 +357,17 @@ export default function ExerciseList() {
         if (socketRef.current) socketRef.current.close();
         if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
     };
+
+    if (loading) {
+        return (
+            <Container className="py-5 text-center">
+                <div className="spinner-border text-success" role="status">
+                    <span className="visually-hidden">Đang tải...</span>
+                </div>
+                <p className="mt-3 text-secondary fw-bold">Đang tải bài tập...</p>
+            </Container>
+        );
+    }
 
     return (
         <Container className="py-5">

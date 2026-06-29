@@ -1,6 +1,4 @@
-import { exerciseDatabase } from '../data/exerciseDatabase';
-
-export const generateDynamicRoadmap = (userData) => {
+export const generateDynamicRoadmap = (userData, exercises = []) => {
     const isBeginner = userData.fitnessLevel === 'Mới bắt đầu' || userData.fitnessLevel === 'Đã có nền tảng';
     const isFatLoss = userData.goal.toLowerCase().includes('giảm');
     const isSkills = userData.goal.toLowerCase().includes('kĩ năng');
@@ -79,7 +77,7 @@ export const generateDynamicRoadmap = (userData) => {
 
         targets.forEach(target => {
             // Filter pool
-            let pool = exerciseDatabase.filter(ex => ex.target === target);
+            let pool = exercises.filter(ex => ex.target === target);
             
             // Modifier: No Jumps if Overweight
             if (isOverweight) {

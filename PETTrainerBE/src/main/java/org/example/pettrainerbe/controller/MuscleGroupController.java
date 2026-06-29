@@ -75,6 +75,17 @@ public class MuscleGroupController {
                         eDto.setMediaUrl(ex.getMediaUrl());
                         eDto.setStandardAngles(ex.getStandardAngles());
                         eDto.setEstimatedCaloriesPerRep(ex.getEstimatedCaloriesPerRep());
+                        eDto.setReps(ex.getReps());
+                        eDto.setSets(ex.getSets());
+                        eDto.setLevel(ex.getLevel());
+                        eDto.setVideoUrl(ex.getVideoUrl());
+                        eDto.setIsJump(ex.getIsJump());
+                        eDto.setMuscleGroupId(group.getGroupId());
+                        eDto.setMuscleGroupName(group.getName());
+                        Float kcalPerRep = ex.getEstimatedCaloriesPerRep() != null ? ex.getEstimatedCaloriesPerRep() : 0f;
+                        Integer reps = ex.getReps() != null ? ex.getReps() : 0;
+                        Integer sets = ex.getSets() != null ? ex.getSets() : 0;
+                        eDto.setKcal(kcalPerRep * reps * sets);
                         return eDto;
                     })
                     .collect(Collectors.toList());

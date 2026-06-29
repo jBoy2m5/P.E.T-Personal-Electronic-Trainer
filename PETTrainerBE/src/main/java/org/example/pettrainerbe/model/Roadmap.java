@@ -5,23 +5,26 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
-@Table(name = "pets")
+@Table(name = "roadmaps")
 @Data
-public class Pet {
+public class Roadmap {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer petId;
+    private Integer id;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "user_id")
     @JsonIgnoreProperties({"pet", "workoutSessions"})
     private User user;
 
-    private String appearanceType;
-    private String emotionalState;
-    private Integer totalExp;
-    private Integer level;
-    private LocalDateTime lastUpdated;
+    private String goal;
+    private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "roadmap", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties("roadmap")
+    private List<RoadmapDay> days;
 }

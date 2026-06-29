@@ -1,12 +1,10 @@
 .idea/
-# B? qua môi tru?ng ?o (Virtual Environments)
 myenv/
 venv/
 env/
 
-# B? qua b? nh? d?m c?a Python (Python Cache)
 __pycache__/
 *.pyc
 
-# B? qua c?u hình editor
 .vscode/
+CLAUDE.md

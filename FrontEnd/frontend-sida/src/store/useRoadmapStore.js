@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { generateDynamicRoadmap } from '../services/roadmapGenerator';
+import useExerciseStore from './useExerciseStore';
 
 const useRoadmapStore = create((set, get) => ({
   roadmapData: [],
@@ -14,7 +15,7 @@ const useRoadmapStore = create((set, get) => ({
     }
   },
 
-  generateRoadmap: () => {
+  generateRoadmap: async () => {
     const saved = localStorage.getItem('user-data');
     let userData = {
       gender: 'Nam',
@@ -23,7 +24,7 @@ const useRoadmapStore = create((set, get) => ({
       fitnessLevel: 'Mới bắt đầu',
       goal: 'Giữ dáng'
     };
-    
+
     if (saved) {
       const parsed = JSON.parse(saved);
       userData = {
@@ -35,8 +36,8 @@ const useRoadmapStore = create((set, get) => ({
       };
     }
 
-    // Call the dynamic assembly engine
-    const roadmap = generateDynamicRoadmap(userData);
+    const exercises = await useExerciseStore.getState().fetchExercises();
+    const roadmap = generateDynamicRoadmap(userData, exercises);
 
     localStorage.setItem('roadmap-data', JSON.stringify(roadmap));
     set({ roadmapData: roadmap, initialized: true });
