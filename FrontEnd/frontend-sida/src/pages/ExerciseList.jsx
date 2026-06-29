@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Badge, Button, Modal, ProgressBar } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import confetti from 'canvas-confetti';
 
 const getTodayKey = () => {
     const d = new Date();
@@ -39,6 +40,13 @@ export default function ExerciseList() {
     const [targetReps, setTargetReps] = useState(0);
     const [targetSets, setTargetSets] = useState(0);
     const [aiStatus, setAiStatus] = useState('');
+
+    // AI Refs
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const socketRef = useRef(null);
+    const streamRef = useRef(null);
+    const animationFrameRef = useRef(null);
 
     // States cho Detailed Exercise Modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -234,103 +242,127 @@ export default function ExerciseList() {
         triggerConfetti();
     };
 
-    // Logic giả lập AI đếm reps
+    // Logic Camera AI đếm reps
     useEffect(() => {
-        let timer;
         if (showAIModal && currentExercise) {
-            const startDelay = setTimeout(() => {
-                setAiStatus('Form chuẩn! Đang theo dõi...');
-                timer = setInterval(() => {
-                    setSimReps(prevReps => {
-                        const newReps = prevReps + 1;
-                        if (newReps >= targetReps) {
-                            // Đạt đủ reps cho set này
-                            setSimSets(prevSets => {
-                                const newSets = prevSets + 1;
-                                if (newSets > targetSets) {
-                                    // Hoàn thành toàn bộ
-                                    clearInterval(timer);
-                                    setAiStatus('Hoàn thành xuất sắc! Đang lưu dữ liệu...');
-                                    
-                                    // ... Logic lưu vào localStorage
-                                    const sessionId = Math.floor(Math.random() * 1000000);
-                                    const sessionData = {
-                                        session_id: sessionId,
-                                        user_id: 1,
-                                        start_time: new Date(Date.now() - 60000).toISOString(),
-                                        end_time: new Date().toISOString(),
-                                        total_calories_burned: Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets),
-                                        total_valid_reps: targetReps * targetSets
-                                    };
-                                    const savedSessions = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
-                                    savedSessions.push(sessionData);
-                                    localStorage.setItem('workout-sessions', JSON.stringify(savedSessions));
+            const initAI = async () => {
+                try {
+                    setAiStatus("Đang yêu cầu quyền Camera...");
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } });
+                    streamRef.current = stream;
+                    if (videoRef.current) videoRef.current.srcObject = stream;
 
-                                    setTimeout(() => {
-                                        markDayAsTrained();
-                                        setShowAIModal(false);
-
-                                        const kcal = sessionData.total_calories_burned;
-                                        let expGained = Math.max(1, Math.round(kcal * 0.1));
-                                        
-                                        // Giới hạn điểm mỗi ngày (300 EXP)
-                                        const dailySaved = localStorage.getItem('pet-daily');
-                                        const dailyParsed = dailySaved ? JSON.parse(dailySaved) : { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: getTodayKey() };
-                                        
-                                        const todayStr = getTodayKey();
-                                        if (dailyParsed.date !== todayStr) {
-                                            dailyParsed.date = todayStr;
-                                            dailyParsed.pointsEarnedToday = 0;
-                                        }
-                                        
-                                        const MAX_DAILY_EXP = 300;
-                                        if (dailyParsed.pointsEarnedToday + expGained > MAX_DAILY_EXP) {
-                                            expGained = Math.max(0, MAX_DAILY_EXP - dailyParsed.pointsEarnedToday);
-                                        }
-
-                                        setSummaryData({
-                                            exerciseName: currentExercise.name,
-                                            exerciseId: currentExercise.exercise_id,
-                                            reps: targetReps,
-                                            sets: targetSets,
-                                            kcal: kcal,
-                                            exp: expGained,
-                                            isCapped: dailyParsed.pointsEarnedToday + expGained >= MAX_DAILY_EXP
-                                        });
-
-                                        // Thêm điểm vào LocalStorage
-                                        dailyParsed.pointsEarnedToday += expGained;
-                                        dailyParsed.totalPoints = (dailyParsed.totalPoints || 0) + expGained;
-                                        if(!dailyParsed.exercisesTrained) dailyParsed.exercisesTrained = [];
-                                        if(!dailyParsed.exercisesTrained.includes(currentExercise.name)) {
-                                            dailyParsed.exercisesTrained.push(currentExercise.name);
-                                        }
-                                        localStorage.setItem('pet-daily', JSON.stringify(dailyParsed));
-                                        window.dispatchEvent(new Event('storage'));
-
-                                        setShowSummaryModal(true);
-                                        triggerConfetti();
-                                    }, 1500);
-                                    return prevSets;
-                                } else {
-                                    // Chuyển sang set mới
-                                    setAiStatus('Nghỉ ngơi 1 lát...');
-                                    setTimeout(() => {
-                                        if (showAIModal) setAiStatus('Form chuẩn! Đang theo dõi...');
-                                    }, 2000);
-                                    return newSets;
-                                }
-                            });
-                            return 0; // reset reps
+                    setAiStatus("Đang kết nối AI Server...");
+                    socketRef.current = new WebSocket('ws://localhost:8765');
+                    socketRef.current.onopen = () => { setAiStatus("Đã kết nối! Bắt đầu phân tích..."); sendFrames(); };
+                    socketRef.current.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        setAiStatus(data.feedback || "Form chuẩn! Đang theo dõi...");
+                        setSimReps(data.reps || 0);
+                        if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
+                            handleSetComplete();
                         }
-                        return newReps;
-                    });
-                }, workoutMode === 'time' ? 1000 : 800); // 1s cho time, 0.8s cho reps
-            }, 2000);
+                    };
+                    socketRef.current.onerror = (error) => { console.error('WebSocket Error:', error); setAiStatus("Lỗi kết nối tới AI Server!"); };
+                } catch (err) { setAiStatus("Không thể mở Camera!"); }
+            };
 
-            return () => { clearTimeout(startDelay); clearInterval(timer); };
+            const sendFrames = () => {
+                if (!videoRef.current || !canvasRef.current || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) return;
+                const ctx = canvasRef.current.getContext('2d');
+                ctx.drawImage(videoRef.current, 0, 0, 640, 480);
+                const frameData = canvasRef.current.toDataURL('image/jpeg', 0.5);
+                let aiMode = "SQUAT";
+                const exName = currentExercise.name.toLowerCase();
+                if (exName.includes("hít đất") || exName.includes("push-up")) aiMode = "PUSH-UP";
+                else if (exName.includes("plank")) aiMode = "PLANK";
+                else if (exName.includes("xà đơn") || exName.includes("pull-up")) aiMode = "PULL-UP";
+                socketRef.current.send(JSON.stringify({ mode: aiMode, frame: frameData }));
+                animationFrameRef.current = setTimeout(() => requestAnimationFrame(sendFrames), 100);
+            };
+
+            const handleSetComplete = () => {
+                if (animationFrameRef.current) clearTimeout(animationFrameRef.current);
+                setSimSets(prevSets => {
+                    const newSets = prevSets + 1;
+                    if (newSets > targetSets) {
+                        setAiStatus('Hoàn thành xuất sắc! Đang lưu dữ liệu...');
+                        
+                        const sessionId = Math.floor(Math.random() * 1000000);
+                        const sessionData = {
+                            session_id: sessionId, user_id: 1,
+                            start_time: new Date(Date.now() - 60000).toISOString(),
+                            end_time: new Date().toISOString(),
+                            total_calories_burned: Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets),
+                            total_valid_reps: targetReps * targetSets
+                        };
+                        const savedSessions = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
+                        savedSessions.push(sessionData);
+                        localStorage.setItem('workout-sessions', JSON.stringify(savedSessions));
+
+                        setTimeout(() => {
+                            markDayAsTrained();
+                            setShowAIModal(false);
+                            stopAI();
+
+                            const kcal = sessionData.total_calories_burned;
+                            let expGained = Math.max(1, Math.round(kcal * 0.1));
+                            
+                            const dailySaved = localStorage.getItem('pet-daily');
+                            const dailyParsed = dailySaved ? JSON.parse(dailySaved) : { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: getTodayKey() };
+                            
+                            const todayStr = getTodayKey();
+                            if (dailyParsed.date !== todayStr) {
+                                dailyParsed.date = todayStr;
+                                dailyParsed.pointsEarnedToday = 0;
+                            }
+                            
+                            const MAX_DAILY_EXP = 300;
+                            if (dailyParsed.pointsEarnedToday + expGained > MAX_DAILY_EXP) {
+                                expGained = Math.max(0, MAX_DAILY_EXP - dailyParsed.pointsEarnedToday);
+                            }
+
+                            setSummaryData({
+                                exerciseName: currentExercise.name,
+                                exerciseId: currentExercise.exercise_id,
+                                reps: targetReps,
+                                sets: targetSets,
+                                kcal: kcal,
+                                exp: expGained,
+                                isCapped: dailyParsed.pointsEarnedToday + expGained >= MAX_DAILY_EXP
+                            });
+
+                            dailyParsed.pointsEarnedToday += expGained;
+                            dailyParsed.totalPoints = (dailyParsed.totalPoints || 0) + expGained;
+                            if(!dailyParsed.exercisesTrained) dailyParsed.exercisesTrained = [];
+                            if(!dailyParsed.exercisesTrained.includes(currentExercise.name)) {
+                                dailyParsed.exercisesTrained.push(currentExercise.name);
+                            }
+                            localStorage.setItem('pet-daily', JSON.stringify(dailyParsed));
+                            window.dispatchEvent(new Event('storage'));
+
+                            setShowSummaryModal(true);
+                            triggerConfetti();
+                        }, 1500);
+                        return prevSets;
+                    } else {
+                        setAiStatus('Nghỉ ngơi 1 lát...');
+                        setSimReps(0);
+                        setTimeout(() => { if (showAIModal) { setAiStatus('Form chuẩn! Đang theo dõi...'); sendFrames(); } }, 2000);
+                        return newSets;
+                    }
+                });
+            };
+            initAI();
+            return () => stopAI();
         }
     }, [showAIModal, currentExercise, targetReps, targetSets, workoutMode]);
+
+    const stopAI = () => {
+        if (animationFrameRef.current) clearTimeout(animationFrameRef.current);
+        if (socketRef.current) socketRef.current.close();
+        if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+    };
 
     return (
         <Container className="py-5">
@@ -498,17 +530,16 @@ export default function ExerciseList() {
             </Modal>
 
             {/* AI Camera Tracker Modal */}
-            <Modal show={showAIModal} backdrop="static" keyboard={false} centered
-                contentClassName="border-0 rounded-4 overflow-hidden shadow-lg"
-                style={{ '--bs-modal-bg': '#1a1a1c' }}>
-                <Modal.Body className="bg-surface-main text-primary-dynamic p-0 position-relative">
-                    {/* Fake Camera Feed Background */}
+            <Modal show={showAIModal} fullscreen backdrop="static" keyboard={false} centered
+                contentClassName="border-0 bg-black overflow-hidden"
+                style={{ '--bs-modal-bg': '#000' }}>
+                <Modal.Body className="bg-black text-primary-dynamic p-0 position-relative">
+                    {/* Real Camera Feed */}
                     <div style={{
-                        height: '500px', width: '100%',
-                        backgroundImage: currentExercise ? `url(${currentExercise.img})` : 'none',
-                        backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.5,
-                        position: 'relative'
+                        height: '100vh', width: '100%', background: '#000', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center'
                     }}>
+                        <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }}></video>
+                        <canvas ref={canvasRef} width="640" height="480" style={{ display: 'none' }}></canvas>
                         <div style={{
                             position: 'absolute', top: 0, left: 0, width: '100%', height: '4px',
                             background: 'var(--brand-neon)', boxShadow: '0 0 15px var(--brand-neon)',

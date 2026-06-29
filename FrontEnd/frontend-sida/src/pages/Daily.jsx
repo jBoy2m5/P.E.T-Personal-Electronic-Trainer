@@ -280,7 +280,7 @@ export default function Daily() {
         contentClassName="border-0 overflow-hidden"
         style={{ '--bs-modal-bg': 'transparent' }}
       >
-        <Modal.Body className="text-center p-5 position-relative bg-surface-card border-surface" style={{ borderRadius: '32px', border: '1px solid', boxShadow: '0 30px 60px rgba(0,0,0,0.3)' }}>
+        <Modal.Body className="text-center p-5 position-relative bg-surface-card border-surface" style={{ borderRadius: '32px', border: '1px solid', boxShadow: 'var(--shadow-lg), var(--shadow-neon)' }}>
           <div className="d-flex justify-content-center mb-4">
             <div className="success-circle">✓</div>
           </div>
@@ -301,7 +301,7 @@ export default function Daily() {
         }
 
         .gym-hero {
-          box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+          box-shadow: var(--shadow-md);
         }
         
         .gym-streak-badge {
@@ -317,7 +317,7 @@ export default function Daily() {
         }
 
         .gym-panel {
-          box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+          box-shadow: var(--shadow-md);
         }
 
         .gym-track-line {
@@ -410,7 +410,7 @@ export default function Daily() {
 
         .gym-quest-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+          box-shadow: var(--shadow-md);
           border-color: var(--brand-neon) !important;
         }
 

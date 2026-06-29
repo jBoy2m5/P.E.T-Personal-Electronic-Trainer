@@ -225,7 +225,10 @@ export default function PetProfile() {
               </div>
 
               {/* Task Card */}
-              <Card className="border shadow-sm rounded-4 mb-4 bg-white text-dark">
+              <Card className="border shadow-sm rounded-4 mb-4 bg-white text-dark" style={{ transition: 'all 0.3s ease' }}
+                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)'; }}
+                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}
+              >
                 <Card.Body className="p-4">
                   <h5 className="fw-black mb-4">{t('pet_profile.pet_missions')}</h5>
                   <div className="d-flex flex-column gap-3">
@@ -245,7 +248,10 @@ export default function PetProfile() {
               </Card>
 
               {/* Streak Card */}
-              <Card className="border shadow-sm rounded-4 mb-5 bg-white text-dark">
+              <Card className="border shadow-sm rounded-4 mb-5 bg-white text-dark" style={{ transition: 'all 0.3s ease' }}
+                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)'; }}
+                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}
+              >
                 <Card.Body className="p-4">
                   <h5 className="fw-black mb-4">{t('pet_profile.streak_badges')}</h5>
                   <div className="d-flex justify-content-between align-items-center position-relative">

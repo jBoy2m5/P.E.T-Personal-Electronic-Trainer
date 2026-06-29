@@ -15,6 +15,7 @@ export default function Home() {
   const [showInfoModal, setShowInfoModal] = useState(false);
 
   const [burnedCalories, setBurnedCalories] = useState(0);
+  const [displayCalories, setDisplayCalories] = useState(0);
 
   useEffect(() => {
     // 1. Load User Data
@@ -41,6 +42,22 @@ export default function Home() {
     return () => window.removeEventListener('storage', loadCalories);
   }, []);
 
+  // Animated counter for calories
+  useEffect(() => {
+    if (burnedCalories === 0) return;
+    let start = 0;
+    const duration = 1200;
+    const startTime = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayCalories(Math.round(eased * burnedCalories));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [burnedCalories]);
+
   // Mock data 8 nhóm cơ theo thiết kế Figma
   const muscleGroups = [
     { id: 1, name: t('home.muscles.chest'), img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT2KdiiCQ-3r8D3eOw0taiTQ7d4UwJHpXinF71rGL25jb01RZC_GzcB5ayg&s=10" },
@@ -55,25 +72,29 @@ export default function Home() {
 
   return (
     <div className="bg-surface-main min-vh-100">
-      {/* FULL WIDTH HERO BANNER - NETLIFY STYLE */}
+      {/* FULL WIDTH HERO BANNER - PREMIUM */}
       <div
         className="w-100 position-relative d-flex align-items-center bg-hero-banner"
         style={{
-          minHeight: '600px',
+          minHeight: '620px',
           paddingTop: '60px',
           paddingBottom: '60px',
           overflow: 'hidden'
         }}
       >
+        {/* Animated gradient orbs */}
+        <div style={{ position: 'absolute', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.08) 0%, transparent 70%)', top: '-150px', right: '10%', filter: 'blur(60px)', animation: 'float 8s ease-in-out infinite', pointerEvents: 'none' }}></div>
+        <div style={{ position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,229,255,0.05) 0%, transparent 70%)', bottom: '-100px', left: '5%', filter: 'blur(60px)', animation: 'float 10s ease-in-out infinite reverse', pointerEvents: 'none' }}></div>
+        <div style={{ position: 'absolute', width: '200px', height: '200px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,85,247,0.05) 0%, transparent 70%)', top: '30%', left: '30%', filter: 'blur(40px)', animation: 'float 6s ease-in-out infinite 2s', pointerEvents: 'none' }}></div>
         <Container className="position-relative" style={{ zIndex: 2 }}>
           <Row className="align-items-center">
             {/* Cột trái: Text & CTA */}
             <Col lg={6} className="text-start">
               <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
                 <h2 className="fw-bold text-primary-dynamic mb-3">{t('home.hero_subtitle')}</h2>
-                <h1 className="fw-bold text-primary-dynamic mb-4" style={{ fontSize: '4.5rem', lineHeight: '1.1', letterSpacing: '-1px' }}>
+                <h1 className="fw-bold text-primary-dynamic mb-4" style={{ fontSize: '4.5rem', lineHeight: '1.1', letterSpacing: '-2px' }}>
                   {t('home.hero_title_1')} <br />
-                  <span className="text-neon">{t('home.hero_title_2')}</span>
+                  <span className="text-gradient" style={{ fontWeight: '900' }}>{t('home.hero_title_2')}</span>
                 </h1>
                 <p className="text-primary-dynamic mb-5" style={{ fontSize: '1.2rem', opacity: 0.8, maxWidth: '500px', lineHeight: '1.6' }}>
                   {t('home.hero_desc')}
@@ -84,16 +105,18 @@ export default function Home() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate('/roadmap')}
-                    className="btn fw-bold px-4 py-3 rounded-pill glass-panel"
+                    className="btn fw-bold px-5 py-3 rounded-pill"
                     style={{
-                      backgroundColor: 'var(--brand-neon)',
+                      background: 'linear-gradient(135deg, var(--brand-neon), #88ff44)',
                       color: '#000',
                       border: 'none',
                       fontSize: '1rem',
-                      transition: 'all 0.2s ease'
+                      boxShadow: '0 4px 25px rgba(var(--brand-neon-rgb),0.4)',
+                      transition: 'all 0.3s ease',
+                      letterSpacing: '0.5px'
                     }}
-                    onMouseOver={e => { e.target.style.backgroundColor = '#b3e600'; }}
-                    onMouseOut={e => { e.target.style.backgroundColor = 'var(--brand-neon)'; }}
+                    onMouseOver={e => { e.target.style.boxShadow = '0 8px 35px rgba(var(--brand-neon-rgb),0.6)'; }}
+                    onMouseOut={e => { e.target.style.boxShadow = '0 4px 25px rgba(var(--brand-neon-rgb),0.4)'; }}
                   >
                     {t('home.start_now')}
                   </motion.button>
@@ -104,7 +127,8 @@ export default function Home() {
                     className="btn text-primary-dynamic fw-bold px-4 py-3 rounded-pill glass-panel"
                     style={{
                       fontSize: '1rem',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.3s ease',
+                      letterSpacing: '0.5px'
                     }}
                   >
                     {t('home.learn_more')}
@@ -150,14 +174,15 @@ export default function Home() {
 
         {/* PHẦN 2: LƯỚI CÁC NHÓM CƠ */}
         <div className="mt-5">
-          <motion.h3 
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="fw-bold mb-4 text-primary-dynamic"
+            className="d-flex align-items-center gap-3 mb-4"
           >
-            {t('home.exercise_list')}
-          </motion.h3>
+            <div style={{ width: '4px', height: '32px', borderRadius: '2px', background: 'linear-gradient(180deg, var(--brand-neon), transparent)' }}></div>
+            <h3 className="fw-bold mb-0 text-primary-dynamic" style={{ letterSpacing: '-0.5px' }}>{t('home.exercise_list')}</h3>
+          </motion.div>
           <Row className="g-4">
             {muscleGroups.map((muscle, index) => (
               <Col md={6} lg={3} key={muscle.id}>
@@ -231,7 +256,7 @@ export default function Home() {
                 <div className="position-absolute top-50 start-50 translate-middle rounded-circle" style={{ width: '130px', height: '130px', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.15) 0%, transparent 60%)', animation: 'pulse 2.5s infinite' }}></div>
 
                 <div className="position-absolute top-50 start-50 translate-middle text-center w-100" style={{ zIndex: 2 }}>
-                  <div className="fw-bold text-primary-dynamic mb-0" style={{ fontSize: '3.5rem', lineHeight: '1', textShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>{burnedCalories}</div>
+                  <div className="fw-bold text-primary-dynamic mb-0" style={{ fontSize: '3.5rem', lineHeight: '1', textShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>{displayCalories}</div>
                   <div className="text-neon fw-bold mt-1" style={{ fontSize: '0.9rem', letterSpacing: '2px' }}>{t('home.kcal_burned')}</div>
                 </div>
               </div>

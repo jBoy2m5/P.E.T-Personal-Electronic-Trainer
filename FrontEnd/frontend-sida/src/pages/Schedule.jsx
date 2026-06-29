@@ -163,7 +163,7 @@ export default function Schedule() {
           transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
           border: '1px solid',
           padding: '50px 40px',
-          boxShadow: '0 30px 80px rgba(0,0,0,0.5)'
+          boxShadow: 'var(--shadow-lg)'
         }}>
           {/* Animated gradient orbs */}
           <div style={{ position: 'absolute', width: '350px', height: '350px', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.12) 0%, transparent 70%)', top: '-100px', right: '-50px', filter: 'blur(50px)', pointerEvents: 'none', animation: 'headerFloat 6s ease-in-out infinite' }}></div>
@@ -259,7 +259,7 @@ export default function Schedule() {
           <Col lg={8}>
             <div className="p-4 rounded-4 bg-surface-card border-surface" style={{
               border: '1px solid',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.2)'
+              boxShadow: 'var(--shadow-lg)'
             }}>
               {/* Navigation tháng */}
               <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-surface" style={{ borderBottom: '1px solid' }}>

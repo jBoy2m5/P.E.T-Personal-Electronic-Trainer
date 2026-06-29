@@ -83,8 +83,15 @@ export default function TopNav() {
   return (
     <Navbar 
       expand="lg" 
-      className={`border-bottom sticky-top py-3 d-none d-lg-flex ${isDark ? 'bg-black border-dark' : 'bg-white border-light'}`} 
-      style={{ zIndex: 1000 }}
+      className={`sticky-top py-3 d-none d-lg-flex`} 
+      style={{ 
+        zIndex: 1000,
+        background: isDark ? 'rgba(10,10,12,0.85)' : 'rgba(255,255,255,0.85)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+        boxShadow: isDark ? '0 4px 30px rgba(0,0,0,0.3)' : '0 4px 30px rgba(0,0,0,0.04)'
+      }}
     >
       <Container className="d-flex justify-content-between align-items-center">
         {!isLoginPage ? (
@@ -160,8 +167,16 @@ export default function TopNav() {
                     {/* Dropdown Menu */}
                     {showNotif && (
                       <div 
-                        className={`position-absolute top-100 end-0 mt-2 rounded-3 shadow-lg ${isDark ? 'bg-dark border-secondary' : 'bg-white border-light'}`} 
-                        style={{ width: '300px', zIndex: 1050, border: '1px solid', overflow: 'hidden' }}
+                        className={`position-absolute top-100 end-0 mt-2 rounded-4`} 
+                        style={{ 
+                          width: '320px', zIndex: 1050, overflow: 'hidden',
+                          background: isDark ? 'rgba(20,20,22,0.95)' : 'rgba(255,255,255,0.95)',
+                          backdropFilter: 'blur(20px) saturate(180%)',
+                          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                          border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                          boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.5)' : '0 20px 60px rgba(0,0,0,0.1)',
+                          animation: 'fadeSlideIn 0.2s ease'
+                        }}
                       >
                         <div className={`p-3 border-bottom fw-bold ${isDark ? 'text-white border-secondary' : 'text-dark border-light'}`}>
                           {t('nav.notifications')}
@@ -197,7 +212,7 @@ export default function TopNav() {
                       </span>
                     </Dropdown.Toggle>
 
-                    <Dropdown.Menu className={`shadow-lg mt-2 ${isDark ? 'dropdown-menu-dark border-secondary' : 'border-light'}`} style={{ minWidth: '200px' }}>
+                    <Dropdown.Menu className={`mt-2 rounded-4 ${isDark ? 'dropdown-menu-dark' : ''}`} style={{ minWidth: '220px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.5)' : '0 20px 60px rgba(0,0,0,0.1)', background: isDark ? 'rgba(20,20,22,0.95)' : 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)' }}>
                       <Dropdown.Item as={Link} to="/profile" className="d-flex align-items-center py-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="me-2" viewBox="0 0 16 16">
                           <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3Zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>

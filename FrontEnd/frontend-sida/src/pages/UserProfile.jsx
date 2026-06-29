@@ -124,14 +124,18 @@ export default function UserProfile() {
                 <Row className="g-4">
                     {/* Left Column: Avatar & Basic Info */}
                     <Col lg={4}>
-                        <Card className="border-0 bg-surface-card rounded-4 shadow-lg overflow-hidden h-100" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Card className="border-0 bg-surface-card rounded-4 overflow-hidden h-100" style={{ border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-lg)' }}>
                             <Card.Body className="p-4 d-flex flex-column align-items-center text-center">
                                 <div className="position-relative mb-4 mt-3">
                                     <img 
                                         src={userData.pictureUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || 'User')}&background=random&size=150`} 
                                         alt="Profile" 
                                         className="rounded-circle shadow" 
-                                        style={{ width: '150px', height: '150px', objectFit: 'cover', border: '4px solid var(--brand-neon)' }} 
+                                        style={{ 
+                                            width: '150px', height: '150px', objectFit: 'cover', 
+                                            border: '4px solid var(--brand-neon)',
+                                            boxShadow: '0 0 20px rgba(var(--brand-neon-rgb),0.3)'
+                                        }} 
                                     />
                                     <div 
                                       className="position-absolute bottom-0 end-0 bg-neon text-dark rounded-circle d-flex align-items-center justify-content-center" 
@@ -174,7 +178,10 @@ export default function UserProfile() {
                     <Col lg={8}>
                         <Row className="g-4 mb-4">
                             <Col sm={4} xs={6}>
-                                <Card className="border-0 bg-surface-card rounded-4 shadow-sm text-center h-100">
+                                <Card className="border-0 bg-surface-card rounded-4 text-center h-100" style={{ transition: 'all 0.3s ease', border: '1px solid var(--border-subtle)' }}
+                                    onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                                    onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                                >
                                     <Card.Body className="p-3 p-md-4">
                                         <div className="fs-2 mb-2">🔥</div>
                                         <h3 className="fw-bold text-neon mb-1">{stats.totalCalories}</h3>
@@ -183,7 +190,10 @@ export default function UserProfile() {
                                 </Card>
                             </Col>
                             <Col sm={4} xs={6}>
-                                <Card className="border-0 bg-surface-card rounded-4 shadow-sm text-center h-100">
+                                <Card className="border-0 bg-surface-card rounded-4 text-center h-100" style={{ transition: 'all 0.3s ease', border: '1px solid var(--border-subtle)' }}
+                                    onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                                    onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                                >
                                     <Card.Body className="p-3 p-md-4">
                                         <div className="fs-2 mb-2">💪</div>
                                         <h3 className="fw-bold text-primary-dynamic mb-1">{stats.totalWorkouts}</h3>
@@ -192,7 +202,10 @@ export default function UserProfile() {
                                 </Card>
                             </Col>
                             <Col sm={4} xs={12}>
-                                <Card className="border-0 bg-surface-card rounded-4 shadow-sm text-center h-100">
+                                <Card className="border-0 bg-surface-card rounded-4 text-center h-100" style={{ transition: 'all 0.3s ease', border: '1px solid var(--border-subtle)' }}
+                                    onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                                    onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                                >
                                     <Card.Body className="p-3 p-md-4">
                                         <div className="fs-2 mb-2">⚡</div>
                                         <h3 className="fw-bold text-warning mb-1">{stats.streak}</h3>

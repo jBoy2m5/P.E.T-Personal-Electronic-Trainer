@@ -28,8 +28,10 @@ export default function CalorieTracker() {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const [burnedCalories, setBurnedCalories] = useState(0);
+    const [displayCalories, setDisplayCalories] = useState(0);
     const [todaySessions, setTodaySessions] = useState([]);
     const [todayDetails, setTodayDetails] = useState([]);
+    const [animateChart, setAnimateChart] = useState(false);
 
     useEffect(() => {
         const loadCaloriesData = () => {
@@ -59,18 +61,43 @@ export default function CalorieTracker() {
         return () => window.removeEventListener('storage', loadCaloriesData);
     }, []);
 
+    // Animated counter
+    useEffect(() => {
+        if (burnedCalories === 0) return;
+        setAnimateChart(true);
+        let start = 0;
+        const duration = 1200;
+        const startTime = Date.now();
+        const tick = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setDisplayCalories(Math.round(eased * burnedCalories));
+            if (progress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }, [burnedCalories]);
+
     return (
-        <div className="bg-surface-main" style={{ minHeight: '100vh', paddingTop: '80px', paddingBottom: '100px' }}>
+        <div className="bg-surface-main" style={{ minHeight: '100vh', paddingTop: '80px', paddingBottom: '100px', position: 'relative', overflow: 'hidden' }}>
+            {/* Decorative background orbs */}
+            <div style={{ position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.06) 0%, transparent 70%)', top: '-100px', right: '-50px', filter: 'blur(60px)', pointerEvents: 'none' }}></div>
+            <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,229,255,0.04) 0%, transparent 70%)', bottom: '10%', left: '-50px', filter: 'blur(50px)', pointerEvents: 'none' }}></div>
             <Container style={{ maxWidth: '800px' }}>
-                <div className="d-flex align-items-center mb-4">
+                <div className="d-flex align-items-center mb-5">
                     <button
                         onClick={() => navigate(-1)}
-                        className="btn text-white p-0 me-3 d-flex align-items-center justify-content-center"
-                        style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}
+                        className="btn text-primary-dynamic p-0 me-3 d-flex align-items-center justify-content-center"
+                        style={{ width: '44px', height: '44px', background: 'rgba(var(--brand-neon-rgb),0.06)', borderRadius: '50%', border: '1px solid rgba(var(--brand-neon-rgb),0.15)', transition: 'all 0.3s ease' }}
+                        onMouseOver={e => { e.currentTarget.style.background = 'rgba(var(--brand-neon-rgb),0.12)'; }}
+                        onMouseOut={e => { e.currentTarget.style.background = 'rgba(var(--brand-neon-rgb),0.06)'; }}
                     >
                         <span className="fs-5">←</span>
                     </button>
-                    <h2 className="fw-bold text-primary-dynamic mb-0" style={{ letterSpacing: '1px' }}>{t('calorie_tracker.title')}</h2>
+                    <div>
+                        <div className="text-secondary fw-bold text-uppercase" style={{ fontSize: '0.7rem', letterSpacing: '2px', marginBottom: '2px' }}>TRACKING</div>
+                        <h2 className="fw-bold text-primary-dynamic mb-0" style={{ letterSpacing: '-0.5px' }}>{t('calorie_tracker.title')}</h2>
+                    </div>
                 </div>
 
                 <Row className="g-4 mb-5">
@@ -98,7 +125,7 @@ export default function CalorieTracker() {
                                     />
                                 </svg>
                                 <div className="position-absolute top-50 start-50 translate-middle w-100">
-                                    <div className="fw-bold text-primary-dynamic" style={{ fontSize: '3rem', lineHeight: '1' }}>{burnedCalories}</div>
+                                    <div className="fw-bold text-primary-dynamic" style={{ fontSize: '3rem', lineHeight: '1' }}>{displayCalories}</div>
                                     <div className="text-neon fw-bold mt-1" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>{t('calorie_tracker.kcal_burned')}</div>
                                 </div>
                             </div>
@@ -134,7 +161,10 @@ export default function CalorieTracker() {
                                         }
 
                                         return (
-                                            <div key={index} className="d-flex align-items-center p-3 mb-3 rounded-4 border-surface" style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.03))', border: '1px solid' }}>
+                                            <div key={index} className="d-flex align-items-center p-3 mb-3 rounded-4 border-surface" style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.03))', border: '1px solid', transition: 'all 0.3s ease', animationDelay: `${index * 0.1}s`, animation: 'fadeSlideIn 0.4s ease forwards' }}
+                                                onMouseOver={e => { e.currentTarget.style.transform = 'translateX(6px)'; e.currentTarget.style.borderColor = 'rgba(var(--brand-neon-rgb),0.2)'; }}
+                                                onMouseOut={e => { e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.borderColor = ''; }}
+                                            >
                                                 <div style={{ width: '60px', height: '60px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }} className="me-3">
                                                     <img src={exData.img} alt="ex" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 </div>

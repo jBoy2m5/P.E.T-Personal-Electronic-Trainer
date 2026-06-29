@@ -120,10 +120,11 @@ export default function Onboarding() {
           disabled={disableNext}
           className="fw-bold px-5 py-3 rounded-pill flex-grow-1 border-0"
           style={{
-            backgroundColor: disableNext ? '#333' : '#ccff00',
+            background: disableNext ? 'var(--surface-4, #333)' : 'linear-gradient(135deg, var(--brand-neon), #88ff44)',
             color: disableNext ? '#777' : '#000',
-            boxShadow: disableNext ? 'none' : '0 0 20px rgba(204,255,0,0.4)',
-            transition: 'all 0.3s ease'
+            boxShadow: disableNext ? 'none' : '0 4px 25px rgba(var(--brand-neon-rgb),0.4)',
+            transition: 'all 0.3s ease',
+            letterSpacing: '1px'
           }}
         >
           TIẾP TỤC
@@ -136,11 +137,12 @@ export default function Onboarding() {
     <Container fluid className="p-0 bg-black min-vh-100 d-flex align-items-center">
       <style type="text/css">
         {`
-          .bg-success { background-color: #ccff00 !important; }
-          .form-range::-webkit-slider-thumb { background: #ccff00; }
-          .form-range::-moz-range-thumb { background: #ccff00; }
-          .animate-fade-in { animation: fadeIn 0.4s ease-in-out; }
-          @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+          .bg-success { background-color: var(--brand-neon) !important; }
+          .form-range::-webkit-slider-thumb { background: var(--brand-neon); box-shadow: 0 0 10px rgba(var(--brand-neon-rgb),0.4); }
+          .form-range::-moz-range-thumb { background: var(--brand-neon); box-shadow: 0 0 10px rgba(var(--brand-neon-rgb),0.4); }
+          .form-range::-webkit-slider-runnable-track { background: rgba(var(--brand-neon-rgb),0.15); }
+          .animate-fade-in { animation: fadeSlideStep 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
+          @keyframes fadeSlideStep { from { opacity: 0; transform: translateY(20px) scale(0.98); filter: blur(4px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
         `}
       </style>
 
@@ -296,7 +298,13 @@ export default function Onboarding() {
                   <Button
                     onClick={handleSubmit}
                     className="w-100 py-3 fw-bold rounded-pill border-0 flex-grow-1"
-                    style={{ backgroundColor: '#ccff00', color: '#000', boxShadow: '0 0 20px rgba(204,255,0,0.5)', fontSize: '1.1rem' }}
+                    style={{ 
+                      background: 'linear-gradient(135deg, var(--brand-neon), #88ff44)', 
+                      color: '#000', 
+                      boxShadow: '0 4px 25px rgba(var(--brand-neon-rgb),0.5)', 
+                      fontSize: '1.1rem',
+                      letterSpacing: '1px'
+                    }}
                   >
                     HOÀN THÀNH & TẠO LỘ TRÌNH
                   </Button>

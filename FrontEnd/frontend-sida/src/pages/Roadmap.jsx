@@ -151,10 +151,17 @@ export default function Roadmap() {
                       width: '70px',
                       height: '70px',
                       borderRadius: '50%',
-                      backgroundColor: isCompleted ? 'var(--brand-neon)' : (isActive ? '#ffffff' : '#222222'),
-                      border: `4px solid ${isActive ? 'var(--brand-neon)' : (isCompleted ? '#aacc00' : '#333')}`,
+                      backgroundColor: isCompleted ? 'var(--brand-neon)' : (isActive ? '#ffffff' : 'var(--surface-4, #222222)'),
+                      border: `4px solid ${isActive ? 'var(--brand-neon)' : (isCompleted ? '#aacc00' : 'var(--border-default, #333)')}`,
                       cursor: isLocked ? 'not-allowed' : 'pointer',
-                      zIndex: 2
+                      zIndex: 2,
+                      transition: 'all 0.3s ease',
+                      boxShadow: isActive 
+                        ? '0 0 25px rgba(var(--brand-neon-rgb),0.4), 0 0 50px rgba(var(--brand-neon-rgb),0.15)' 
+                        : isCompleted 
+                          ? '0 0 15px rgba(var(--brand-neon-rgb),0.2)' 
+                          : 'none',
+                      animation: isActive ? 'sagaPulse 2s infinite' : 'none'
                     }}
                     onClick={() => handleNodeClick(day)}
                   >
@@ -177,7 +184,7 @@ export default function Roadmap() {
 
       <Modal show={showModal} onHide={() => setShowModal(false)} centered className="saga-modal border-0">
         {selectedDay && (
-          <Modal.Body className="bg-surface-card rounded-4 p-0 overflow-hidden" style={{ border: '1px solid rgba(var(--brand-neon-rgb),0.3)' }}>
+          <Modal.Body className="bg-surface-card rounded-4 p-0 overflow-hidden" style={{ border: '1px solid rgba(var(--brand-neon-rgb),0.2)', boxShadow: 'var(--shadow-lg), var(--shadow-neon)' }}>
             <div className="p-4 position-relative text-center" style={{ background: 'linear-gradient(180deg, rgba(var(--brand-neon-rgb),0.2) 0%, transparent 100%)' }}>
               <button onClick={() => setShowModal(false)} className="btn-close btn-close-white position-absolute top-0 end-0 m-3"></button>
               

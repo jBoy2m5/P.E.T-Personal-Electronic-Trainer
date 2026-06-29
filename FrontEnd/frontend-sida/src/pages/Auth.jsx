@@ -91,12 +91,13 @@ export default function Auth() {
       color: #fff;
     }
     .auth-card {
-      background: rgba(20, 21, 26, 0.6) !important;
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-radius: 20px;
+      background: rgba(20, 21, 26, 0.5) !important;
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.06) !important;
+      border-radius: 24px;
       padding: 2.5rem;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05);
       transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
     }
     .btn-google {
@@ -119,19 +120,29 @@ export default function Auth() {
       margin-bottom: 2rem;
       position: relative;
       z-index: 2;
+      transition: transform 0.3s ease;
+    }
+    .feature-item:hover {
+      transform: translateX(8px);
     }
     .feature-icon-wrapper {
-      width: 48px;
-      height: 48px;
-      background: rgba(204, 255, 0, 0.1);
-      border: 1px solid rgba(204, 255, 0, 0.3);
-      border-radius: 12px;
+      width: 50px;
+      height: 50px;
+      background: rgba(204, 255, 0, 0.08);
+      border: 1px solid rgba(204, 255, 0, 0.2);
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #ccff00;
       margin-right: 1.25rem;
       transition: all 0.3s ease;
+      box-shadow: 0 0 20px rgba(204,255,0,0.05);
+    }
+    .feature-item:hover .feature-icon-wrapper {
+      background: rgba(204, 255, 0, 0.15);
+      box-shadow: 0 0 25px rgba(204,255,0,0.15);
+      transform: scale(1.05);
     }
     .feature-title {
       font-weight: 700;
@@ -171,9 +182,10 @@ export default function Auth() {
       background: linear-gradient(180deg, #f4f6f8 0%, #e5e7eb 100%);
     }
     [data-bs-theme="light"] .auth-card {
-      background: rgba(255, 255, 255, 0.8) !important;
-      border: 1px solid rgba(0, 0, 0, 0.08) !important;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+      background: rgba(255, 255, 255, 0.75) !important;
+      backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(0, 0, 0, 0.06) !important;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255,255,255,0.8);
     }
     [data-bs-theme="light"] .auth-card h1 {
       color: #111827 !important;
