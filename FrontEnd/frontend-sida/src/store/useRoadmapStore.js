@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { generateDynamicRoadmap } from '../services/roadmapGenerator';
 import useExerciseStore from './useExerciseStore';
+import axiosClient from '../api/axiosClient';
 
 const useRoadmapStore = create((set, get) => ({
   roadmapData: [],
@@ -41,6 +42,15 @@ const useRoadmapStore = create((set, get) => ({
 
     localStorage.setItem('roadmap-data', JSON.stringify(roadmap));
     set({ roadmapData: roadmap, initialized: true });
+
+    // Fetch Gemini AI advice in background (fire-and-forget)
+    axiosClient.get('/ai/roadmap-advice')
+      .then(res => {
+        if (res && res.advice) {
+          localStorage.setItem('ai-roadmap-advice', res.advice);
+        }
+      })
+      .catch(() => {});
   }
 }));
 

@@ -6,6 +6,56 @@ import usePetStore from '../store/usePetStore';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
 
+const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
+const PET_THRESHOLDS_LIST = [0, 10, 50, 150, 300, 600, 1200, 2500];
+
+const POSE_CONNECTIONS = [
+    [11,12],[11,13],[13,15],[12,14],[14,16],
+    [11,23],[12,24],[23,24],
+    [23,25],[25,27],[24,26],[26,28],
+    [27,31],[28,32]
+];
+
+const ERROR_KEYWORDS = ['too high','too low','too narrow','wider','go lower','tighten','straight','controlled','võng','sai','chưa đủ','hips'];
+
+const isFormError = (status) =>
+    status ? ERROR_KEYWORDS.some(k => status.toLowerCase().includes(k)) : false;
+
+const drawSkeleton = (landmarks, hasError, canvas, video) => {
+    if (!canvas || !video || !landmarks?.length) return;
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+    const cw = video.clientWidth || 640;
+    const ch = video.clientHeight || 480;
+    canvas.width = cw;
+    canvas.height = ch;
+    const scale = Math.min(cw / vw, ch / vh);
+    const ox = (cw - vw * scale) / 2;
+    const oy = (ch - vh * scale) / 2;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, cw, ch);
+    const color = hasError ? '#ff4444' : '#00ff88';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.fillStyle = color;
+    POSE_CONNECTIONS.forEach(([i, j]) => {
+        const a = landmarks[i], b = landmarks[j];
+        if (a && b && a.visibility > 0.5 && b.visibility > 0.5) {
+            ctx.beginPath();
+            ctx.moveTo(ox + a.x * vw * scale, oy + a.y * vh * scale);
+            ctx.lineTo(ox + b.x * vw * scale, oy + b.y * vh * scale);
+            ctx.stroke();
+        }
+    });
+    landmarks.forEach(lm => {
+        if (lm.visibility > 0.5) {
+            ctx.beginPath();
+            ctx.arc(ox + lm.x * vw * scale, oy + lm.y * vh * scale, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+};
+
 const getTodayKey = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -46,6 +96,11 @@ export default function DailyWorkout() {
     const [completedExercises, setCompletedExercises] = useState(getCompletedToday());
     const [dailyData, setDailyData] = useState(null);
     const addExp = usePetStore(state => state.addExp);
+    const totalPoints = usePetStore(state => state.totalPoints);
+    const isSadFn = usePetStore(state => state.isSad);
+    const petIsSad = isSadFn();
+    const petIcon = petIsSad ? '😢' : (PET_ICONS_LIST[PET_THRESHOLDS_LIST.filter(th => totalPoints >= th).length - 1] || '🥚');
+    const overlayCanvasRef = useRef(null);
 
     // States cho AI Camera Modal
     const [showAIModal, setShowAIModal] = useState(false);
@@ -146,13 +201,20 @@ export default function DailyWorkout() {
         const translatedGroup = t(`roadmap_data.${mgKey}`, dayInfo.muscleGroup);
         const translatedGoal = t(`daily_workout.${goalTranslations[goal] || 'goal_muscle'}`, goal);
 
-        // Mock exercises for this day
-        const mockExercises = [
+        const fallbackExercises = [
             { exercise_id: 101, name: 'Hít đất cơ bản (Standard Push-up)', reps: '15', sets: '3', kcal: 45, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Giúp săn chắc toàn bộ cơ ngực, vai và tay sau.', safety_notes: 'Không võng lưng', estimated_calories_per_rep: 1.0 },
             { exercise_id: 501, name: 'Gập bụng (Crunches)', reps: '20', sets: '3', kcal: 50, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: 'Giúp săn chắc cơ bụng thẳng.', safety_notes: '', estimated_calories_per_rep: 0.8 },
             { exercise_id: 601, name: 'Squat cơ bản', reps: '15', sets: '4', kcal: 70, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', technical_description: 'Bài tập Vua cho thân dưới, phát triển đùi trước, đùi sau và mông.', safety_notes: '', estimated_calories_per_rep: 1.2 },
             { exercise_id: 201, name: 'Hít xà đơn (Pull-up)', reps: '8', sets: '3', kcal: 60, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Bài tập kinh điển phát triển cơ xô, cơ lưng giữa và bắp tay trước.', safety_notes: '', estimated_calories_per_rep: 2.0 },
         ];
+
+        const roadmapExercises = dayInfo.exercises && dayInfo.exercises.length > 0
+            ? dayInfo.exercises.map(ex => ({
+                ...ex,
+                exercise_id: ex.exercise_id || ex.id,
+                kcal: ex.kcal ?? Math.round((ex.estimated_calories_per_rep || ex.kcalPerRep || 1) * parseInt(ex.reps || 12) * (ex.sets || 3))
+            }))
+            : fallbackExercises;
 
         setDailyData({
             ...dayInfo,
@@ -160,7 +222,7 @@ export default function DailyWorkout() {
             translatedGoal: translatedGoal,
             translatedGroup: translatedGroup,
             benefits: t('daily_workout.benefits_default', { group: translatedGroup.toLowerCase() }),
-            exercises: mockExercises,
+            exercises: roadmapExercises,
             difficulty: dayInfo.muscleGroup === 'Full Body' ? 4 : 3
         });
     }, [dayId, t]);
@@ -274,10 +336,25 @@ export default function DailyWorkout() {
                     setAiStatus("Đang kết nối AI Server...");
                     socketRef.current = new WebSocket('ws://localhost:8765');
                     socketRef.current.onopen = () => { setAiStatus("Đã kết nối! Bắt đầu phân tích..."); sendFrames(); };
+                    const errorLogCooldownRef = { last: 0 };
                     socketRef.current.onmessage = (event) => {
                         const data = JSON.parse(event.data);
-                        setAiStatus(data.feedback || "Form chuẩn! Đang theo dõi...");
+                        const feedback = data.feedback || "Form chuẩn! Đang theo dõi...";
+                        setAiStatus(feedback);
                         setSimReps(data.reps || 0);
+                        if (data.landmarks?.length) {
+                            drawSkeleton(data.landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
+                        }
+                        if (isFormError(feedback)) {
+                            const now = Date.now();
+                            if (now - errorLogCooldownRef.last > 5000) {
+                                errorLogCooldownRef.last = now;
+                                axiosClient.post('/error-logs', {
+                                    error_description: feedback,
+                                    created_at: new Date().toISOString().slice(0, 19)
+                                }).catch(() => {});
+                            }
+                        }
                         if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
                             handleSetComplete();
                         }
@@ -565,6 +642,7 @@ export default function DailyWorkout() {
                     <div style={{ height: '100vh', width: '100%', background: '#000', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }}></video>
                         <canvas ref={canvasRef} width="640" height="480" style={{ display: 'none' }}></canvas>
+                        <canvas ref={overlayCanvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', transform: 'scaleX(-1)', pointerEvents: 'none', zIndex: 1 }}></canvas>
                         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'var(--brand-neon)', boxShadow: '0 0 15px var(--brand-neon)', animation: 'scan 2s linear infinite' }}></div>
                     </div>
 
@@ -578,6 +656,17 @@ export default function DailyWorkout() {
                                 </div>
                             </div>
                             <Button variant="link" className="text-white p-0 m-0 text-decoration-none" onClick={() => setShowAIModal(false)}><span className="fs-1 fw-bold text-shadow">&times;</span></Button>
+                        </div>
+
+                        {/* Pet animation + speech bubble */}
+                        <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '200px', right: '24px', zIndex: 2 }}>
+                            {isFormError(aiStatus) && (
+                                <div className="mb-2 px-3 py-2 rounded-3 fw-bold text-dark" style={{ background: '#ff4444', fontSize: '0.75rem', maxWidth: '160px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)', position: 'relative' }}>
+                                    {aiStatus}
+                                    <div style={{ position: 'absolute', bottom: '-8px', right: '20px', width: 0, height: 0, borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '8px solid #ff4444' }}></div>
+                                </div>
+                            )}
+                            <div className="pet-working" style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>{petIcon}</div>
                         </div>
 
                         <div className="mt-auto p-4 rounded-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -623,6 +712,11 @@ export default function DailyWorkout() {
                                 </>
                             ) : <div className="fw-black text-success" style={{ fontSize: '2.5rem' }}>{t('exercise_list.done')}</div>}
                         </div>
+                    </div>
+
+                    {/* Pet animation */}
+                    <div className="text-center mb-3">
+                        <span className={manualIsResting ? 'pet-resting' : 'pet-working'} style={{ fontSize: '2rem', display: 'inline-block' }}>{petIcon}</span>
                     </div>
 
                     <div className="d-flex flex-column gap-3">
@@ -697,6 +791,10 @@ export default function DailyWorkout() {
                 .text-shadow { text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
                 @keyframes scan { 0% { top: 0%; opacity: 0.8; } 50% { top: 100%; opacity: 0.3; } 100% { top: 0%; opacity: 0.8; } }
                 @keyframes blink-anim { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+                @keyframes pet-bounce { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-12px) scale(1.1); } }
+                @keyframes pet-rest { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+                .pet-working { animation: pet-bounce 0.6s ease-in-out infinite; }
+                .pet-resting { animation: pet-rest 1.5s ease-in-out infinite; }
                 /* Hide scrollbar for Chrome, Safari and Opera */
                 .d-flex.gap-4::-webkit-scrollbar { display: none; }
                 /* Hide scrollbar for IE, Edge and Firefox */

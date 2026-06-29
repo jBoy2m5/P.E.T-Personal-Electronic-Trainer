@@ -46,6 +46,19 @@ const usePetStore = create((set, get) => ({
     return current;
   },
 
+  isSad: () => {
+    const schedule = localStorage.getItem('pet-schedule');
+    if (!schedule) return false;
+    const data = JSON.parse(schedule);
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const today = new Date();
+    for (let i = 1; i <= 2; i++) {
+      const d = new Date(today); d.setDate(today.getDate() - i);
+      if (data[fmt(d)]?.trained) return false;
+    }
+    return !data[fmt(today)]?.trained;
+  },
+
   addExp: (kcal, exerciseName) => {
     const MAX_DAILY_EXP = 300;
     

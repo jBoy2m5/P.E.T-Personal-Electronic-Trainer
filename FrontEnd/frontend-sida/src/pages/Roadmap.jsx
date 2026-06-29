@@ -10,11 +10,14 @@ export default function Roadmap() {
   const { roadmapData, initialized, loadRoadmap } = useRoadmapStore();
   const [selectedDay, setSelectedDay] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [aiAdvice, setAiAdvice] = useState('');
 
   useEffect(() => {
     if (!initialized) {
         loadRoadmap();
     }
+    const advice = localStorage.getItem('ai-roadmap-advice');
+    if (advice) setAiAdvice(advice);
   }, [initialized, loadRoadmap]);
 
   const handleNodeClick = (day) => {
@@ -99,7 +102,19 @@ export default function Roadmap() {
         <div style={{ width: '100px' }}></div>
       </div>
 
-      <Container fluid className="position-relative" style={{ zIndex: 1, maxWidth: '1200px', marginTop: '100px' }}>
+      {/* AI Coach Advice Banner */}
+      {aiAdvice && (
+        <div className="position-relative mx-auto px-4 pb-2" style={{ zIndex: 1, maxWidth: '1200px', marginTop: '110px' }}>
+          <div className="p-3 rounded-4 border" style={{ background: 'rgba(0,0,0,0.6)', borderColor: 'var(--brand-neon)', backdropFilter: 'blur(10px)' }}>
+            <div className="d-flex align-items-start gap-2">
+              <span style={{ fontSize: '1.2rem' }}>🤖</span>
+              <p className="text-white fw-bold mb-0 small" style={{ lineHeight: 1.6 }}>{aiAdvice}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Container fluid className="position-relative" style={{ zIndex: 1, maxWidth: '1200px', marginTop: aiAdvice ? '8px' : '100px' }}>
         <div className="saga-map-wrapper position-relative mx-auto mt-4">
           {roadmapData.map((day, index) => {
             const isLast = index === roadmapData.length - 1;
