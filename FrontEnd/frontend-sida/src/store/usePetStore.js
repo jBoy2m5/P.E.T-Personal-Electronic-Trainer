@@ -127,10 +127,12 @@ const usePetStore = create((set, get) => ({
     try {
       const result = await axiosClient.post(`/pets/${petId}/checkin`);
       const expGained = result.checkin_exp_gained || 0;
+      // Only update if backend confirms checkin (last_checkin_date must be set)
+      if (!result.last_checkin_date) return null;
       const newState = {
         totalPoints: result.total_exp || 0,
         checkinStreak: result.checkin_streak || 0,
-        lastCheckinDate: result.last_checkin_date || todayStr,
+        lastCheckinDate: result.last_checkin_date,
         petId: result.pet_id,
       };
       set((state) => {
