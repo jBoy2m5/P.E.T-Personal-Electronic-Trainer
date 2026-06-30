@@ -32,6 +32,17 @@ export default function CalorieTracker() {
     const [todaySessions, setTodaySessions] = useState([]);
     const [todayDetails, setTodayDetails] = useState([]);
     const [animateChart, setAnimateChart] = useState(false);
+    const [isDark, setIsDark] = useState(true);
+
+    useEffect(() => {
+        const checkTheme = () => {
+            setIsDark(document.documentElement.getAttribute('data-bs-theme') !== 'light');
+        };
+        checkTheme();
+        const observer = new MutationObserver(checkTheme);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         const loadCaloriesData = () => {
@@ -81,8 +92,8 @@ export default function CalorieTracker() {
     return (
         <div className="bg-surface-main" style={{ minHeight: '100vh', paddingTop: '80px', paddingBottom: '100px', position: 'relative', overflow: 'hidden' }}>
             {/* Decorative background orbs */}
-            <div style={{ position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.06) 0%, transparent 70%)', top: '-100px', right: '-50px', filter: 'blur(60px)', pointerEvents: 'none' }}></div>
-            <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,229,255,0.04) 0%, transparent 70%)', bottom: '10%', left: '-50px', filter: 'blur(50px)', pointerEvents: 'none' }}></div>
+            <div style={{ position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', background: `radial-gradient(circle, rgba(var(--brand-neon-rgb),${isDark ? '0.08' : '0.04'}) 0%, transparent 70%)`, top: '-100px', right: '-50px', filter: 'blur(60px)', pointerEvents: 'none' }}></div>
+            <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', background: `radial-gradient(circle, rgba(0,229,255,${isDark ? '0.05' : '0.02'}) 0%, transparent 70%)`, bottom: '10%', left: '-50px', filter: 'blur(50px)', pointerEvents: 'none' }}></div>
             <Container style={{ maxWidth: '800px' }}>
                 <div className="d-flex align-items-center mb-5">
                     <button
@@ -103,30 +114,44 @@ export default function CalorieTracker() {
                 <Row className="g-4 mb-5">
                     {/* Card Tổng Quan */}
                     <Col lg={5}>
-                        <Card className="bg-surface-card-gradient border-surface p-4 text-center h-100 d-flex flex-column justify-content-center" style={{ borderRadius: '32px' }}>
+                        <Card className="border-surface p-4 text-center h-100 d-flex flex-column justify-content-center" style={{ borderRadius: '32px', background: isDark ? 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)' : '#fff', boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.2)' : '0 8px 32px rgba(0,0,0,0.05)' }}>
 
-                            <h5 className="text-muted fw-bold mb-4" style={{ letterSpacing: '1px' }}>{t('calorie_tracker.today')}</h5>
+                            <h5 className="fw-bold mb-4 text-uppercase" style={{ letterSpacing: '2px', fontSize: '0.9rem', color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }}>{t('calorie_tracker.today')}</h5>
 
                             <div className="position-relative d-inline-block mx-auto mb-4" style={{ width: '220px', height: '220px' }}>
-                                <svg viewBox="0 0 100 100" className="w-100 h-100" style={{ filter: 'drop-shadow(0 0 10px rgba(204,255,0,0.3))' }}>
+                                <svg viewBox="0 0 100 100" className="w-100 h-100" style={{ filter: `drop-shadow(0 0 20px rgba(var(--brand-neon-rgb),${isDark ? '0.35' : '0.2'}))` }}>
                                     <defs>
-                                        <linearGradient id="kcalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" stopColor="#ccff00" />
-                                            <stop offset="100%" stopColor="#00ff88" />
+                                        <linearGradient id="kcalGradientPremium" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stopColor="var(--brand-neon)" />
+                                            <stop offset="50%" stopColor={isDark ? '#99ff00' : '#22c55e'} />
+                                            <stop offset="100%" stopColor={isDark ? '#00ff88' : '#10b981'} />
+                                        </linearGradient>
+                                        <linearGradient id="kcalTrack" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stopColor={isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'} />
+                                            <stop offset="100%" stopColor={isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'} />
                                         </linearGradient>
                                     </defs>
-                                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-                                    <circle cx="50" cy="50" r="34" fill="none" stroke="rgba(204,255,0,0.1)" strokeWidth="1" strokeDasharray="2 3" />
+                                    {/* Outer glow ring */}
+                                    <circle cx="50" cy="50" r="46" fill="none" stroke={`rgba(var(--brand-neon-rgb),${isDark ? '0.06' : '0.08'})`} strokeWidth="1" />
+                                    {/* Track */}
+                                    <circle cx="50" cy="50" r="42" fill="none" stroke="url(#kcalTrack)" strokeWidth="7" strokeLinecap="round" />
+                                    {/* Inner detail dashed line */}
+                                    <circle cx="50" cy="50" r="34" fill="none" stroke={`rgba(var(--brand-neon-rgb),${isDark ? '0.15' : '0.12'})`} strokeWidth="1" strokeDasharray="2 3" />
+                                    {/* Progress */}
                                     <circle
-                                        cx="50" cy="50" r="42" fill="none" stroke="url(#kcalGrad)" strokeWidth="8" strokeLinecap="round"
+                                        cx="50" cy="50" r="42" fill="none" stroke="url(#kcalGradientPremium)" strokeWidth="7" strokeLinecap="round"
                                         strokeDasharray="264"
                                         strokeDashoffset={0}
-                                        style={{ transformOrigin: 'center', transform: 'rotate(-90deg)', transition: 'stroke-dashoffset 1s ease' }}
+                                        style={{ transformOrigin: 'center', transform: 'rotate(-90deg)', transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }}
                                     />
                                 </svg>
-                                <div className="position-absolute top-50 start-50 translate-middle w-100">
-                                    <div className="fw-bold text-primary-dynamic" style={{ fontSize: '3rem', lineHeight: '1' }}>{displayCalories}</div>
-                                    <div className="text-neon fw-bold mt-1" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>{t('calorie_tracker.kcal_burned')}</div>
+                                
+                                {/* Glowing center pulse */}
+                                <div className="position-absolute top-50 start-50 translate-middle rounded-circle" style={{ width: '140px', height: '140px', background: `radial-gradient(circle, rgba(var(--brand-neon-rgb),${isDark ? '0.12' : '0.08'}) 0%, transparent 65%)`, animation: 'pulse 3s infinite ease-in-out' }}></div>
+
+                                <div className="position-absolute top-50 start-50 translate-middle text-center w-100" style={{ zIndex: 2 }}>
+                                    <div className="fw-bold mb-0" style={{ fontSize: '3.8rem', lineHeight: '1', color: isDark ? '#fff' : '#1a1a2e', textShadow: isDark ? '0 0 30px rgba(var(--brand-neon-rgb),0.3)' : 'none' }}>{displayCalories}</div>
+                                    <div className="fw-bold mt-1 text-uppercase" style={{ fontSize: '0.85rem', letterSpacing: '3px', color: 'var(--brand-neon)' }}>{t('calorie_tracker.kcal_burned')}</div>
                                 </div>
                             </div>
                         </Card>
@@ -192,7 +217,13 @@ export default function CalorieTracker() {
             <style>{`
                 .custom-scroll::-webkit-scrollbar { width: 6px; }
                 .custom-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
-                .custom-scroll::-webkit-scrollbar-thumb { background: rgba(204,255,0,0.5); border-radius: 10px; }
+                .custom-scroll::-webkit-scrollbar-thumb { background: rgba(var(--brand-neon-rgb),0.5); border-radius: 10px; }
+                
+                @keyframes pulse {
+                    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.4; }
+                    50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.7; }
+                    100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.4; }
+                }
             `}</style>
         </div>
     );

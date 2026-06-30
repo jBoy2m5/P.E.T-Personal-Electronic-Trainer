@@ -83,6 +83,8 @@ export default function DailyWorkout() {
     const [manualTotalTime, setManualTotalTime] = useState(0);
     const [manualCurrentSet, setManualCurrentSet] = useState(1);
     const [manualIsResting, setManualIsResting] = useState(false);
+    const [manualIsWaiting, setManualIsWaiting] = useState(true);
+    const [manualCountdown, setManualCountdown] = useState(null);
 
     // States cho Workout Summary Modal
     const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -154,10 +156,38 @@ export default function DailyWorkout() {
         const translatedGoal = t(`daily_workout.${goalTranslations[goal] || 'goal_muscle'}`, goal);
 
         const fallbackExercises = [
-            { exercise_id: 101, name: 'Hít đất cơ bản (Standard Push-up)', reps: '15', sets: '3', kcal: 45, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Giúp săn chắc toàn bộ cơ ngực, vai và tay sau.', safety_notes: 'Không võng lưng', estimated_calories_per_rep: 1.0 },
-            { exercise_id: 501, name: 'Gập bụng (Crunches)', reps: '20', sets: '3', kcal: 50, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', technical_description: 'Giúp săn chắc cơ bụng thẳng.', safety_notes: '', estimated_calories_per_rep: 0.8 },
-            { exercise_id: 601, name: 'Squat cơ bản', reps: '15', sets: '4', kcal: 70, level: 'Cơ bản', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', technical_description: 'Bài tập Vua cho thân dưới, phát triển đùi trước, đùi sau và mông.', safety_notes: '', estimated_calories_per_rep: 1.2 },
-            { exercise_id: 201, name: 'Hít xà đơn (Pull-up)', reps: '8', sets: '3', kcal: 60, level: 'Trung bình', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', technical_description: 'Bài tập kinh điển phát triển cơ xô, cơ lưng giữa và bắp tay trước.', safety_notes: '', estimated_calories_per_rep: 2.0 },
+            { 
+                exercise_id: 101, 
+                name: 'Hít đất cơ bản (Standard Push-up)', reps: '15', sets: '3', kcal: 45, level: 'Cơ bản', 
+                img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', 
+                technical_description: 'Bài tập phát triển toàn diện cơ ngực, vai và bắp tay sau. Khi hạ người, ngực được dãn tối đa, sau đó dùng sức mạnh bộc phát đẩy người lên. Giúp tăng cường sức bền và sức mạnh thân trên.', 
+                safety_notes: '⚠️ LƯU Ý: Cánh tay tạo với thân người một góc khoảng 45 độ (tuyệt đối không giang rộng 90 độ sẽ gây rách chóp xoay vai). Siết chặt cơ bụng và mông để giữ lưng thẳng như một tấm ván, không để võng lưng dưới.', 
+                estimated_calories_per_rep: 1.0 
+            },
+            { 
+                exercise_id: 501, 
+                name: 'Gập bụng (Crunches)', reps: '20', sets: '3', kcal: 50, level: 'Cơ bản', 
+                img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', 
+                technical_description: 'Bài tập cô lập cơ bụng thẳng (six-pack). Thay vì ngồi hẳn lên như sit-up, bạn chỉ cần cuộn phần vai và lưng trên lên khỏi mặt sàn, ép chặt cơ bụng lại ở điểm cao nhất.', 
+                safety_notes: '⚠️ LƯU Ý: Bàn tay chỉ đặt hờ sau gáy, KHÔNG dùng tay kéo gập cổ về phía trước (dễ chấn thương đốt sống cổ). Giữ khoảng cách giữa cằm và ngực bằng một quả táo. Lưng dưới luôn dán chặt xuống sàn.', 
+                estimated_calories_per_rep: 0.8 
+            },
+            { 
+                exercise_id: 601, 
+                name: 'Squat cơ bản', reps: '15', sets: '4', kcal: 70, level: 'Cơ bản', 
+                img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', 
+                technical_description: 'Bài tập "vua" cho phần thân dưới, giúp xây dựng cơ đùi trước, đùi sau và mông. Động tác mô phỏng việc ngồi xuống một chiếc ghế vô hình phía sau và đứng lên bằng lực đẩy của gót chân.', 
+                safety_notes: '⚠️ LƯU Ý: Lưng luôn giữ thẳng tự nhiên, ngực ưỡn. Khi hạ người, đầu gối phải mở ra theo hướng mũi chân, KHÔNG chụm hai gối vào nhau để bảo vệ dây chằng. Trọng lượng dồn vào gót chân.', 
+                estimated_calories_per_rep: 1.2 
+            },
+            { 
+                exercise_id: 201, 
+                name: 'Hít xà đơn (Pull-up)', reps: '8', sets: '3', kcal: 60, level: 'Trung bình', 
+                img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', 
+                technical_description: 'Bài tập kinh điển nhất để xây dựng cơ xô (lưng chữ V), cơ lưng giữa và kích thích bắp tay trước. Kéo toàn bộ trọng lượng cơ thể lên bằng lực kéo của lưng cho đến khi cằm vượt qua xà.', 
+                safety_notes: '⚠️ LƯU Ý: Khi thả người xuống, không thả lỏng khớp vai hoàn toàn (dead hang quá lỏng) mà vẫn giữ một chút lực căng bả vai để bảo vệ khớp. Gồng chặt cơ bụng để người không đu đưa.', 
+                estimated_calories_per_rep: 2.0 
+            },
         ];
 
         const roadmapExercises = dayInfo.exercises && dayInfo.exercises.length > 0
@@ -168,8 +198,26 @@ export default function DailyWorkout() {
             }))
             : fallbackExercises;
 
+        // Tính toán thời lượng động nếu backend trả về 0
+        let calculatedDuration = 0;
+        if (roadmapExercises && roadmapExercises.length > 0) {
+            roadmapExercises.forEach(ex => {
+                const reps = parseInt(ex.reps) || 12;
+                const sets = parseInt(ex.sets) || 3;
+                // Nếu reps > 30 thường là bài tập tính bằng giây (vd: Plank 60s), nếu không thì tính 4s/rep
+                const timePerSet = reps > 30 ? reps : reps * 4; 
+                const restTimePerSet = 45; // 45s nghỉ giữa các set
+                calculatedDuration += (timePerSet * sets) + ((sets - 1) * restTimePerSet);
+            });
+            // 60s nghỉ giữa các bài tập khác nhau
+            calculatedDuration += (roadmapExercises.length - 1) * 60; 
+        }
+        const totalMinutes = Math.ceil(calculatedDuration / 60) || 0;
+        const finalDuration = dayInfo.duration && dayInfo.duration > 0 ? dayInfo.duration : totalMinutes;
+
         setDailyData({
             ...dayInfo,
+            duration: finalDuration,
             goal: goal,
             translatedGoal: translatedGoal,
             translatedGroup: translatedGroup,
@@ -216,13 +264,29 @@ export default function DailyWorkout() {
             setManualTimeLeft(setTime);
             setManualTotalTime(setTime);
             setManualIsResting(false);
+            setManualIsWaiting(true);
+            setManualCountdown(null);
             setShowManualModal(true);
         }
     };
 
     useEffect(() => {
+        let countdownTimer;
+        if (manualCountdown !== null && manualCountdown > 0) {
+            countdownTimer = setTimeout(() => {
+                setManualCountdown(prev => prev - 1);
+            }, 1000);
+        } else if (manualCountdown === 0) {
+            countdownTimer = setTimeout(() => {
+                setManualCountdown(null);
+            }, 1000);
+        }
+        return () => clearTimeout(countdownTimer);
+    }, [manualCountdown]);
+
+    useEffect(() => {
         let timer;
-        if (showManualModal && workoutMode === 'time' && manualTimeLeft > 0 && !manualIsResting) {
+        if (showManualModal && workoutMode === 'time' && manualTimeLeft > 0 && !manualIsResting && manualCountdown === null && !manualIsWaiting) {
             timer = setInterval(() => {
                 setManualTimeLeft(prev => {
                     if (prev <= 1) {
@@ -235,7 +299,7 @@ export default function DailyWorkout() {
             }, 1000);
         }
         return () => clearInterval(timer);
-    }, [showManualModal, manualTimeLeft, manualIsResting, workoutMode]);
+    }, [showManualModal, manualTimeLeft, manualIsResting, workoutMode, manualCountdown, manualIsWaiting]);
 
     const handleNextSet = () => {
         const setTime = workoutMode === 'reps' ? targetReps : targetReps;
@@ -243,6 +307,8 @@ export default function DailyWorkout() {
         setManualTimeLeft(setTime);
         setManualTotalTime(setTime);
         setManualIsResting(false);
+        setManualIsWaiting(true);
+        setManualCountdown(null);
     };
 
     const toLocalISOString = (date) => date.toISOString().slice(0, 19);
@@ -252,7 +318,7 @@ export default function DailyWorkout() {
         setCompletedExercises(prev => [...prev, currentExercise.name]);
         setShowManualModal(false);
 
-        const kcal = Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets) || 25;
+        const kcal = currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25;
         const result = addExp(kcal, currentExercise.name);
 
         axiosClient.post('/workout-sessions', {
@@ -318,7 +384,7 @@ export default function DailyWorkout() {
                     if (newSets > targetSets) {
                         setAiStatus(t('exercise_list.ai_done', 'Hoàn thành xuất sắc! Đang lưu dữ liệu...'));
                         
-                        const sessionCalories = Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets);
+                        const sessionCalories = currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25;
                         const sessionData = {
                             start_time: new Date(Date.now() - 60000).toISOString().slice(0, 19),
                             end_time: new Date().toISOString().slice(0, 19),
@@ -498,7 +564,7 @@ export default function DailyWorkout() {
                             </div>
                             
                             <Row className="mb-4">
-                                <Col md={6} className="mb-4 mb-md-0">
+                                <Col md={12} className="mb-4 mb-md-0">
                                     <div className="mb-4">
                                         <h6 className="fw-black text-secondary text-uppercase mb-2" style={{ fontSize: '0.85rem' }}>{t('exercise_list.desc_benefits')}</h6>
                                         <p className="text-primary-dynamic mb-0" style={{ fontSize: '0.95rem', lineHeight: '1.6' }}>
@@ -510,36 +576,6 @@ export default function DailyWorkout() {
                                         <p className="text-danger fw-bold mb-0" style={{ fontSize: '0.9rem' }}>
                                             {t(`exercises.safety_${selectedDetail.exercise_id}`, selectedDetail.safety_notes) || t('exercise_list.safety_notes')}
                                         </p>
-                                    </div>
-                                </Col>
-                                <Col md={6}>
-                                    <div className="bg-surface-main p-4 rounded-4 border-surface h-100 d-flex flex-column">
-                                        <h6 className="fw-black text-primary-dynamic mb-3 text-uppercase text-center">{t('exercise_list.customize_workout')}</h6>
-                                        
-                                        <div className="d-flex gap-2 mb-4">
-                                            <Button variant={workoutMode === 'reps' ? 'success' : 'outline-secondary'} className={`flex-grow-1 fw-bold rounded-pill ${workoutMode === 'reps' ? 'border-0' : ''}`} style={workoutMode === 'reps' ? { background: 'var(--brand-neon)', color: '#000' } : {}} onClick={() => { setWorkoutMode('reps'); setCustomTarget(parseInt(selectedDetail.reps)); }}>{t('exercise_list.by_reps')}</Button>
-                                            <Button variant={workoutMode === 'time' ? 'success' : 'outline-secondary'} className={`flex-grow-1 fw-bold rounded-pill ${workoutMode === 'time' ? 'border-0' : ''}`} style={workoutMode === 'time' ? { background: 'var(--brand-neon)', color: '#000' } : {}} onClick={() => { setWorkoutMode('time'); setCustomTarget(60); }}>{t('exercise_list.time')}</Button>
-                                        </div>
-
-                                        <div className="d-flex flex-column gap-3 mt-auto mb-2">
-                                            <div className="d-flex align-items-center justify-content-between bg-body p-2 rounded-pill border-surface">
-                                                <Button variant="link" className="text-secondary text-decoration-none fw-bold fs-3 px-3" onClick={() => setCustomSets(prev => Math.max(1, prev - 1))}>-</Button>
-                                                <div className="text-center d-flex align-items-baseline gap-2">
-                                                    <span className="fw-black text-primary-dynamic" style={{ fontSize: '1.8rem' }}>{customSets}</span>
-                                                    <span className="text-secondary fw-bold text-uppercase" style={{ fontSize: '0.85rem' }}>Sets</span>
-                                                </div>
-                                                <Button variant="link" className="text-secondary text-decoration-none fw-bold fs-3 px-3" onClick={() => setCustomSets(prev => prev + 1)}>+</Button>
-                                            </div>
-
-                                            <div className="d-flex align-items-center justify-content-between bg-body p-2 rounded-pill border-surface">
-                                                <Button variant="link" className="text-secondary text-decoration-none fw-bold fs-3 px-3" onClick={() => setCustomTarget(prev => Math.max(1, prev - (workoutMode === 'time' ? 10 : 1)))}>-</Button>
-                                                <div className="text-center d-flex align-items-baseline gap-2">
-                                                    <span className="fw-black text-primary-dynamic" style={{ fontSize: '1.8rem' }}>{customTarget}</span>
-                                                    <span className="text-secondary fw-bold text-uppercase" style={{ fontSize: '0.85rem' }}>{workoutMode === 'reps' ? 'Reps' : t('exercise_list.secs')}</span>
-                                                </div>
-                                                <Button variant="link" className="text-secondary text-decoration-none fw-bold fs-3 px-3" onClick={() => setCustomTarget(prev => prev + (workoutMode === 'time' ? 10 : 1))}>+</Button>
-                                            </div>
-                                        </div>
                                     </div>
                                 </Col>
                             </Row>
@@ -635,10 +671,14 @@ export default function DailyWorkout() {
                         </svg>
                         <div className="position-absolute top-50 start-50 translate-middle text-center w-100">
                             {!manualIsResting ? (
-                                <>
-                                    <div className="fw-black text-primary-dynamic" style={{ fontSize: '4.5rem', lineHeight: '1' }}>{workoutMode === 'time' ? manualTimeLeft : targetReps}</div>
-                                    <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>{workoutMode === 'time' ? t('exercise_list.secs') : 'Reps'}</div>
-                                </>
+                                manualCountdown !== null && !manualIsWaiting ? (
+                                    <div className="fw-black text-warning" style={{ fontSize: '5rem', lineHeight: '1', textShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>{manualCountdown > 0 ? manualCountdown : 'GO'}</div>
+                                ) : (
+                                    <>
+                                        <div className="fw-black text-primary-dynamic" style={{ fontSize: '4.5rem', lineHeight: '1' }}>{workoutMode === 'time' ? manualTimeLeft : targetReps}</div>
+                                        <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>{workoutMode === 'time' ? t('exercise_list.secs') : 'Reps'}</div>
+                                    </>
+                                )
                             ) : <div className="fw-black text-success" style={{ fontSize: '2.5rem' }}>{t('exercise_list.done')}</div>}
                         </div>
                     </div>
@@ -650,10 +690,19 @@ export default function DailyWorkout() {
 
                     <div className="d-flex flex-column gap-3">
                         {!manualIsResting ? (
-                            <>
-                                {workoutMode === 'reps' && <Button className="w-100 py-3 fw-black border-0 rounded-pill mb-2" style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }} onClick={() => setManualIsResting(true)}>{t('exercise_list.set_done')}</Button>}
-                                <Button variant="outline-danger" className="fw-bold py-3 rounded-pill" onClick={() => setShowManualModal(false)}>{t('exercise_list.cancel_workout')}</Button>
-                            </>
+                            manualIsWaiting ? (
+                                <>
+                                    <Button className="w-100 py-3 fw-black border-0 rounded-pill mb-2" style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }} onClick={() => { setManualIsWaiting(false); setManualCountdown(3); }}>SẴN SÀNG</Button>
+                                    <Button variant="outline-danger" className="fw-bold py-3 rounded-pill" onClick={() => setShowManualModal(false)}>{t('exercise_list.cancel_workout')}</Button>
+                                </>
+                            ) : manualCountdown !== null ? (
+                                <Button className="w-100 py-3 fw-black border-0 rounded-pill mb-2" disabled style={{ background: '#495057', color: '#fff', fontSize: '1.2rem' }}>BẮT ĐẦU TRONG {manualCountdown}...</Button>
+                            ) : (
+                                <>
+                                    {workoutMode === 'reps' && <Button className="w-100 py-3 fw-black border-0 rounded-pill mb-2" style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }} onClick={() => setManualIsResting(true)}>{t('exercise_list.set_done')}</Button>}
+                                    <Button variant="outline-danger" className="fw-bold py-3 rounded-pill" onClick={() => setShowManualModal(false)}>{t('exercise_list.cancel_workout')}</Button>
+                                </>
+                            )
                         ) : (
                             manualCurrentSet < targetSets ? (
                                 <Button className="w-100 py-3 fw-black border-0 rounded-pill" style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }} onClick={handleNextSet}>{t('exercise_list.start_set')} {manualCurrentSet + 1}</Button>

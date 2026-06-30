@@ -15,6 +15,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,17 +47,42 @@ public class AuthController {
         String tokenString = payload.get("credential");
         
         try {
-            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-                    .setAudience(Collections.singletonList(clientId))
-                    .build();
+            String email = null;
+            String googleOauthId = null;
+            String name = null;
+            String pictureUrl = null;
 
-            GoogleIdToken idToken = verifier.verify(tokenString);
-            if (idToken != null) {
-                GoogleIdToken.Payload googlePayload = idToken.getPayload();
-                String email = googlePayload.getEmail();
-                String googleOauthId = googlePayload.getSubject();
-                String name = (String) googlePayload.get("name");
-                String pictureUrl = (String) googlePayload.get("picture");
+            if (tokenString != null && tokenString.startsWith("ya29.")) {
+                // Handle Access Token from custom useGoogleLogin
+                RestTemplate restTemplate = new RestTemplate();
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBearerAuth(tokenString);
+                HttpEntity<String> entity = new HttpEntity<>("", headers);
+                ResponseEntity<Map> userInfoResponse = restTemplate.exchange("https://www.googleapis.com/oauth2/v3/userinfo", HttpMethod.GET, entity, Map.class);
+                Map<String, Object> userInfo = userInfoResponse.getBody();
+                if (userInfo != null) {
+                    email = (String) userInfo.get("email");
+                    googleOauthId = (String) userInfo.get("sub");
+                    name = (String) userInfo.get("name");
+                    pictureUrl = (String) userInfo.get("picture");
+                }
+            } else {
+                // Handle ID Token from traditional GoogleLogin
+                GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                        .setAudience(Collections.singletonList(clientId))
+                        .build();
+
+                GoogleIdToken idToken = verifier.verify(tokenString);
+                if (idToken != null) {
+                    GoogleIdToken.Payload googlePayload = idToken.getPayload();
+                    email = googlePayload.getEmail();
+                    googleOauthId = googlePayload.getSubject();
+                    name = (String) googlePayload.get("name");
+                    pictureUrl = (String) googlePayload.get("picture");
+                }
+            }
+
+            if (email != null) {
 
                 User user = userRepository.findByEmail(email);
                 boolean needsOnboarding = false;

@@ -100,6 +100,8 @@ export default function ExerciseList() {
     const [manualTotalTime, setManualTotalTime] = useState(0);
     const [manualCurrentSet, setManualCurrentSet] = useState(1);
     const [manualIsResting, setManualIsResting] = useState(false);
+    const [manualIsWaiting, setManualIsWaiting] = useState(true);
+    const [manualCountdown, setManualCountdown] = useState(null);
 
     // States cho Workout Summary Modal
     const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -168,14 +170,30 @@ export default function ExerciseList() {
             setManualTimeLeft(setTime);
             setManualTotalTime(setTime);
             setManualIsResting(false);
+            setManualIsWaiting(true);
+            setManualCountdown(null);
             setShowManualModal(true);
         }
     };
 
+    useEffect(() => {
+        let countdownTimer;
+        if (manualCountdown !== null && manualCountdown > 0) {
+            countdownTimer = setTimeout(() => {
+                setManualCountdown(prev => prev - 1);
+            }, 1000);
+        } else if (manualCountdown === 0) {
+            countdownTimer = setTimeout(() => {
+                setManualCountdown(null);
+            }, 1000);
+        }
+        return () => clearTimeout(countdownTimer);
+    }, [manualCountdown]);
+
     // Timer cho Manual Mode (Chỉ chạy đếm ngược nếu là chế độ TIME)
     useEffect(() => {
         let timer;
-        if (showManualModal && workoutMode === 'time' && manualTimeLeft > 0 && !manualIsResting) {
+        if (showManualModal && workoutMode === 'time' && manualTimeLeft > 0 && !manualIsResting && manualCountdown === null && !manualIsWaiting) {
             timer = setInterval(() => {
                 setManualTimeLeft(prev => {
                     if (prev <= 1) {
@@ -188,7 +206,7 @@ export default function ExerciseList() {
             }, 1000);
         }
         return () => clearInterval(timer);
-    }, [showManualModal, manualTimeLeft, manualIsResting, workoutMode]);
+    }, [showManualModal, manualTimeLeft, manualIsResting, workoutMode, manualCountdown, manualIsWaiting]);
 
     const handleNextSet = () => {
         const setTime = workoutMode === 'reps' ? targetReps : targetReps;
@@ -196,13 +214,15 @@ export default function ExerciseList() {
         setManualTimeLeft(setTime);
         setManualTotalTime(setTime);
         setManualIsResting(false);
+        setManualIsWaiting(true);
+        setManualCountdown(null);
     };
 
     const handleFinishManual = () => {
         markDayAsTrained();
         setShowManualModal(false);
         
-        const kcal = Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets) || 25;
+        const kcal = currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25;
         let expGained = Math.max(1, Math.round(kcal * 0.1));
         
         // Giới hạn điểm mỗi ngày (300 EXP)
@@ -291,7 +311,7 @@ export default function ExerciseList() {
                             session_id: sessionId, user_id: 1,
                             start_time: new Date(Date.now() - 60000).toISOString(),
                             end_time: new Date().toISOString(),
-                            total_calories_burned: Math.round(currentExercise.estimated_calories_per_rep * targetReps * targetSets),
+                            total_calories_burned: currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25,
                             total_valid_reps: targetReps * targetSets
                         };
                         const savedSessions = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
@@ -631,20 +651,27 @@ export default function ExerciseList() {
                         <div className="position-absolute top-50 start-50 translate-middle text-center w-100">
                             {workoutMode === 'time' ? (
                                 !manualIsResting ? (
-                                    <>
-                                        <div className="fw-black text-primary-dynamic" style={{ fontSize: '4.5rem', lineHeight: '1' }}>{manualTimeLeft}</div>
-                                        <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>Giây</div>
-                                        <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>{t('exercise_list.secs')}</div>
-                                    </>
+                                    manualCountdown !== null && !manualIsWaiting ? (
+                                        <div className="fw-black text-warning" style={{ fontSize: '5rem', lineHeight: '1', textShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>{manualCountdown > 0 ? manualCountdown : 'GO'}</div>
+                                    ) : (
+                                        <>
+                                            <div className="fw-black text-primary-dynamic" style={{ fontSize: '4.5rem', lineHeight: '1' }}>{manualTimeLeft}</div>
+                                            <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>{t('exercise_list.secs')}</div>
+                                        </>
+                                    )
                                 ) : (
                                     <div className="fw-black text-success" style={{ fontSize: '2.5rem' }}>{t('exercise_list.done')}</div>
                                 )
                             ) : (
                                 !manualIsResting ? (
-                                    <>
-                                        <div className="fw-black text-primary-dynamic" style={{ fontSize: '4.5rem', lineHeight: '1' }}>{targetReps}</div>
-                                        <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>Reps</div>
-                                    </>
+                                    manualCountdown !== null && !manualIsWaiting ? (
+                                        <div className="fw-black text-warning" style={{ fontSize: '5rem', lineHeight: '1', textShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>{manualCountdown > 0 ? manualCountdown : 'GO'}</div>
+                                    ) : (
+                                        <>
+                                            <div className="fw-black text-primary-dynamic" style={{ fontSize: '4.5rem', lineHeight: '1' }}>{targetReps}</div>
+                                            <div className="text-secondary fw-bold text-uppercase mt-1" style={{ letterSpacing: '2px' }}>Reps</div>
+                                        </>
+                                    )
                                 ) : (
                                     <div className="fw-black text-success" style={{ fontSize: '2.5rem' }}>{t('exercise_list.done')}</div>
                                 )
@@ -654,20 +681,29 @@ export default function ExerciseList() {
 
                     <div className="d-flex flex-column gap-3">
                         {!manualIsResting ? (
-                            <>
-                                {workoutMode === 'reps' && (
-                                    <Button 
-                                        className="w-100 py-3 fw-black border-0 rounded-pill mb-2"
-                                        style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
-                                        onClick={() => setManualIsResting(true)}
-                                    >
-                                        {t('exercise_list.set_done')}
+                            manualIsWaiting ? (
+                                <>
+                                    <Button className="w-100 py-3 fw-black border-0 rounded-pill mb-2" style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }} onClick={() => { setManualIsWaiting(false); setManualCountdown(3); }}>SẴN SÀNG</Button>
+                                    <Button variant="outline-danger" className="fw-bold py-3 rounded-pill" onClick={() => setShowManualModal(false)}>{t('exercise_list.cancel_workout')}</Button>
+                                </>
+                            ) : manualCountdown !== null ? (
+                                <Button className="w-100 py-3 fw-black border-0 rounded-pill mb-2" disabled style={{ background: '#495057', color: '#fff', fontSize: '1.2rem' }}>BẮT ĐẦU TRONG {manualCountdown}...</Button>
+                            ) : (
+                                <>
+                                    {workoutMode === 'reps' && (
+                                        <Button 
+                                            className="w-100 py-3 fw-black border-0 rounded-pill mb-2"
+                                            style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
+                                            onClick={() => setManualIsResting(true)}
+                                        >
+                                            {t('exercise_list.set_done')}
+                                        </Button>
+                                    )}
+                                    <Button variant="outline-danger" className="fw-bold py-3 rounded-pill" onClick={() => setShowManualModal(false)}>
+                                        {t('exercise_list.cancel_workout')}
                                     </Button>
-                                )}
-                                <Button variant="outline-danger" className="fw-bold py-3 rounded-pill" onClick={() => setShowManualModal(false)}>
-                                    {t('exercise_list.cancel_workout')}
-                                </Button>
-                            </>
+                                </>
+                            )
                         ) : (
                             manualCurrentSet < targetSets ? (
                                 <Button 
