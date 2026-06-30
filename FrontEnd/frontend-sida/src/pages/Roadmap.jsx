@@ -86,7 +86,7 @@ export default function Roadmap() {
 
       {/* Top Header */}
       <div className="position-absolute top-0 start-0 w-100 p-4 d-flex justify-content-between align-items-center" style={{ zIndex: 10 }}>
-        <Button variant="dark" className="rounded-pill px-4 border-secondary fw-bold" onClick={() => navigate(-1)}>
+        <Button variant="dark" className="rounded-pill px-4 border-secondary fw-bold" onClick={() => navigate('/')}>
           <span className="me-2">←</span> {t('roadmap.back')}
         </Button>
         
