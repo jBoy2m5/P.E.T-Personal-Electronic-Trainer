@@ -336,64 +336,78 @@ export default function DailyWorkout() {
                 return angle;
             };
 
-            const initInBrowserPose = () => {
+            const loadScript = (src) => new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+                const s = document.createElement('script');
+                s.src = src; s.crossOrigin = 'anonymous';
+                s.onload = resolve; s.onerror = reject;
+                document.head.appendChild(s);
+            });
+
+            const onPoseResults = (results) => {
+                if (!results.poseLandmarks) return;
+                const lms = results.poseLandmarks;
+                const landmarks = lms.map(lm => ({ x: lm.x, y: lm.y, z: lm.z, visibility: lm.visibility }));
+                const exName = currentExercise.name.toLowerCase();
+                let feedback = "Form chuẩn! Đang theo dõi...";
+
+                if (exName.includes("squat")) {
+                    const angle = calcAngle(lms[23], lms[25], lms[27]);
+                    if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
+                    if (angle > 160 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
+                    if (angle < 70) feedback = "Xuống sâu hơn!";
+                } else if (exName.includes("push") || exName.includes("hít đất")) {
+                    const angle = calcAngle(lms[11], lms[13], lms[15]);
+                    if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
+                    if (angle > 150 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
+                    if (angle < 60) feedback = "Lên cao hơn!";
+                } else if (exName.includes("pull") || exName.includes("xà")) {
+                    const angle = calcAngle(lms[11], lms[13], lms[15]);
+                    if (angle < 90 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
+                    if (angle > 150 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
+                } else if (exName.includes("plank")) {
+                    feedback = "Siết cơ bụng, giữ thẳng người!";
+                } else {
+                    const angle = calcAngle(lms[23], lms[25], lms[27]);
+                    if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
+                    if (angle > 160 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
+                }
+
+                const reps = repStateRef.current.count;
+                setSimReps(reps);
+                setAiStatus(feedback);
+                drawSkeleton(landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
+                if ((workoutMode === 'reps' && reps >= targetReps) || (workoutMode === 'time' && reps >= targetReps)) {
+                    handleSetComplete();
+                }
+            };
+
+            const initInBrowserPose = async () => {
                 repStateRef.current = { count: 0, stage: 'up' };
-                import('@mediapipe/pose').then(({ Pose }) => {
-                    const pose = new Pose({
+                try {
+                    setAiStatus("Đang tải AI...");
+                    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js');
+                    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js');
+
+                    const pose = new window.Pose({
                         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
                     });
                     pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-
-                    pose.onResults((results) => {
-                        if (!results.poseLandmarks) return;
-                        const lms = results.poseLandmarks;
-                        const landmarks = lms.map(lm => ({ x: lm.x, y: lm.y, z: lm.z, visibility: lm.visibility }));
-                        const exName = currentExercise.name.toLowerCase();
-                        let feedback = "Form chuẩn! Đang theo dõi...";
-
-                        if (exName.includes("squat") || exName.includes("squats")) {
-                            const angle = calcAngle(lms[23], lms[25], lms[27]);
-                            if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
-                            if (angle > 160 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
-                            if (angle < 70) feedback = "Xuống sâu hơn!";
-                        } else if (exName.includes("push") || exName.includes("hít đất")) {
-                            const angle = calcAngle(lms[11], lms[13], lms[15]);
-                            if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
-                            if (angle > 150 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
-                            if (angle < 60) feedback = "Lên cao hơn!";
-                        } else if (exName.includes("pull") || exName.includes("xà")) {
-                            const angle = calcAngle(lms[11], lms[13], lms[15]);
-                            if (angle < 90 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
-                            if (angle > 150 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
-                        } else if (exName.includes("plank")) {
-                            feedback = "Siết cơ bụng, giữ thẳng người!";
-                        } else {
-                            const angle = calcAngle(lms[23], lms[25], lms[27]);
-                            if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
-                            if (angle > 160 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
-                        }
-
-                        const reps = repStateRef.current.count;
-                        setSimReps(reps);
-                        setAiStatus(feedback);
-                        drawSkeleton(landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
-                        if ((workoutMode === 'reps' && reps >= targetReps) || (workoutMode === 'time' && reps >= targetReps)) {
-                            handleSetComplete();
-                        }
-                    });
-
+                    pose.onResults(onPoseResults);
+                    await pose.initialize();
                     poseRef.current = pose;
 
-                    import('@mediapipe/camera_utils').then(({ Camera }) => {
-                        const cam = new Camera(videoRef.current, {
-                            onFrame: async () => { if (poseRef.current) await poseRef.current.send({ image: videoRef.current }); },
-                            width: 640, height: 480
-                        });
-                        cam.start();
-                        mediapipeCameraRef.current = cam;
-                        setAiStatus("AI đang phân tích... Bắt đầu tập!");
+                    const cam = new window.Camera(videoRef.current, {
+                        onFrame: async () => { if (poseRef.current) await poseRef.current.send({ image: videoRef.current }); },
+                        width: 640, height: 480
                     });
-                }).catch(() => setAiStatus("Không thể tải AI!"));
+                    cam.start();
+                    mediapipeCameraRef.current = cam;
+                    setAiStatus("AI đang phân tích... Bắt đầu tập!");
+                } catch (e) {
+                    console.error('MediaPipe load error:', e);
+                    setAiStatus("Không thể tải AI! Kiểm tra kết nối mạng.");
+                }
             };
 
             const initAI = async () => {
