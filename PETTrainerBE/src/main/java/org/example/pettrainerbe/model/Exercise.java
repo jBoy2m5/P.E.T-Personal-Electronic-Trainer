@@ -30,6 +30,7 @@ public class Exercise {
     private String level;
     private String videoUrl;
     private Boolean isJump;
+    private String aiMode;
 
     @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("exercise") // Chặn vòng lặp với WorkoutDetail

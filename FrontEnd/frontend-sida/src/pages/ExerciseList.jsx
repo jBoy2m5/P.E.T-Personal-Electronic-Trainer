@@ -7,13 +7,6 @@ import confetti from 'canvas-confetti';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
 
-const AI_EXERCISE_MODES = {
-    'Push Up': 'PUSH-UP',
-    'Bodyweight Squat': 'SQUAT',
-    'Plank': 'PLANK',
-    'Pull Up': 'PULL-UP',
-    'Handstand': 'HANDSTAND',
-};
 
 const getTodayKey = () => {
     const d = new Date();
@@ -297,7 +290,7 @@ export default function ExerciseList() {
                 const ctx = canvasRef.current.getContext('2d');
                 ctx.drawImage(videoRef.current, 0, 0, 640, 480);
                 const frameData = canvasRef.current.toDataURL('image/jpeg', 0.5);
-                socketRef.current.send(JSON.stringify({ mode: AI_EXERCISE_MODES[currentExercise.name], frame: frameData }));
+                socketRef.current.send(JSON.stringify({ mode: currentExercise.ai_mode, frame: frameData }));
                 animationFrameRef.current = setTimeout(() => requestAnimationFrame(sendFrames), 100);
             };
 
@@ -547,7 +540,7 @@ export default function ExerciseList() {
 
                             {/* Đồng bộ 2 nút tập */}
                             <div className="d-flex gap-3 mt-4">
-                                {AI_EXERCISE_MODES[selectedDetail?.name] && (
+                                {selectedDetail?.ai_mode && (
                                     <Button
                                         className="flex-fill py-3 fw-black rounded-pill border-0"
                                         style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}

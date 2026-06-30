@@ -80,6 +80,7 @@ public class MuscleGroupController {
                         eDto.setLevel(ex.getLevel());
                         eDto.setVideoUrl(ex.getVideoUrl());
                         eDto.setIsJump(ex.getIsJump());
+                        eDto.setAiMode(ex.getAiMode());
                         eDto.setMuscleGroupId(group.getGroupId());
                         eDto.setMuscleGroupName(group.getName());
                         Float kcalPerRep = ex.getEstimatedCaloriesPerRep() != null ? ex.getEstimatedCaloriesPerRep() : 0f;

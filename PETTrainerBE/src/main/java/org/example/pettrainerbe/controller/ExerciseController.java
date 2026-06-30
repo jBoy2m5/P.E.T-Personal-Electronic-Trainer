@@ -82,6 +82,7 @@ public class ExerciseController {
         dto.setLevel(exercise.getLevel());
         dto.setVideoUrl(exercise.getVideoUrl());
         dto.setIsJump(exercise.getIsJump());
+        dto.setAiMode(exercise.getAiMode());
         if (exercise.getMuscleGroup() != null) {
             dto.setMuscleGroupId(exercise.getMuscleGroup().getGroupId());
             dto.setMuscleGroupName(exercise.getMuscleGroup().getName());

@@ -10,23 +10,7 @@ import axiosClient from '../api/axiosClient';
 const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
 const PET_THRESHOLDS_LIST = [0, 10, 50, 150, 300, 600, 1200, 2500];
 
-const AI_MODE_BY_NAME = {
-    'Push Up': 'PUSH-UP',
-    'Bodyweight Squat': 'SQUAT',
-    'Plank': 'PLANK',
-    'Pull Up': 'PULL-UP',
-    'Handstand': 'HANDSTAND',
-};
-const AI_MODE_BY_ID = {
-    101: 'PUSH-UP', 102: 'PUSH-UP', 103: 'PUSH-UP', 104: 'PUSH-UP', 105: 'PUSH-UP',
-    601: 'SQUAT',
-    501: 'PLANK', 505: 'PLANK',
-};
-const getAiMode = (ex) =>
-    ex?.aiMode ||
-    AI_MODE_BY_NAME[ex?.name] ||
-    AI_MODE_BY_ID[ex?.exercise_id] ||
-    null;
+const getAiMode = (ex) => ex?.aiMode || null;
 
 
 const getTodayKey = () => {

@@ -20,7 +20,8 @@ const useExerciseStore = create((set, get) => ({
         level: levelMap[ex.level] || ex.level || 'Cơ bản',
         img: ex.media_url || DEFAULT_IMG,
         desc: ex.technical_description || '',
-        kcalPerRep: ex.estimated_calories_per_rep || 1.0
+        kcalPerRep: ex.estimated_calories_per_rep || 1.0,
+        aiMode: ex.ai_mode || null
       }));
       set({ exercises: mapped, loaded: true });
       return mapped;

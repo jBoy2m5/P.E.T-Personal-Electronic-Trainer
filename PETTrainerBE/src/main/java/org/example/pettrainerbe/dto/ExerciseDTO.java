@@ -17,6 +17,7 @@ public class ExerciseDTO {
     private String videoUrl;
     private Float kcal;
     private Boolean isJump;
+    private String aiMode;
     private Integer muscleGroupId;
     private String muscleGroupName;
 }
