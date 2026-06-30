@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import logo from '../assets/logo.png'; 
+import logo from '../assets/logo-black.png';
 import { getUnclaimedCount } from '../services/rewards';
 
 export default function TopNav() {
@@ -105,8 +105,7 @@ export default function TopNav() {
                 style={{
                   width: 'auto',
                   objectFit: 'contain',
-                  filter: isDark ? 'invert(1)' : 'none',
-                  mixBlendMode: isDark ? 'screen' : 'multiply',
+                  filter: isDark ? 'invert(1) drop-shadow(0 0 1px rgba(255,255,255,0.3))' : 'none',
                   transition: 'all 0.3s ease'
                 }}
               />
