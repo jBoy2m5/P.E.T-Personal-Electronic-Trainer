@@ -102,12 +102,12 @@ export default function TopNav() {
                 alt="P.E.T Logo" 
                 height="48" 
                 className="me-2" 
-                style={{ 
-                  width: 'auto', 
+                style={{
+                  width: 'auto',
                   objectFit: 'contain',
-                  filter: isDark ? 'invert(1)' : 'none',
+                  mixBlendMode: 'screen',
                   transition: 'all 0.3s ease'
-                }} 
+                }}
               />
               <span className="text-secondary mx-2 fs-4">|</span>
               <span className={`fw-bold fs-4 ms-1 ${isDark ? 'text-white' : 'text-dark'}`} style={{ letterSpacing: '2px' }}>P.E.T</span>
