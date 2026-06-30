@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Modal, Button, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import usePetStore from '../store/usePetStore';
 import petChatbot from '../assets/pet_chatbot.png';
 import petBgImage from '../assets/pet_bg.png'; // File background ảnh thật
 
@@ -19,6 +20,7 @@ const PET_LEVELS = [
 export default function PetProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { totalPoints, exercisesTrained, getCurrentLevel } = usePetStore();
 
   const [petData, setPetData] = useState({
     pet_name: 'P.E.T',
@@ -57,23 +59,14 @@ export default function PetProfile() {
   }, []);
 
   useEffect(() => {
-    // 1. Load Daily EXP & Streak
-    const dailySaved = localStorage.getItem('pet-daily');
-    let exp = 0;
-    let streak = 0;
-    if (dailySaved) {
-      const dailyParsed = JSON.parse(dailySaved);
-      exp = dailyParsed.totalPoints || 0;
-      streak = dailyParsed.checkinStreak || 0;
-    }
+    const exp = totalPoints || 0;
+    const trainedArray = exercisesTrained || [];
 
-    // 2. Calculate Level
     let currentLevelObj = PET_LEVELS[0];
     for (const lvl of PET_LEVELS) {
       if (exp >= lvl.minPoints) currentLevelObj = lvl;
     }
 
-    // 3. Load Pet Name
     const petSaved = localStorage.getItem('pet-data');
     let pet_name = 'Vô Danh';
     if (exp >= 10) pet_name = 'Quẹc';
@@ -82,11 +75,8 @@ export default function PetProfile() {
       if (parsedPet.pet_name) pet_name = parsedPet.pet_name;
     }
 
-    setPetData({ pet_name, total_exp: exp, checkin_streak: streak, level: currentLevelObj.level });
+    setPetData({ pet_name, total_exp: exp, checkin_streak: 0, level: currentLevelObj.level });
 
-    // 4. Load Tasks based on daily progress
-    const trainedArray = dailySaved ? JSON.parse(dailySaved).exercisesTrained || [] : [];
-    
     let loadedTasks = [
       { id: 1, name: t('pet_profile.task_login'), expReward: 10, completed: true },
       { id: 2, name: t('pet_profile.task_complete_1'), expReward: 20, completed: trainedArray.length > 0 },
@@ -105,7 +95,7 @@ export default function PetProfile() {
     }
 
     setTasks(loadedTasks);
-  }, []);
+  }, [totalPoints, exercisesTrained]);
 
   const currentLevelObj = PET_LEVELS.find(l => l.level === petData.level) || PET_LEVELS[0];
   const nextLevelObj = PET_LEVELS.find(l => l.minPoints > petData.total_exp);
