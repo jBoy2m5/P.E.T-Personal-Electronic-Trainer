@@ -2,7 +2,9 @@ package org.example.pettrainerbe.controller;
 
 import org.example.pettrainerbe.dto.PetDTO;
 import org.example.pettrainerbe.model.Pet;
+import org.example.pettrainerbe.model.User;
 import org.example.pettrainerbe.repository.PetRepository;
+import org.example.pettrainerbe.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,9 @@ public class PetController {
 
     @Autowired
     private PetRepository petRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping
     public List<PetDTO> getAllPets() {
@@ -41,9 +46,23 @@ public class PetController {
     }
 
     @PostMapping
-    public ResponseEntity<PetDTO> createPet(@RequestBody Pet pet) {
-        Pet savedPet = petRepository.save(pet);
-        return ResponseEntity.ok(convertToDTO(savedPet));
+    public ResponseEntity<PetDTO> createPet(@RequestBody java.util.Map<String, Object> body) {
+        Integer userId = (Integer) body.get("user_id");
+        if (userId == null) return ResponseEntity.badRequest().build();
+
+        // Return existing pet if already created
+        java.util.Optional<Pet> existing = petRepository.findAll().stream()
+                .filter(p -> p.getUser() != null && p.getUser().getUserId().equals(userId))
+                .findFirst();
+        if (existing.isPresent()) return ResponseEntity.ok(convertToDTO(existing.get()));
+
+        return userRepository.findById(userId).map(user -> {
+            Pet pet = new Pet();
+            pet.setUser(user);
+            pet.setLevel(body.get("level") != null ? (Integer) body.get("level") : 1);
+            pet.setTotalExp(body.get("total_exp") != null ? (Integer) body.get("total_exp") : 0);
+            return ResponseEntity.ok(convertToDTO(petRepository.save(pet)));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
