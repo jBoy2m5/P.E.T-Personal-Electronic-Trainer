@@ -329,188 +329,6 @@ export default function DailyWorkout() {
 
     useEffect(() => {
         if (showAIModal && currentExercise) {
-            const calcAngle = (a, b, c) => {
-                const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-                let angle = Math.abs(rad * 180 / Math.PI);
-                if (angle > 180) angle = 360 - angle;
-                return angle;
-            };
-
-            const loadScript = (src) => new Promise((resolve, reject) => {
-                if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
-                const s = document.createElement('script');
-                s.src = src; s.crossOrigin = 'anonymous';
-                s.onload = resolve; s.onerror = reject;
-                document.head.appendChild(s);
-            });
-
-            const dist3d = (a, b) => Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2);
-            const checkVis = (lms, indices) => indices.every(i => lms[i].visibility >= 0.5);
-
-            const exName = currentExercise.name.toLowerCase();
-            let aiMode = "SQUAT";
-            if (exName.includes("push") || exName.includes("hít đất")) aiMode = "PUSH-UP";
-            else if (exName.includes("plank")) aiMode = "PLANK";
-            else if (exName.includes("pull") || exName.includes("xà")) aiMode = "PULL-UP";
-            else if (exName.includes("handstand")) aiMode = "HANDSTAND";
-
-            const onPoseResults = (results) => {
-                if (!results.poseLandmarks) { setAiStatus("Không phát hiện người!"); return; }
-                const lms = results.poseLandmarks;
-                const landmarks = lms.map(lm => ({ x: lm.x, y: lm.y, z: lm.z, visibility: lm.visibility }));
-                const st = repStateRef.current;
-
-                // Visibility check
-                let isVisible = false;
-                if (aiMode === "SQUAT") isVisible = checkVis(lms, [11,12,23,25,27,28]);
-                else if (aiMode === "PUSH-UP" || aiMode === "PLANK") isVisible = checkVis(lms, [11,13,15,23,27]);
-                else if (aiMode === "PULL-UP" || aiMode === "HANDSTAND") isVisible = checkVis(lms, [11,12,13,15,23]);
-
-                let feedback = st.lastFeedback;
-
-                if (!isVisible) {
-                    feedback = (aiMode === "PULL-UP" || aiMode === "HANDSTAND")
-                        ? "SHOW UPPER BODY (WAIST UP)!"
-                        : "PLEASE SHOW FULL BODY!";
-                    if (st.isPlanking) { st.totalPlankTime += (Date.now() - st.plankStartTime) / 1000; st.isPlanking = false; }
-                } else {
-                    const sh = lms[11], el = lms[13], wr = lms[15];
-                    const hip = lms[23], knee = lms[25], ankle = lms[27];
-
-                    if (aiMode === "SQUAT") {
-                        const kneeAngle = calcAngle(hip, knee, ankle);
-                        const backAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
-                        const stanceRatio = dist3d(lms[27], lms[28]) / (dist3d(lms[11], lms[12]) + 0.0001);
-                        feedback = "FORM: GOOD";
-                        if (kneeAngle > 150) {
-                            if (stanceRatio < 0.8) feedback = "WIDEN STANCE!";
-                            else if (stanceRatio > 1.6) feedback = "NARROW STANCE!";
-                        }
-                        if (backAngle > 65) feedback = "KEEP CHEST UP!";
-                        if (kneeAngle > 160) {
-                            if (st.stage === 'down') st.count++;
-                            st.stage = 'up';
-                        } else if (kneeAngle < 140) {
-                            if (hip.y >= knee.y - 0.04) { st.stage = 'down'; if (feedback === "FORM: GOOD") feedback = "PERFECT DEPTH!"; }
-                            else if (st.stage !== 'down' && feedback === "FORM: GOOD") feedback = "GO DEEPER!";
-                        }
-                        st.lastFeedback = feedback;
-
-                    } else if (aiMode === "PUSH-UP") {
-                        const armAngle = calcAngle(sh, el, wr);
-                        const bodyAngle = calcAngle(sh, hip, ankle);
-                        const torsoAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
-                        if (torsoAngle < 45) { feedback = "WARNING: STANDING!"; st.stage = null; }
-                        else if (bodyAngle < 155) { feedback = "KEEP BODY STRAIGHT!"; st.stage = null; }
-                        else {
-                            feedback = "FORM: GOOD";
-                            if (armAngle > 160) { if (st.stage === 'down') st.count++; st.stage = 'up'; }
-                            else if (armAngle < 110) {
-                                if (sh.y >= el.y - 0.05) { st.stage = 'down'; feedback = "PERFECT DEPTH!"; }
-                                else if (st.stage !== 'down') feedback = "GO LOWER!";
-                            }
-                        }
-                        st.lastFeedback = feedback;
-
-                    } else if (aiMode === "PLANK") {
-                        const bodyAngle = calcAngle(sh, hip, ankle);
-                        const torsoAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
-                        if (torsoAngle < 45) {
-                            feedback = "GET DOWN ON THE FLOOR!";
-                            if (st.isPlanking) { st.totalPlankTime += (Date.now() - st.plankStartTime) / 1000; st.isPlanking = false; }
-                        } else {
-                            const refY = (sh.y + ankle.y) / 2;
-                            if (bodyAngle > 165) {
-                                feedback = "FORM: PERFECT!";
-                                if (!st.isPlanking) { st.isPlanking = true; st.plankStartTime = Date.now(); }
-                            } else {
-                                if (st.isPlanking) { st.totalPlankTime += (Date.now() - st.plankStartTime) / 1000; st.isPlanking = false; }
-                                if (hip.y < refY - 0.05) feedback = "LOWER YOUR HIPS!";
-                                else if (hip.y > refY + 0.05) feedback = "RAISE YOUR HIPS!";
-                                else feedback = "STRAIGHTEN YOUR LEGS!";
-                            }
-                        }
-                        st.lastFeedback = feedback;
-                        const displayTime = st.isPlanking ? st.totalPlankTime + (Date.now() - st.plankStartTime) / 1000 : st.totalPlankTime;
-                        setSimReps(Math.round(displayTime));
-                        setAiStatus(feedback);
-                        drawSkeleton(landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
-                        if (workoutMode === 'time' && Math.round(displayTime) >= targetReps) handleSetComplete();
-                        return;
-
-                    } else if (aiMode === "PULL-UP") {
-                        const l_wr = lms[15], r_wr = lms[16], l_sh = lms[11], r_sh = lms[12], nose = lms[0];
-                        if (l_wr.y > l_sh.y) { feedback = "HANG ON THE BAR!"; st.stage = null; }
-                        else {
-                            const gripRatio = dist3d(l_wr, r_wr) / (dist3d(l_sh, r_sh) + 0.0001);
-                            const armAngle = calcAngle(sh, el, wr);
-                            const torsoAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
-                            const barY = (l_wr.y + r_wr.y) / 2;
-                            if (gripRatio < 1.2) feedback = "WIDEN GRIP (TARGET LATS)!";
-                            else if (torsoAngle > 25) feedback = "NO SWINGING! ENGAGE CORE.";
-                            else {
-                                feedback = "FORM: GOOD";
-                                if (armAngle > 140) { if (st.stage === 'up') st.count++; st.stage = 'down'; st.hangShoulderY = sh.y; }
-                                else if (armAngle < 110) {
-                                    if (st.hangShoulderY - sh.y < 0.04) { feedback = "NO AIR PULL-UPS! LIFT YOUR BODY."; st.stage = null; }
-                                    else if (nose.y <= barY + 0.05) { st.stage = 'up'; if (feedback === "FORM: GOOD") feedback = "CHIN OVER BAR!"; }
-                                    else if (st.stage !== 'up' && feedback === "FORM: GOOD") feedback = "PULL HIGHER!";
-                                }
-                            }
-                        }
-                        st.lastFeedback = feedback;
-
-                    } else if (aiMode === "HANDSTAND") {
-                        const armAngle = calcAngle(sh, el, wr);
-                        const torsoAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
-                        if (hip.y > sh.y) { feedback = "KICK UP INTO HANDSTAND!"; st.stage = null; }
-                        else if (torsoAngle > 25) { feedback = "KEEP CORE TIGHT & VERTICAL!"; st.stage = null; }
-                        else {
-                            feedback = "FORM: GOOD";
-                            if (armAngle > 150) { if (st.stage === 'down') st.count++; st.stage = 'up'; }
-                            else if (armAngle < 110) {
-                                if (sh.y >= el.y - 0.05) { st.stage = 'down'; feedback = "PERFECT DEPTH!"; }
-                                else if (st.stage !== 'down') feedback = "GO LOWER!";
-                            }
-                        }
-                        st.lastFeedback = feedback;
-                    }
-                }
-
-                const reps = st.count;
-                setSimReps(reps);
-                setAiStatus(feedback);
-                drawSkeleton(landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
-                if ((workoutMode === 'reps' && reps >= targetReps) || (workoutMode === 'time' && reps >= targetReps)) handleSetComplete();
-            };
-
-            const initInBrowserPose = async () => {
-                repStateRef.current = { count: 0, stage: null, isPlanking: false, plankStartTime: 0, totalPlankTime: 0, hangShoulderY: 0, lastFeedback: "Đang chờ..." };
-                try {
-                    setAiStatus("Đang tải AI...");
-                    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js');
-                    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js');
-
-                    const pose = new window.Pose({
-                        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
-                    });
-                    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-                    pose.onResults(onPoseResults);
-                    await pose.initialize();
-                    poseRef.current = pose;
-
-                    const cam = new window.Camera(videoRef.current, {
-                        onFrame: async () => { if (poseRef.current) await poseRef.current.send({ image: videoRef.current }); },
-                        width: 640, height: 480
-                    });
-                    cam.start();
-                    mediapipeCameraRef.current = cam;
-                    setAiStatus("AI đang phân tích... Bắt đầu tập!");
-                } catch (e) {
-                    console.error('MediaPipe load error:', e);
-                    setAiStatus("Không thể tải AI! Kiểm tra kết nối mạng.");
-                }
-            };
 
             const initAI = async () => {
                 try {
@@ -519,38 +337,33 @@ export default function DailyWorkout() {
                     streamRef.current = stream;
                     if (videoRef.current) videoRef.current.srcObject = stream;
 
-                    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-                    if (isLocal) {
-                        setAiStatus("Đang kết nối AI Server...");
-                        socketRef.current = new WebSocket('ws://localhost:8765');
-                        socketRef.current.onopen = () => { setAiStatus("Đã kết nối! Bắt đầu phân tích..."); sendFrames(); };
-                        const errorLogCooldownRef = { last: 0 };
-                        socketRef.current.onmessage = (event) => {
-                            const data = JSON.parse(event.data);
-                            const feedback = data.feedback || "Form chuẩn! Đang theo dõi...";
-                            setAiStatus(feedback);
-                            setSimReps(data.reps || 0);
-                            if (data.landmarks?.length) {
-                                drawSkeleton(data.landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
+                    setAiStatus("Đang kết nối AI Server...");
+                    socketRef.current = new WebSocket('ws://localhost:8765');
+                    socketRef.current.onopen = () => { setAiStatus("Đã kết nối! Bắt đầu phân tích..."); sendFrames(); };
+                    const errorLogCooldownRef = { last: 0 };
+                    socketRef.current.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        const feedback = data.feedback || "Form chuẩn! Đang theo dõi...";
+                        setAiStatus(feedback);
+                        setSimReps(data.reps || 0);
+                        if (data.landmarks?.length) {
+                            drawSkeleton(data.landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
+                        }
+                        if (isFormError(feedback)) {
+                            const now = Date.now();
+                            if (now - errorLogCooldownRef.last > 5000) {
+                                errorLogCooldownRef.last = now;
+                                axiosClient.post('/error-logs', {
+                                    error_description: feedback,
+                                    created_at: new Date().toISOString().slice(0, 19)
+                                }).catch(() => {});
                             }
-                            if (isFormError(feedback)) {
-                                const now = Date.now();
-                                if (now - errorLogCooldownRef.last > 5000) {
-                                    errorLogCooldownRef.last = now;
-                                    axiosClient.post('/error-logs', {
-                                        error_description: feedback,
-                                        created_at: new Date().toISOString().slice(0, 19)
-                                    }).catch(() => {});
-                                }
-                            }
-                            if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
-                                handleSetComplete();
-                            }
-                        };
-                        socketRef.current.onerror = () => { console.warn('WebSocket không khả dụng, dùng AI trình duyệt...'); initInBrowserPose(); };
-                    } else {
-                        initInBrowserPose();
-                    }
+                        }
+                        if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
+                            handleSetComplete();
+                        }
+                    };
+                    socketRef.current.onerror = () => { setAiStatus("Không kết nối được AI Server! Hãy chạy: python upload/websocket_server.py"); };
                 } catch (err) { setAiStatus("Không thể mở Camera!"); }
             };
 
@@ -559,12 +372,7 @@ export default function DailyWorkout() {
                 const ctx = canvasRef.current.getContext('2d');
                 ctx.drawImage(videoRef.current, 0, 0, 640, 480);
                 const frameData = canvasRef.current.toDataURL('image/jpeg', 0.5);
-                let aiMode = "SQUAT";
-                const exName = currentExercise.name.toLowerCase();
-                if (exName.includes("hít đất") || exName.includes("push-up")) aiMode = "PUSH-UP";
-                else if (exName.includes("plank")) aiMode = "PLANK";
-                else if (exName.includes("xà đơn") || exName.includes("pull-up")) aiMode = "PULL-UP";
-                socketRef.current.send(JSON.stringify({ mode: aiMode, frame: frameData }));
+                socketRef.current.send(JSON.stringify({ mode: currentExercise.aiMode, frame: frameData }));
                 animationFrameRef.current = setTimeout(() => requestAnimationFrame(sendFrames), 100);
             };
 
@@ -805,14 +613,16 @@ export default function DailyWorkout() {
 
                             {/* Đồng bộ 2 nút tập */}
                             <div className="d-flex gap-3 mt-4">
-                                <Button 
-                                    className="flex-fill py-3 fw-black rounded-pill border-0"
-                                    style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
-                                    onClick={() => handleStartFromDetail(true)}
-                                >
-                                    {t('exercise_list.ai_workout')}
-                                </Button>
-                                <Button 
+                                {selectedDetail?.aiMode && (
+                                    <Button
+                                        className="flex-fill py-3 fw-black rounded-pill border-0"
+                                        style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
+                                        onClick={() => handleStartFromDetail(true)}
+                                    >
+                                        {t('exercise_list.ai_workout')}
+                                    </Button>
+                                )}
+                                <Button
                                     className="flex-fill py-3 fw-black rounded-pill border-2 bg-transparent"
                                     style={{ borderColor: 'var(--brand-neon)', color: 'var(--brand-neon)', fontSize: '1rem' }}
                                     onClick={() => handleStartFromDetail(false)}

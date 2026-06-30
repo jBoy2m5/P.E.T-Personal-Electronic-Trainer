@@ -380,12 +380,7 @@ export default function ExerciseList() {
                 const ctx = canvasRef.current.getContext('2d');
                 ctx.drawImage(videoRef.current, 0, 0, 640, 480);
                 const frameData = canvasRef.current.toDataURL('image/jpeg', 0.5);
-                let aiMode = "SQUAT";
-                const exName = currentExercise.name.toLowerCase();
-                if (exName.includes("hít đất") || exName.includes("push-up")) aiMode = "PUSH-UP";
-                else if (exName.includes("plank")) aiMode = "PLANK";
-                else if (exName.includes("xà đơn") || exName.includes("pull-up")) aiMode = "PULL-UP";
-                socketRef.current.send(JSON.stringify({ mode: aiMode, frame: frameData }));
+                socketRef.current.send(JSON.stringify({ mode: currentExercise.aiMode, frame: frameData }));
                 animationFrameRef.current = setTimeout(() => requestAnimationFrame(sendFrames), 100);
             };
 
