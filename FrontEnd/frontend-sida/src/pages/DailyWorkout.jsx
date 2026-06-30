@@ -10,6 +10,24 @@ import axiosClient from '../api/axiosClient';
 const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
 const PET_THRESHOLDS_LIST = [0, 10, 50, 150, 300, 600, 1200, 2500];
 
+const AI_MODE_BY_NAME = {
+    'Push Up': 'PUSH-UP',
+    'Bodyweight Squat': 'SQUAT',
+    'Plank': 'PLANK',
+    'Pull Up': 'PULL-UP',
+    'Handstand': 'HANDSTAND',
+};
+const AI_MODE_BY_ID = {
+    101: 'PUSH-UP', 102: 'PUSH-UP', 103: 'PUSH-UP', 104: 'PUSH-UP', 105: 'PUSH-UP',
+    601: 'SQUAT',
+    501: 'PLANK', 505: 'PLANK',
+};
+const getAiMode = (ex) =>
+    ex?.aiMode ||
+    AI_MODE_BY_NAME[ex?.name] ||
+    AI_MODE_BY_ID[ex?.exercise_id] ||
+    null;
+
 
 const getTodayKey = () => {
     const d = new Date();
@@ -396,7 +414,7 @@ export default function DailyWorkout() {
                 const ctx = canvasRef.current.getContext('2d');
                 ctx.drawImage(videoRef.current, 0, 0, 640, 480);
                 const frameData = canvasRef.current.toDataURL('image/jpeg', 0.5);
-                socketRef.current.send(JSON.stringify({ mode: currentExercise.aiMode, frame: frameData }));
+                socketRef.current.send(JSON.stringify({ mode: getAiMode(currentExercise), frame: frameData }));
                 animationFrameRef.current = setTimeout(() => requestAnimationFrame(sendFrames), 100);
             };
 
@@ -607,7 +625,7 @@ export default function DailyWorkout() {
 
                             {/* Đồng bộ 2 nút tập */}
                             <div className="d-flex gap-3 mt-4">
-                                {selectedDetail?.aiMode && (
+                                {getAiMode(selectedDetail) && (
                                     <Button
                                         className="flex-fill py-3 fw-black rounded-pill border-0"
                                         style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
