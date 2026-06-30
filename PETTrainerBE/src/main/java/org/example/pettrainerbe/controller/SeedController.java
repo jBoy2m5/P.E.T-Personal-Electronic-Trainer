@@ -41,7 +41,7 @@ public class SeedController {
                 "Lower your chest toward the floor while keeping your knees on the ground, then push back up.",
                 "Keep your core engaged and avoid arching your lower back.",
                 "Keep your body straight from shoulders to knees with elbows at about 45°.",
-                null, 0.25f, 12, 3, "1", null, "PUSH-UP"));
+                null, 0.25f, 12, 3, "1", null, null));
         all.add(ex(chest, "Push Up",
                 "Lower your chest until just above the floor before pressing back to the starting position.",
                 "Do not let your hips sag or elbows flare excessively.",
@@ -51,12 +51,12 @@ public class SeedController {
                 "Perform a push-up with hands close together to increase triceps and inner chest activation.",
                 "Keep wrists comfortable and avoid excessive elbow flare.",
                 "Hands form a diamond directly under the chest.",
-                null, 0.45f, 10, 4, "2", null, "PUSH-UP"));
+                null, 0.45f, 10, 4, "2", null, null));
         all.add(ex(chest, "Decline Push Up",
                 "Place your feet on a chair or bench and perform a push-up to increase upper chest and shoulder activation.",
                 "Keep your core tight and avoid letting your hips sag.",
                 "Feet elevated on a stable surface with the body kept straight.",
-                null, 0.55f, 10, 4, "3", null, "PUSH-UP"));
+                null, 0.55f, 10, 4, "3", null, null));
 
         // ===== 2. BACK =====
         MuscleGroup back = saveGroup("Lưng", "Nhóm cơ lưng - rèn luyện tư thế vững chắc.");
@@ -79,7 +79,7 @@ public class SeedController {
                 "Pull your body upward beside the bar while alternating which shoulder approaches the bar each repetition.",
                 "Avoid twisting your lower back and control the descent.",
                 "Grip the bar with one hand in front of the other and pull until your head reaches the bar.",
-                null, 0.80f, 6, 4, "3", null, "PULL-UP"));
+                null, 0.80f, 6, 4, "3", null, null));
 
         // ===== 3. SHOULDER =====
         MuscleGroup shoulders = saveGroup("Vai", "Nhóm cơ vai - vai rộng chuẩn form, sức mạnh thân trên.");
@@ -110,7 +110,7 @@ public class SeedController {
                 "Perform push-ups while keeping your elbows close to your body.",
                 "Maintain a straight body and avoid flaring the elbows.",
                 "Hands placed slightly narrower than shoulder width.",
-                null, 0.35f, 12, 3, "1", null, "PUSH-UP"));
+                null, 0.35f, 12, 3, "1", null, null));
         all.add(ex(arms, "Bench Dips",
                 "Use a chair or bench to lower and raise your body using your arms.",
                 "Avoid lowering too deeply if you feel shoulder discomfort.",
@@ -120,7 +120,7 @@ public class SeedController {
                 "Pull yourself upward until your chin clears the bar before lowering slowly.",
                 "Avoid swinging and maintain full range of motion.",
                 "Use a shoulder-width underhand grip.",
-                null, 0.70f, 8, 4, "2", null, "PULL-UP"));
+                null, 0.70f, 8, 4, "2", null, null));
         all.add(ex(arms, "Bodyweight Triceps Extension",
                 "Using a sturdy table edge, bar, or suspension trainer, lower your forehead toward your hands by bending your elbows, then extend your arms to return to the starting position.",
                 "Keep your elbows close to your body and avoid letting your hips sag.",
@@ -171,7 +171,7 @@ public class SeedController {
                 "Perform a full squat using only one leg while keeping the opposite leg off the ground.",
                 "Requires good balance, mobility, and leg strength.",
                 "Keep one leg extended while squatting on the other.",
-                null, 0.80f, 6, 4, "3", null, "SQUAT"));
+                null, 0.80f, 6, 4, "3", null, null));
 
         // ===== 7. GLUTES =====
         MuscleGroup glutes = saveGroup("Mông", "Nhóm cơ mông - phát triển vòng 3 săn chắc.");
