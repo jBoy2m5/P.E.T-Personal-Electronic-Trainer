@@ -32,30 +32,20 @@ export const getDailyMissions = (dateKey) => {
 export const getUnclaimedCount = () => {
   let count = 0;
   const todayKey = getTodayKey();
-  
-  const dailySaved = localStorage.getItem('pet-daily');
-  let dailyData = { checkinHistory: [], claimedMissions: {} };
-  if (dailySaved) dailyData = JSON.parse(dailySaved);
-  
-  if (!dailyData.checkinHistory?.includes(todayKey)) {
-    count += 1;
-  }
 
-  const scheduleSaved = localStorage.getItem('pet-schedule');
-  let actualCompletedToday = [];
-  if (scheduleSaved) {
-    const schedule = JSON.parse(scheduleSaved);
-    actualCompletedToday = schedule[todayKey]?.completedExercises || [];
-  }
+  try {
+    const userData = localStorage.getItem('user-data');
+    const userId = userData ? JSON.parse(userData)?.userId : null;
+    const key = userId ? `pet-daily-${userId}` : 'pet-daily';
+    const saved = localStorage.getItem(key);
+    const data = saved ? JSON.parse(saved) : {};
+    const claimedToday = data.claimedMissions?.[todayKey] || [];
+    const trainedToday = data.exercisesTrained || [];
 
-  const todayMissions = getDailyMissions(todayKey);
-  const claimedToday = dailyData.claimedMissions?.[todayKey] || [];
-
-  todayMissions.forEach(mission => {
-    if (actualCompletedToday.includes(mission.title) && !claimedToday.includes(mission.id)) {
-      count += 1;
-    }
-  });
+    if (!claimedToday.includes('login')) count += 1;
+    if (trainedToday.length > 0 && !claimedToday.includes('exercise_1')) count += 1;
+    if (trainedToday.length >= 3 && !claimedToday.includes('exercise_3')) count += 1;
+  } catch { /* ignore */ }
 
   return count;
 };

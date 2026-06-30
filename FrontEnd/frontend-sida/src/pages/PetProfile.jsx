@@ -20,7 +20,8 @@ const PET_LEVELS = [
 export default function PetProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { totalPoints, exercisesTrained, getCurrentLevel } = usePetStore();
+  const { totalPoints, exercisesTrained, getCurrentLevel, claimedMissions, claimMission } = usePetStore();
+  const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
   const [petData, setPetData] = useState({
     pet_name: 'P.E.T',
@@ -77,25 +78,34 @@ export default function PetProfile() {
 
     setPetData({ pet_name, total_exp: exp, checkin_streak: 0, level: currentLevelObj.level });
 
+    const todayClaimed = claimedMissions?.[todayKey] || [];
+
     let loadedTasks = [
-      { id: 1, name: t('pet_profile.task_login'), expReward: 10, completed: true },
-      { id: 2, name: t('pet_profile.task_complete_1'), expReward: 20, completed: trainedArray.length > 0 },
-      { id: 3, name: t('pet_profile.task_complete_3'), expReward: 50, completed: trainedArray.length >= 3 }
+      { id: 'login', name: t('pet_profile.task_login'), expReward: 10, completed: true, claimed: todayClaimed.includes('login') },
+      { id: 'exercise_1', name: t('pet_profile.task_complete_1'), expReward: 20, completed: trainedArray.length > 0, claimed: todayClaimed.includes('exercise_1') },
+      { id: 'exercise_3', name: t('pet_profile.task_complete_3'), expReward: 50, completed: trainedArray.length >= 3, claimed: todayClaimed.includes('exercise_3') }
     ];
 
     if (trainedArray.length > 0) {
-      trainedArray.slice(0, 2).forEach((ex, idx) => {
+      trainedArray.slice(0, 2).forEach((ex) => {
+        const id = `ex_${ex}`;
         loadedTasks.push({
-          id: 4 + idx,
+          id,
           name: t('pet_profile.task_complete_ex', { ex }),
           expReward: 15,
-          completed: true
+          completed: true,
+          claimed: todayClaimed.includes(id)
         });
       });
     }
 
     setTasks(loadedTasks);
-  }, [totalPoints, exercisesTrained]);
+
+    // Auto-claim login mission
+    if (!todayClaimed.includes('login')) {
+      claimMission('login', 10);
+    }
+  }, [totalPoints, exercisesTrained, claimedMissions]);
 
   const currentLevelObj = PET_LEVELS.find(l => l.level === petData.level) || PET_LEVELS[0];
   const nextLevelObj = PET_LEVELS.find(l => l.minPoints > petData.total_exp);
@@ -273,14 +283,24 @@ export default function PetProfile() {
                   <h5 className="fw-black mb-4">{t('pet_profile.pet_missions')}</h5>
                   <div className="d-flex flex-column gap-3">
                     {tasks.map(task => (
-                      <div key={task.id} className="d-flex align-items-center gap-3">
-                        <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '40px', height: '40px', background: task.completed ? '#e8f5e9' : (isDark ? 'rgba(255,255,255,0.05)' : '#f8f9fa'), color: task.completed ? '#2e7d32' : '#adb5bd', border: task.completed ? 'none' : '1px solid #dee2e6' }}>
-                          {task.completed ? '✓' : '•'}
+                      <div key={task.id} className="d-flex align-items-center gap-3 justify-content-between">
+                        <div className="d-flex align-items-center gap-3">
+                          <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '40px', height: '40px', background: task.claimed ? '#e8f5e9' : task.completed ? '#fff8e1' : (isDark ? 'rgba(255,255,255,0.05)' : '#f8f9fa'), color: task.claimed ? '#2e7d32' : task.completed ? '#f9a825' : '#adb5bd', border: task.claimed ? 'none' : task.completed ? '1px solid #f9a825' : '1px solid #dee2e6' }}>
+                            {task.claimed ? '✓' : task.completed ? '!' : '•'}
+                          </div>
+                          <div>
+                            <div className="fw-bold" style={{ color: task.completed ? (isDark ? '#e0e0e0' : '#212529') : (isDark ? '#9e9e9e' : '#495057') }}>{task.name}</div>
+                            <div style={{ color: '#00b4d8', fontSize: '0.85rem', fontWeight: 'bold' }}>+{task.expReward} EXP</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="fw-bold" style={{ color: task.completed ? (isDark ? '#e0e0e0' : '#212529') : (isDark ? '#9e9e9e' : '#495057') }}>{task.name}</div>
-                          <div style={{ color: '#00b4d8', fontSize: '0.85rem', fontWeight: 'bold' }}>+{task.expReward} EXP</div>
-                        </div>
+                        {task.completed && !task.claimed && (
+                          <button className="btn btn-sm fw-bold rounded-pill flex-shrink-0" style={{ background: '#00b4d8', color: '#fff', border: 'none', padding: '4px 14px' }} onClick={() => claimMission(task.id, task.expReward)}>
+                            Nhận
+                          </button>
+                        )}
+                        {task.claimed && (
+                          <span style={{ color: '#2e7d32', fontSize: '0.8rem', fontWeight: 'bold', flexShrink: 0 }}>✓ Đã nhận</span>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -41,7 +41,7 @@ const getInitialState = () => {
   const userId = getUserId();
   const key = getPetKey(userId);
   const todayStr = getTodayKey();
-  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null };
+  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null, claimedMissions: {} };
   try {
     const saved = localStorage.getItem(key);
     if (saved) {
@@ -75,6 +75,7 @@ const usePetStore = create((set, get) => ({
         petId: pet.pet_id,
         pointsEarnedToday: needsReset ? 0 : (existing.pointsEarnedToday || 0),
         exercisesTrained: needsReset ? [] : (existing.exercisesTrained || []),
+        claimedMissions: existing.claimedMissions || {},
         date: todayStr
       };
       localStorage.setItem(key, JSON.stringify(newState));
@@ -113,6 +114,44 @@ const usePetStore = create((set, get) => ({
       if (data[fmt(d)]?.trained) return false;
     }
     return !data[fmt(today)]?.trained;
+  },
+
+  claimMission: (missionId, expReward) => {
+    const MAX_DAILY_EXP = 300;
+    const todayStr = getTodayKey();
+    const userId = getUserId();
+    const key = getPetKey(userId);
+
+    set((state) => {
+      const todayClaimed = state.claimedMissions?.[todayStr] || [];
+      if (todayClaimed.includes(missionId)) return state;
+
+      let currentPointsToday = state.date === todayStr ? state.pointsEarnedToday : 0;
+      let expGained = expReward;
+      if (currentPointsToday + expGained > MAX_DAILY_EXP) {
+        expGained = Math.max(0, MAX_DAILY_EXP - currentPointsToday);
+      }
+
+      const newTotalPoints = state.totalPoints + expGained;
+      const newClaimed = { ...state.claimedMissions, [todayStr]: [...todayClaimed, missionId] };
+      const newState = {
+        ...state,
+        totalPoints: newTotalPoints,
+        pointsEarnedToday: currentPointsToday + expGained,
+        claimedMissions: newClaimed,
+        date: todayStr,
+      };
+      localStorage.setItem(key, JSON.stringify(newState));
+
+      if (state.petId) {
+        axiosClient.put(`/pets/${state.petId}`, {
+          total_exp: newTotalPoints,
+          level: calcLevel(newTotalPoints)
+        }).catch(() => {});
+      }
+
+      return newState;
+    });
   },
 
   addExp: (kcal, exerciseName) => {
