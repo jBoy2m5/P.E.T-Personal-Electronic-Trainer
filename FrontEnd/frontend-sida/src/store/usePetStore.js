@@ -63,34 +63,34 @@ const usePetStore = create((set, get) => ({
   syncFromBackend: async () => {
     const userId = getUserId();
     if (!userId) return;
+    const key = getPetKey(userId);
+    const todayStr = getTodayKey();
     try {
       const pet = await axiosClient.get(`/pets/user/${userId}`);
-      if (pet?.pet_id) {
-        const totalPoints = pet.total_exp || 0;
-        const key = getPetKey(userId);
-        const todayStr = getTodayKey();
-        const existing = JSON.parse(localStorage.getItem(key) || '{}');
-        const needsReset = existing.date !== todayStr;
-        const newState = {
-          totalPoints,
-          petId: pet.pet_id,
-          pointsEarnedToday: needsReset ? 0 : (existing.pointsEarnedToday || 0),
-          exercisesTrained: needsReset ? [] : (existing.exercisesTrained || []),
-          date: todayStr
-        };
-        localStorage.setItem(key, JSON.stringify(newState));
-        set(newState);
-      } else {
-        // New user: create pet in backend with level 1, exp 0
-        const newPet = await axiosClient.post('/pets', { user_id: userId, level: 1, total_exp: 0 });
-        if (newPet?.pet_id) {
-          set({ petId: newPet.pet_id, totalPoints: 0 });
-          const key = getPetKey(userId);
-          const existing = JSON.parse(localStorage.getItem(key) || '{}');
-          localStorage.setItem(key, JSON.stringify({ ...existing, petId: newPet.pet_id, totalPoints: 0 }));
-        }
+      const totalPoints = pet.total_exp || 0;
+      const existing = JSON.parse(localStorage.getItem(key) || '{}');
+      const needsReset = existing.date !== todayStr;
+      const newState = {
+        totalPoints,
+        petId: pet.pet_id,
+        pointsEarnedToday: needsReset ? 0 : (existing.pointsEarnedToday || 0),
+        exercisesTrained: needsReset ? [] : (existing.exercisesTrained || []),
+        date: todayStr
+      };
+      localStorage.setItem(key, JSON.stringify(newState));
+      set(newState);
+    } catch (err) {
+      if (err?.response?.status === 404) {
+        // New user: create pet with level 1, exp 0
+        try {
+          const newPet = await axiosClient.post('/pets', { user_id: userId, level: 1, total_exp: 0 });
+          const freshState = { totalPoints: 0, petId: newPet.pet_id, pointsEarnedToday: 0, exercisesTrained: [], date: todayStr };
+          localStorage.setItem(key, JSON.stringify(freshState));
+          set(freshState);
+        } catch { /* ignore */ }
       }
-    } catch { /* backend unavailable, use local */ }
+      // Other errors: backend unavailable, keep local state
+    }
   },
 
   getCurrentLevel: () => {
