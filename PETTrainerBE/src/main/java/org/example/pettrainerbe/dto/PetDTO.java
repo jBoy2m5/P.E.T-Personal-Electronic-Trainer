@@ -1,7 +1,6 @@
 package org.example.pettrainerbe.dto;
 
 import lombok.Data;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -14,6 +13,5 @@ public class PetDTO {
     private LocalDateTime lastUpdated;
     private Integer userId;
     private Integer checkinStreak;
-    private LocalDate lastCheckinDate;
-    private Integer checkinExpGained;
+    private String lastCheckinDate;
 }

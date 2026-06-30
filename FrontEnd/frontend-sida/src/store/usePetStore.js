@@ -122,21 +122,29 @@ const usePetStore = create((set, get) => ({
     const userId = getUserId();
     const key = getPetKey(userId);
     const todayStr = getTodayKey();
-    const { petId } = get();
+    const { petId, checkinStreak, lastCheckinDate, totalPoints } = get();
     if (!petId) return null;
+    if (lastCheckinDate === todayStr) return 0;
+
+    // Calculate yesterday
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    const yesterday = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+    const newStreak = lastCheckinDate === yesterday ? (checkinStreak || 0) + 1 : 1;
+    const dayInCycle = ((newStreak - 1) % 7) + 1;
+    const expRewards = [10, 15, 20, 25, 30, 40, 100];
+    const expGained = expRewards[dayInCycle - 1];
+    const newTotalExp = (totalPoints || 0) + expGained;
+
     try {
-      const result = await axiosClient.post(`/pets/${petId}/checkin`);
-      const expGained = result.checkin_exp_gained || 0;
-      // Only update if backend confirms checkin (last_checkin_date must be set)
-      if (!result.last_checkin_date) return null;
-      const newState = {
-        totalPoints: result.total_exp || 0,
-        checkinStreak: result.checkin_streak || 0,
-        lastCheckinDate: result.last_checkin_date,
-        petId: result.pet_id,
-      };
+      await axiosClient.put(`/pets/${petId}`, {
+        total_exp: newTotalExp,
+        level: calcLevel(newTotalExp),
+        checkin_streak: newStreak,
+        last_checkin_date: todayStr,
+      });
       set((state) => {
-        const merged = { ...state, ...newState };
+        const merged = { ...state, totalPoints: newTotalExp, checkinStreak: newStreak, lastCheckinDate: todayStr };
         localStorage.setItem(key, JSON.stringify(merged));
         return merged;
       });

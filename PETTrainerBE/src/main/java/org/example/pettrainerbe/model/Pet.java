@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -26,5 +25,5 @@ public class Pet {
     private Integer level;
     private LocalDateTime lastUpdated;
     private Integer checkinStreak;
-    private LocalDate lastCheckinDate;
+    private String lastCheckinDate;
 }

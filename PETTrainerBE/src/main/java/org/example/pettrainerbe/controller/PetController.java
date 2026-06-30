@@ -9,8 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -68,55 +66,18 @@ public class PetController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PetDTO> updatePet(@PathVariable Integer id, @RequestBody Pet petDetails) {
+    public ResponseEntity<PetDTO> updatePet(@PathVariable Integer id, @RequestBody java.util.Map<String, Object> body) {
         return petRepository.findById(id)
                 .map(pet -> {
-                    pet.setAppearanceType(petDetails.getAppearanceType());
-                    pet.setEmotionalState(petDetails.getEmotionalState());
-                    pet.setTotalExp(petDetails.getTotalExp());
-                    pet.setLevel(petDetails.getLevel());
-                    pet.setLastUpdated(petDetails.getLastUpdated());
-                    if (petDetails.getUser() != null) {
-                        pet.setUser(petDetails.getUser());
-                    }
+                    if (body.containsKey("total_exp")) pet.setTotalExp((Integer) body.get("total_exp"));
+                    if (body.containsKey("level")) pet.setLevel((Integer) body.get("level"));
+                    if (body.containsKey("appearance_type")) pet.setAppearanceType((String) body.get("appearance_type"));
+                    if (body.containsKey("emotional_state")) pet.setEmotionalState((String) body.get("emotional_state"));
+                    if (body.containsKey("checkin_streak")) pet.setCheckinStreak((Integer) body.get("checkin_streak"));
+                    if (body.containsKey("last_checkin_date")) pet.setLastCheckinDate((String) body.get("last_checkin_date"));
                     return ResponseEntity.ok(convertToDTO(petRepository.save(pet)));
                 })
                 .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PostMapping("/{id}/checkin")
-    public ResponseEntity<PetDTO> checkin(@PathVariable Integer id) {
-        return petRepository.findById(id).map(pet -> {
-            LocalDate today = LocalDate.now();
-            LocalDate last = pet.getLastCheckinDate();
-
-            if (last != null && last.equals(today)) {
-                // Already checked in today
-                return ResponseEntity.ok(convertToDTO(pet));
-            }
-
-            int currentStreak = pet.getCheckinStreak() == null ? 0 : pet.getCheckinStreak();
-            int newStreak = (last != null && last.equals(today.minusDays(1)))
-                    ? currentStreak + 1
-                    : 1;
-
-            int dayInCycle = ((newStreak - 1) % 7) + 1;
-            int[] expRewards = {10, 15, 20, 25, 30, 40, 100};
-            int expGained = expRewards[dayInCycle - 1];
-
-            int newTotalExp = (pet.getTotalExp() == null ? 0 : pet.getTotalExp()) + expGained;
-            int newLevel = calcLevel(newTotalExp);
-
-            pet.setCheckinStreak(newStreak);
-            pet.setLastCheckinDate(today);
-            pet.setTotalExp(newTotalExp);
-            pet.setLevel(newLevel);
-            petRepository.save(pet);
-
-            PetDTO dto = convertToDTO(pet);
-            dto.setCheckinExpGained(expGained);
-            return ResponseEntity.ok(dto);
-        }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
