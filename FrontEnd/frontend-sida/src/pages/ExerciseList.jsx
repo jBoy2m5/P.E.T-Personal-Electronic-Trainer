@@ -3,7 +3,13 @@ import { Container, Row, Col, Card, Badge, Button, Modal, ProgressBar } from 're
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getMuscleGroupById } from '../api/exerciseApi';
-import { exerciseDatabase } from '../data/exerciseDatabase';
+const AI_EXERCISE_MODES = {
+    'Push Up': 'PUSH-UP',
+    'Bodyweight Squat': 'SQUAT',
+    'Plank': 'PLANK',
+    'Pull Up': 'PULL-UP',
+    'Handstand': 'HANDSTAND',
+};
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
 import confetti from 'canvas-confetti';
@@ -381,8 +387,7 @@ export default function ExerciseList() {
                 const ctx = canvasRef.current.getContext('2d');
                 ctx.drawImage(videoRef.current, 0, 0, 640, 480);
                 const frameData = canvasRef.current.toDataURL('image/jpeg', 0.5);
-                const aiMode = exerciseDatabase.find(e => e.name === currentExercise.name)?.aiMode;
-                socketRef.current.send(JSON.stringify({ mode: aiMode, frame: frameData }));
+                socketRef.current.send(JSON.stringify({ mode: AI_EXERCISE_MODES[currentExercise.name], frame: frameData }));
                 animationFrameRef.current = setTimeout(() => requestAnimationFrame(sendFrames), 100);
             };
 
@@ -625,7 +630,7 @@ export default function ExerciseList() {
 
                             {/* Đồng bộ 2 nút tập */}
                             <div className="d-flex gap-3 mt-4">
-                                {exerciseDatabase.find(e => e.name === selectedDetail?.name)?.aiMode && (
+                                {AI_EXERCISE_MODES[selectedDetail?.name] && (
                                     <Button
                                         className="flex-fill py-3 fw-black rounded-pill border-0"
                                         style={{ background: 'var(--brand-neon)', color: '#000', fontSize: '1rem', boxShadow: '0 4px 15px rgba(var(--brand-neon-rgb), 0.3)' }}
