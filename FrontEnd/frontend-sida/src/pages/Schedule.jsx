@@ -398,7 +398,7 @@ export default function Schedule() {
               <div className="mt-4 pt-3 border-surface" style={{ borderTop: '1px solid' }}>
                 <div className="d-flex justify-content-between mb-2">
                   <span className="text-secondary" style={{ fontSize: '0.8rem', fontWeight: '600' }}>{t('schedule.progress', { month: MONTHS[currentMonth] })}</span>
-                  <span style={{ color: 'var(--brand-neon)', fontSize: '0.8rem', fontWeight: 'bold' }}>{trainedCount}/{monthDays} {t('schedule.out_of_days').replace('/ ', '').replace('{{days}}', monthDays)}</span>
+                  <span style={{ color: 'var(--brand-neon)', fontSize: '0.8rem', fontWeight: 'bold' }}>{trainedCount}/{monthDays}</span>
                 </div>
                 <div style={{ height: '8px', background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.04))', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{

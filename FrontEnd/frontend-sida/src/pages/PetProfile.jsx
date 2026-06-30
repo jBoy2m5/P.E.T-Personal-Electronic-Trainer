@@ -42,6 +42,20 @@ export default function PetProfile() {
   const [isTyping, setIsTyping] = useState(false);
   const [hearts, setHearts] = useState([]);
 
+  const [isDark, setIsDark] = useState(() => document.documentElement.getAttribute('data-bs-theme') === 'dark');
+
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-bs-theme') {
+          setIsDark(document.documentElement.getAttribute('data-bs-theme') === 'dark');
+        }
+      });
+    });
+    observer.observe(document.documentElement, { attributes: true });
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     // 1. Load Daily EXP & Streak
     const dailySaved = localStorage.getItem('pet-daily');
@@ -142,30 +156,66 @@ export default function PetProfile() {
   };
 
   return (
-    <div className="pet-tiktok-layout" style={{ background: '#f8f9fa', minHeight: '100vh', overflow: 'hidden' }}>
+    <div className="pet-tiktok-layout" style={{ background: isDark ? '#1a1a2e' : '#f8f9fa', minHeight: '100vh', overflow: 'hidden' }}>
       <Container fluid className="p-0 h-100">
         <Row className="m-0 h-100" style={{ minHeight: '100vh' }}>
           
           {/* CỘT TRÁI: Khu vực Thao tác & Thông tin */}
-          <Col lg={5} xl={4} className="d-flex flex-column order-2 order-lg-1 bg-white shadow-lg z-2" style={{ maxHeight: '100vh', overflowY: 'auto' }}>
+          <Col lg={5} xl={4} className={`d-flex flex-column order-2 order-lg-1 shadow-lg z-2 ${isDark ? 'bg-dark border-end border-secondary' : 'bg-white'}`} style={{ maxHeight: '100vh', overflowY: 'auto' }}>
             
             {/* Top Bar */}
-            <div className="d-flex justify-content-between align-items-center p-4 sticky-top bg-white z-3">
-              <button onClick={() => navigate(-1)} className="btn p-0 d-flex align-items-center justify-content-center rounded-circle border" style={{ width: '40px', height: '40px', background: '#f8f9fa' }}>
-                <span className="fw-bold text-dark fs-5">✕</span>
+            <div className={`d-flex justify-content-between align-items-center p-4 sticky-top z-3 ${isDark ? 'bg-dark text-white' : 'bg-white text-dark'}`}>
+              <button onClick={() => navigate(-1)} className="btn p-0 d-flex align-items-center justify-content-center rounded-circle border-0" style={{ width: '40px', height: '40px', background: isDark ? 'rgba(255,255,255,0.1)' : '#f8f9fa' }}>
+                <span className={`fw-bold fs-5 ${isDark ? 'text-white' : 'text-dark'}`}>✕</span>
               </button>
               
               <div 
-                className="fw-bold text-dark fs-5 d-flex align-items-center gap-2 px-4 py-2 rounded-pill bg-light border" 
-                style={{ cursor: 'pointer' }}
+                className={`fw-bold fs-5 d-flex align-items-center gap-2 px-4 py-2 rounded-pill border ${isDark ? 'text-white border-secondary' : 'text-dark border-light'}`}
+                style={{ cursor: 'pointer', background: isDark ? 'rgba(255,255,255,0.05)' : '#f8f9fa' }}
                 onClick={() => { setEditNameValue(petData.pet_name); setShowEditName(true); }}
               >
                 {petData.pet_name} ✏️
               </div>
 
-              <button className="btn p-0 d-flex align-items-center justify-content-center rounded-circle border" style={{ width: '40px', height: '40px', background: '#f8f9fa' }}>
-                <span className="fw-bold text-dark">...</span>
-              </button>
+              <div className="position-relative">
+                <button 
+                  className="btn p-0 d-flex align-items-center justify-content-center rounded-circle border-0" 
+                  style={{ width: '40px', height: '40px', background: isDark ? 'rgba(255,255,255,0.1)' : '#f8f9fa' }}
+                  onClick={(e) => {
+                    const menu = e.currentTarget.nextElementSibling;
+                    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+                  }}
+                >
+                  <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>...</span>
+                </button>
+                <div className="pet-dropdown-menu" style={{
+                  display: 'none',
+                  position: 'absolute',
+                  right: 0,
+                  top: '48px',
+                  background: isDark ? '#2b2b40' : '#fff',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                  minWidth: '200px',
+                  zIndex: 999,
+                  overflow: 'hidden'
+                }}>
+                  <button 
+                    className="btn w-100 text-start px-4 py-3 d-flex align-items-center gap-2 border-0"
+                    style={{ fontSize: '0.95rem', color: isDark ? '#fff' : '#333' }}
+                    onMouseOver={e => e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.1)' : '#f8f9fa'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                    onClick={() => { 
+                      setEditNameValue(petData.pet_name); 
+                      setShowEditName(true);
+                      document.querySelectorAll('.pet-dropdown-menu').forEach(el => el.style.display = 'none');
+                    }}
+                  >
+                    ✏️ {t('pet_profile.rename_pet') || 'Đặt lại tên thú cưng'}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Content Left */}
@@ -213,19 +263,19 @@ export default function PetProfile() {
 
               {/* Action Buttons */}
               <div className="d-flex flex-wrap gap-2 justify-content-center mb-4">
-                <button onClick={() => setShowOutfit(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: '#f8f9fa', color: '#0077b6', border: '1px solid rgba(0,119,182,0.2)' }}>
+                <button onClick={() => setShowOutfit(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: isDark ? 'rgba(0,119,182,0.1)' : '#f8f9fa', color: isDark ? '#90e0ef' : '#0077b6', border: '1px solid rgba(0,119,182,0.2)' }}>
                   👕 {t('pet_profile.outfit')}
                 </button>
-                <button onClick={() => setShowChat(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: '#f8f9fa', color: '#023e8a', border: '1px solid rgba(2,62,138,0.2)' }}>
+                <button onClick={() => setShowChat(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: isDark ? 'rgba(2,62,138,0.1)' : '#f8f9fa', color: isDark ? '#caf0f8' : '#023e8a', border: '1px solid rgba(2,62,138,0.2)' }}>
                   💬 {t('pet_profile.ai_chat')}
                 </button>
-                <button onClick={() => setShowDonation(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: '#f8f9fa', color: '#e63946', border: '1px solid rgba(230,57,70,0.2)' }}>
+                <button onClick={() => setShowDonation(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: isDark ? 'rgba(230,57,70,0.1)' : '#f8f9fa', color: isDark ? '#ffb3c6' : '#e63946', border: '1px solid rgba(230,57,70,0.2)' }}>
                   💖 {t('pet_profile.donation')}
                 </button>
               </div>
 
               {/* Task Card */}
-              <Card className="border shadow-sm rounded-4 mb-4 bg-white text-dark" style={{ transition: 'all 0.3s ease' }}
+              <Card className={`border shadow-sm rounded-4 mb-4 ${isDark ? 'bg-dark text-white border-secondary' : 'bg-white text-dark'}`} style={{ transition: 'all 0.3s ease' }}
                 onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)'; }}
                 onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}
               >
@@ -234,11 +284,11 @@ export default function PetProfile() {
                   <div className="d-flex flex-column gap-3">
                     {tasks.map(task => (
                       <div key={task.id} className="d-flex align-items-center gap-3">
-                        <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '40px', height: '40px', background: task.completed ? '#e8f5e9' : '#f8f9fa', color: task.completed ? '#2e7d32' : '#adb5bd', border: task.completed ? 'none' : '1px solid #dee2e6' }}>
+                        <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '40px', height: '40px', background: task.completed ? '#e8f5e9' : (isDark ? 'rgba(255,255,255,0.05)' : '#f8f9fa'), color: task.completed ? '#2e7d32' : '#adb5bd', border: task.completed ? 'none' : '1px solid #dee2e6' }}>
                           {task.completed ? '✓' : '•'}
                         </div>
                         <div>
-                          <div className="fw-bold" style={{ color: task.completed ? '#212529' : '#495057' }}>{task.name}</div>
+                          <div className="fw-bold" style={{ color: task.completed ? (isDark ? '#e0e0e0' : '#212529') : (isDark ? '#9e9e9e' : '#495057') }}>{task.name}</div>
                           <div style={{ color: '#00b4d8', fontSize: '0.85rem', fontWeight: 'bold' }}>+{task.expReward} EXP</div>
                         </div>
                       </div>
@@ -248,21 +298,21 @@ export default function PetProfile() {
               </Card>
 
               {/* Streak Card */}
-              <Card className="border shadow-sm rounded-4 mb-5 bg-white text-dark" style={{ transition: 'all 0.3s ease' }}
+              <Card className={`border shadow-sm rounded-4 mb-5 ${isDark ? 'bg-dark text-white border-secondary' : 'bg-white text-dark'}`} style={{ transition: 'all 0.3s ease' }}
                 onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)'; }}
                 onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}
               >
                 <Card.Body className="p-4">
                   <h5 className="fw-black mb-4">{t('pet_profile.streak_badges')}</h5>
                   <div className="d-flex justify-content-between align-items-center position-relative">
-                    <div className="position-absolute" style={{ top: '35%', left: '10%', right: '10%', height: '2px', background: '#e9ecef', zIndex: 0 }}></div>
+                    <div className="position-absolute" style={{ top: '35%', left: '10%', right: '10%', height: '2px', background: isDark ? '#424242' : '#e9ecef', zIndex: 0 }}></div>
                     {[3, 10, 30, 100, 200].map(days => {
                       const achieved = petData.checkin_streak >= days;
                       return (
                         <div key={days} className="d-flex flex-column align-items-center position-relative z-1" style={{ width: '50px' }}>
-                          <div className="mb-2 d-flex align-items-center justify-content-center bg-white" style={{ 
+                          <div className={`mb-2 d-flex align-items-center justify-content-center ${isDark ? 'bg-dark' : 'bg-white'}`} style={{ 
                             width: '45px', height: '45px', borderRadius: '50%',
-                            border: achieved ? '2px solid #ff9900' : '2px solid #e9ecef',
+                            border: achieved ? '2px solid #ff9900' : `2px solid ${isDark ? '#424242' : '#e9ecef'}`,
                             boxShadow: achieved ? '0 5px 15px rgba(255,153,0,0.3)' : 'none'
                           }}>
                             <span style={{ fontSize: '1.5rem', filter: achieved ? 'none' : 'grayscale(100%) opacity(0.3)' }}>🔥</span>
@@ -309,7 +359,7 @@ export default function PetProfile() {
             </div>
 
             {/* Lời thoại động dễ thương */}
-            <div className="position-absolute z-2 bg-white rounded-pill px-4 py-2 shadow fw-bold text-primary" style={{ top: '20%', right: '20%', transform: 'rotate(5deg)', animation: 'petFloat 4s ease-in-out infinite' }}>
+            <div className={`position-absolute z-2 rounded-pill px-4 py-2 shadow fw-bold text-primary ${isDark ? 'bg-dark border border-secondary' : 'bg-white'}`} style={{ top: '20%', right: '20%', transform: 'rotate(5deg)', animation: 'petFloat 4s ease-in-out infinite' }}>
               {t('pet_profile.keep_working')}
             </div>
 
@@ -339,15 +389,23 @@ export default function PetProfile() {
             <span className="fw-black text-primary fs-5">{petData.total_exp}</span>
           </div>
           <div className="d-flex gap-3 justify-content-center flex-wrap">
-            <div className="p-3 border rounded-3 bg-light" style={{ width: '120px' }}>
+            <div className={`p-3 border rounded-3 ${petData.total_exp >= 150 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '120px', opacity: petData.total_exp >= 150 ? 1 : 0.7 }}>
               <div style={{ fontSize: '3rem' }}>🧢</div>
               <div className="fw-bold mt-2 small">Mũ Snapback</div>
-              <Button size="sm" variant="outline-primary" className="mt-2 fw-bold w-100">150 EXP</Button>
+              {petData.total_exp >= 150 ? (
+                <Button size="sm" variant="primary" className="mt-2 fw-bold w-100">Trang bị</Button>
+              ) : (
+                <Button size="sm" variant="outline-secondary" disabled className="mt-2 fw-bold w-100">🔒 150 EXP</Button>
+              )}
             </div>
-            <div className="p-3 border rounded-3 bg-light" style={{ width: '120px' }}>
+            <div className={`p-3 border rounded-3 ${petData.total_exp >= 200 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '120px', opacity: petData.total_exp >= 200 ? 1 : 0.7 }}>
               <div style={{ fontSize: '3rem' }}>🕶️</div>
               <div className="fw-bold mt-2 small">Kính râm</div>
-              <Button size="sm" variant="outline-primary" className="mt-2 fw-bold w-100">200 EXP</Button>
+              {petData.total_exp >= 200 ? (
+                <Button size="sm" variant="primary" className="mt-2 fw-bold w-100">Trang bị</Button>
+              ) : (
+                <Button size="sm" variant="outline-secondary" disabled className="mt-2 fw-bold w-100">🔒 200 EXP</Button>
+              )}
             </div>
           </div>
         </Modal.Body>
@@ -361,7 +419,7 @@ export default function PetProfile() {
         <Modal.Body className="p-4 text-center">
           <p className="text-muted fw-bold mb-4">{t('pet_profile.charity_desc')}</p>
           <div className="d-flex flex-column gap-3">
-            <Card className="border-0 bg-light">
+            <Card className={`border-0 bg-light ${petData.total_exp >= 500 ? '' : 'opacity-75'}`}>
               <Card.Body className="d-flex align-items-center justify-content-between p-3">
                 <div className="d-flex align-items-center gap-3">
                   <div className="fs-1">🌳</div>
@@ -370,10 +428,14 @@ export default function PetProfile() {
                     <div className="text-muted small">{t('pet_profile.tree_project')}</div>
                   </div>
                 </div>
-                <Button variant="danger" className="fw-bold rounded-pill px-3">500 EXP</Button>
+                {petData.total_exp >= 500 ? (
+                  <Button variant="danger" className="fw-bold rounded-pill px-3">❤️ Quyên góp</Button>
+                ) : (
+                  <Button variant="outline-secondary" disabled className="fw-bold rounded-pill px-3">🔒 Cần 500 EXP</Button>
+                )}
               </Card.Body>
             </Card>
-            <Card className="border-0 bg-light">
+            <Card className={`border-0 bg-light ${petData.total_exp >= 1000 ? '' : 'opacity-75'}`}>
               <Card.Body className="d-flex align-items-center justify-content-between p-3">
                 <div className="d-flex align-items-center gap-3">
                   <div className="fs-1">🍱</div>
@@ -382,7 +444,11 @@ export default function PetProfile() {
                     <div className="text-muted small">{t('pet_profile.meal_project')}</div>
                   </div>
                 </div>
-                <Button variant="danger" className="fw-bold rounded-pill px-3">1000 EXP</Button>
+                {petData.total_exp >= 1000 ? (
+                  <Button variant="danger" className="fw-bold rounded-pill px-3">❤️ Quyên góp</Button>
+                ) : (
+                  <Button variant="outline-secondary" disabled className="fw-bold rounded-pill px-3">🔒 Cần 1000 EXP</Button>
+                )}
               </Card.Body>
             </Card>
           </div>
