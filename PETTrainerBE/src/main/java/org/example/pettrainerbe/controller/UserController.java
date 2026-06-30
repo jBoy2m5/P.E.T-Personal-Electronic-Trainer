@@ -2,18 +2,24 @@ package org.example.pettrainerbe.controller;
 
 import org.example.pettrainerbe.model.User;
 import org.example.pettrainerbe.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public UserController(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     @GetMapping
     public List<User> getAllUsers() {
@@ -21,23 +27,74 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Integer id) {
+    public ResponseEntity<?> getUserById(@PathVariable Integer id) {
         return userRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userRepository.save(user);
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email);
+        if (user == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+        return ResponseEntity.ok(user);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
-        if (userRepository.existsById(id)) {
-            userRepository.deleteById(id);
-            return ResponseEntity.ok().build();
+    @PutMapping("/onboarding")
+    public ResponseEntity<?> updateOnboarding(@RequestBody Map<String, Object> payload) {
+        try {
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            User user = userRepository.findByEmail(email);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+            }
+
+            if (payload.containsKey("gender")) user.setGender((String) payload.get("gender"));
+            if (payload.containsKey("fitnessLevel")) user.setFitnessLevel((String) payload.get("fitnessLevel"));
+            if (payload.containsKey("goal")) user.setFitnessGoal((String) payload.get("goal"));
+            
+            if (payload.containsKey("height")) {
+                user.setHeight(Float.valueOf(payload.get("height").toString()));
+            }
+            if (payload.containsKey("weight")) {
+                user.setWeight(Float.valueOf(payload.get("weight").toString()));
+            }
+            if (payload.containsKey("sessionsPerWeek")) {
+                user.setSessionsPerWeek(Integer.valueOf(payload.get("sessionsPerWeek").toString()));
+            }
+            
+            if (user.getHeight() != null && user.getWeight() != null && user.getHeight() > 0) {
+                float heightM = user.getHeight() / 100.0f;
+                float bmi = user.getWeight() / (heightM * heightM);
+                user.setBmi(bmi);
+            }
+
+            userRepository.save(user);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Cập nhật dữ liệu onboarding thành công");
+            
+            Map<String, Object> userMap = new HashMap<>();
+            userMap.put("userId", user.getUserId());
+            userMap.put("email", user.getEmail());
+            userMap.put("name", user.getName());
+            userMap.put("pictureUrl", user.getPictureUrl());
+            userMap.put("height", user.getHeight());
+            userMap.put("weight", user.getWeight());
+            userMap.put("bmi", user.getBmi());
+            userMap.put("goal", user.getFitnessGoal());
+            userMap.put("gender", user.getGender());
+            userMap.put("fitnessLevel", user.getFitnessLevel());
+            userMap.put("sessionsPerWeek", user.getSessionsPerWeek());
+            response.put("user", userMap);
+
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
         }
-        return ResponseEntity.notFound().build();
     }
 }

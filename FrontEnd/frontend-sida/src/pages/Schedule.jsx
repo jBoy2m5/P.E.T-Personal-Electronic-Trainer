@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Modal, Button, Form } from 'react-bootstrap';
 
-const DAYS_OF_WEEK = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-const MONTHS = [
-  'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-  'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
-];
+import { useTranslation } from 'react-i18next';
 
 export default function Schedule() {
+  const { t } = useTranslation();
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [animateIn, setAnimateIn] = useState(false);
+
+  const DAYS_OF_WEEK = t('schedule.days', { returnObjects: true }) || ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  const MONTHS = t('schedule.months', { returnObjects: true }) || [
+    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+  ];
 
   // State lưu dữ liệu ngày tập & ghi chú (đọc từ localStorage - được ExerciseList tự động ghi vào)
   const [scheduleData, setScheduleData] = useState(() => {
@@ -160,7 +163,7 @@ export default function Schedule() {
           transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
           border: '1px solid',
           padding: '50px 40px',
-          boxShadow: '0 30px 80px rgba(0,0,0,0.5)'
+          boxShadow: 'var(--shadow-lg)'
         }}>
           {/* Animated gradient orbs */}
           <div style={{ position: 'absolute', width: '350px', height: '350px', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.12) 0%, transparent 70%)', top: '-100px', right: '-50px', filter: 'blur(50px)', pointerEvents: 'none', animation: 'headerFloat 6s ease-in-out infinite' }}></div>
@@ -183,21 +186,21 @@ export default function Schedule() {
               {/* Breadcrumb tag */}
               <div className="d-inline-flex align-items-center mb-3 px-2 py-1 rounded"
                 style={{ background: 'rgba(var(--brand-neon-rgb),0.06)', border: '1px solid rgba(var(--brand-neon-rgb),0.12)' }}>
-                <span style={{ color: 'rgba(var(--brand-neon-rgb),0.6)', fontSize: '0.7rem', fontWeight: '600', letterSpacing: '2px' }}>TRANG CHỦ / LỊCH TẬP</span>
+                <span style={{ color: 'rgba(var(--brand-neon-rgb),0.6)', fontSize: '0.7rem', fontWeight: '600', letterSpacing: '2px' }}>{t('schedule.breadcrumb')}</span>
               </div>
 
               <h1 className="fw-bold text-primary-dynamic mb-3" style={{ fontSize: '3.2rem', letterSpacing: '-1px', lineHeight: '1.15' }}>
-                Lịch Tập Luyện
+                {t('schedule.title_1')}
                 <br />
                 <span style={{
                   background: 'linear-gradient(90deg, var(--brand-neon), #88ff44, #00ff88)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   filter: 'drop-shadow(0 0 20px rgba(var(--brand-neon-rgb),0.2))'
-                }}>Của Riêng Bạn</span>
+                }}>{t('schedule.title_2')}</span>
               </h1>
               <p className="text-secondary" style={{ maxWidth: '480px', fontSize: '1rem', lineHeight: '1.7' }}>
-                Hoàn thành bất kỳ bài tập nào và hệ thống sẽ tự động đánh dấu ngày tập. Click vào ngày bất kỳ để ghi chú cảm nhận của bạn.
+                {t('schedule.description')}
               </p>
             </Col>
           </Row>
@@ -211,9 +214,9 @@ export default function Schedule() {
               border: '1px solid rgba(var(--brand-neon-rgb),0.15)', backdropFilter: 'blur(10px)'
             }}>
               <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '5rem', opacity: 0.08, pointerEvents: 'none' }}>🔥</div>
-              <div className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>STREAK</div>
+              <div className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>{t('schedule.streak')}</div>
               <div className="fw-bold" style={{ color: 'var(--brand-neon)', fontSize: '2.5rem', lineHeight: 1, textShadow: '0 0 20px rgba(var(--brand-neon-rgb),0.3)' }}>{streak}</div>
-              <div className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '4px' }}>ngày liên tục</div>
+              <div className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '4px' }}>{t('schedule.consecutive_days')}</div>
             </div>
           </Col>
           <Col xs={6} lg={3}>
@@ -222,9 +225,9 @@ export default function Schedule() {
               border: '1px solid rgba(0,180,216,0.15)', backdropFilter: 'blur(10px)'
             }}>
               <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '5rem', opacity: 0.08, pointerEvents: 'none' }}>💪</div>
-              <div className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>ĐÃ TẬP</div>
+              <div className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>{t('schedule.trained')}</div>
               <div className="fw-bold" style={{ color: '#00b4d8', fontSize: '2.5rem', lineHeight: 1 }}>{trainedCount}</div>
-              <div className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '4px' }}>/ {monthDays} ngày</div>
+              <div className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '4px' }}>{t('schedule.out_of_days', { days: monthDays })}</div>
             </div>
           </Col>
           <Col xs={6} lg={3}>
@@ -233,9 +236,9 @@ export default function Schedule() {
               border: '1px solid rgba(255,107,157,0.15)', backdropFilter: 'blur(10px)'
             }}>
               <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '5rem', opacity: 0.08, pointerEvents: 'none' }}>📝</div>
-              <div className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>GHI CHÚ</div>
+              <div className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>{t('schedule.notes')}</div>
               <div className="fw-bold" style={{ color: '#ff6b9d', fontSize: '2.5rem', lineHeight: 1 }}>{notesCount}</div>
-              <div className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '4px' }}>bài ghi</div>
+              <div className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '4px' }}>{t('schedule.notes_count')}</div>
             </div>
           </Col>
           <Col xs={6} lg={3}>
@@ -244,9 +247,9 @@ export default function Schedule() {
               border: '1px solid rgba(255,217,61,0.15)', backdropFilter: 'blur(10px)'
             }}>
               <div style={{ position: 'absolute', top: '-20px', right: '-20px', fontSize: '5rem', opacity: 0.08, pointerEvents: 'none' }}>🎯</div>
-              <div className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>HOÀN THÀNH</div>
+              <div className="text-secondary" style={{ fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '2px', marginBottom: '8px' }}>{t('schedule.completed')}</div>
               <div className="fw-bold" style={{ color: '#ffd93d', fontSize: '2.5rem', lineHeight: 1 }}>{monthDays > 0 ? Math.round((trainedCount / monthDays) * 100) : 0}%</div>
-              <div className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '4px' }}>mục tiêu tháng</div>
+              <div className="text-secondary" style={{ fontSize: '0.8rem', marginTop: '4px' }}>{t('schedule.monthly_goal')}</div>
             </div>
           </Col>
         </Row>
@@ -256,7 +259,7 @@ export default function Schedule() {
           <Col lg={8}>
             <div className="p-4 rounded-4 bg-surface-card border-surface" style={{
               border: '1px solid',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.2)'
+              boxShadow: 'var(--shadow-lg)'
             }}>
               {/* Navigation tháng */}
               <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-surface" style={{ borderBottom: '1px solid' }}>
@@ -268,7 +271,7 @@ export default function Schedule() {
                     style={{ background: 'var(--bs-tertiary-bg, rgba(var(--brand-neon-rgb),0.08))', fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '1px', transition: 'all 0.2s' }}
                     onMouseOver={e => { e.currentTarget.style.background = 'var(--bs-secondary-bg, rgba(var(--brand-neon-rgb),0.15))'; e.currentTarget.style.transform = 'scale(1.05)'; }}
                     onMouseOut={e => { e.currentTarget.style.background = 'var(--bs-tertiary-bg, rgba(var(--brand-neon-rgb),0.08))'; e.currentTarget.style.transform = 'scale(1)'; }}
-                  >HÔM NAY</button>
+                  >{t('schedule.today')}</button>
                 </div>
                 <div className="d-flex gap-2">
                   <button onClick={prevMonth} className="btn btn-sm rounded-3 d-flex align-items-center justify-content-center text-primary-dynamic"
@@ -364,8 +367,8 @@ export default function Schedule() {
                           border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 25px rgba(0,0,0,0.5)',
                           animation: 'fadeIn 0.15s ease'
                         }}>
-                          {data.trained ? '💪 Đã tập' : ''}
-                          {data.completedExercises?.length > 0 && ` (${data.completedExercises.length} bài)`}
+                          {data.trained ? t('schedule.tooltip_trained') : ''}
+                          {data.completedExercises?.length > 0 && ` ${t('schedule.tooltip_exercises', { count: data.completedExercises.length })}`}
                           <div style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%) rotate(45deg)', width: '8px', height: '8px', background: '#222', borderRight: '1px solid rgba(255,255,255,0.1)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}></div>
                         </div>
                       )}
@@ -379,23 +382,23 @@ export default function Schedule() {
               <div className="d-flex flex-wrap gap-4 mt-4 pt-3 border-surface" style={{ borderTop: '1px solid' }}>
                 <div className="d-flex align-items-center gap-2">
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--brand-neon)', boxShadow: '0 0 6px rgba(var(--brand-neon-rgb),0.6)' }}></div>
-                  <span className="text-secondary" style={{ fontSize: '0.75rem' }}>Đã tập (tự động)</span>
+                  <span className="text-secondary" style={{ fontSize: '0.75rem' }}>{t('schedule.trained_auto')}</span>
                 </div>
                 <div className="d-flex align-items-center gap-2">
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#00b4d8', boxShadow: '0 0 6px rgba(0,180,216,0.5)' }}></div>
-                  <span className="text-secondary" style={{ fontSize: '0.75rem' }}>Có ghi chú</span>
+                  <span className="text-secondary" style={{ fontSize: '0.75rem' }}>{t('schedule.has_note')}</span>
                 </div>
                 <div className="d-flex align-items-center gap-2">
                   <div style={{ width: '10px', height: '10px', borderRadius: '3px', border: '2px solid var(--brand-neon)' }}></div>
-                  <span className="text-secondary" style={{ fontSize: '0.75rem' }}>Hôm nay</span>
+                  <span className="text-secondary" style={{ fontSize: '0.75rem' }}>{t('schedule.today')}</span>
                 </div>
               </div>
 
               {/* Monthly Progress Bar */}
               <div className="mt-4 pt-3 border-surface" style={{ borderTop: '1px solid' }}>
                 <div className="d-flex justify-content-between mb-2">
-                  <span className="text-secondary" style={{ fontSize: '0.8rem', fontWeight: '600' }}>Tiến độ tháng {MONTHS[currentMonth]}</span>
-                  <span style={{ color: 'var(--brand-neon)', fontSize: '0.8rem', fontWeight: 'bold' }}>{trainedCount}/{monthDays} ngày</span>
+                  <span className="text-secondary" style={{ fontSize: '0.8rem', fontWeight: '600' }}>{t('schedule.progress', { month: MONTHS[currentMonth] })}</span>
+                  <span style={{ color: 'var(--brand-neon)', fontSize: '0.8rem', fontWeight: 'bold' }}>{trainedCount}/{monthDays} {t('schedule.out_of_days').replace('/ ', '').replace('{{days}}', monthDays)}</span>
                 </div>
                 <div style={{ height: '8px', background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.04))', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{
@@ -419,7 +422,7 @@ export default function Schedule() {
               }}>
               <div className="d-flex align-items-center gap-2 mb-3">
                 <span style={{ fontSize: '1.2rem' }}>📝</span>
-                <h5 className="fw-bold text-primary-dynamic mb-0" style={{ fontSize: '0.9rem', letterSpacing: '1px' }}>NHẬT KÝ TẬP LUYỆN</h5>
+                <h5 className="fw-bold text-primary-dynamic mb-0" style={{ fontSize: '0.9rem', letterSpacing: '1px' }}>{t('schedule.log')}</h5>
               </div>
               <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
                 {Object.entries(scheduleData)
@@ -442,14 +445,14 @@ export default function Schedule() {
                           <span className="text-secondary" style={{ fontSize: '0.75rem', fontWeight: '600' }}>{d}/{m}/{y}</span>
                           {data.trained && (
                             <span style={{ fontSize: '0.65rem', background: 'rgba(var(--brand-neon-rgb),0.15)', color: 'var(--brand-neon)', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold', border: '1px solid rgba(var(--brand-neon-rgb),0.25)' }}>
-                              💪 ĐÃ TẬP
+                              💪 {t('schedule.trained')}
                             </span>
                           )}
                         </div>
                         {data.completedExercises?.length > 0 && (
                           <div className="text-secondary" style={{ fontSize: '0.75rem', marginTop: '6px' }}>
                             <span style={{ color: '#00b4d8', marginRight: '4px' }}>✓</span>
-                            {data.completedExercises.length} bài tập hoàn thành
+                            {t('schedule.completed_exercises', { count: data.completedExercises.length })}
                           </div>
                         )}
                         {data.note && (
@@ -462,10 +465,10 @@ export default function Schedule() {
                   <div className="text-center py-5">
                     <div style={{ fontSize: '3rem', marginBottom: '10px', opacity: 0.2 }}>🏋️</div>
                     <p className="text-secondary" style={{ fontSize: '0.85rem', marginBottom: '4px' }}>
-                      Chưa có hoạt động nào.
+                      {t('schedule.no_activity')}
                     </p>
                     <p className="text-secondary" style={{ fontSize: '0.75rem', marginBottom: 0 }}>
-                      Hoàn thành bài tập để tự động ghi nhận!
+                      {t('schedule.do_exercise_to_record')}
                     </p>
                   </div>
                 )}
@@ -491,7 +494,7 @@ export default function Schedule() {
             <div className="p-3 rounded-3 mb-3" style={{ background: 'var(--bs-tertiary-bg, rgba(var(--brand-neon-rgb),0.08))', border: '1px solid rgba(var(--brand-neon-rgb),0.2)' }}>
               <div className="d-flex align-items-center gap-2 mb-2">
                 <span style={{ fontSize: '1.3rem' }}>💪</span>
-                <span className="fw-bold text-neon" style={{ fontSize: '0.9rem' }}>ĐÃ TẬP NGÀY NÀY</span>
+                <span className="fw-bold text-neon" style={{ fontSize: '0.9rem' }}>{t('schedule.trained_this_day')}</span>
               </div>
               {scheduleData[selectedDate.key]?.completedExercises?.length > 0 && (
                 <div className="text-secondary" style={{ fontSize: '0.8rem' }}>
@@ -507,18 +510,18 @@ export default function Schedule() {
             <div className="p-3 rounded-3 mb-3" style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.02))', border: '1px solid var(--bs-border-color, rgba(255,255,255,0.06))' }}>
               <div className="d-flex align-items-center gap-2">
                 <span style={{ fontSize: '1.3rem' }}>😴</span>
-                <span className="text-secondary" style={{ fontSize: '0.9rem' }}>Chưa tập ngày này</span>
+                <span className="text-secondary" style={{ fontSize: '0.9rem' }}>{t('schedule.not_trained')}</span>
               </div>
             </div>
           )}
 
           {/* Ghi chú */}
           <Form.Group>
-            <Form.Label className="text-secondary" style={{ fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '1px' }}>GHI CHÚ CÁ NHÂN</Form.Label>
+            <Form.Label className="text-secondary" style={{ fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '1px' }}>{t('schedule.personal_note')}</Form.Label>
             <Form.Control
               as="textarea"
               rows={3}
-              placeholder="Ghi chú cảm nhận, mục tiêu, hay bất cứ điều gì bạn muốn nhớ..."
+              placeholder={t('schedule.note_placeholder')}
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               className="border-0 rounded-3 text-primary-dynamic"
@@ -529,11 +532,11 @@ export default function Schedule() {
         <Modal.Footer className="border-0 pt-0 bg-surface-card border-surface">
           <Button size="sm" className="rounded-pill px-3 text-secondary" onClick={() => setShowModal(false)}
             style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.05))', border: '1px solid var(--bs-border-color, rgba(255,255,255,0.1))', fontSize: '0.8rem' }}>
-            Hủy
+            {t('schedule.cancel')}
           </Button>
           <Button size="sm" className="rounded-pill fw-bold px-4" onClick={handleSaveNote}
             style={{ background: 'var(--brand-neon)', color: '#000', border: 'none', fontSize: '0.8rem', boxShadow: '0 4px 12px rgba(var(--brand-neon-rgb),0.3)' }}>
-            ✓ Lưu ghi chú
+            {t('schedule.save_note')}
           </Button>
         </Modal.Footer>
       </Modal>

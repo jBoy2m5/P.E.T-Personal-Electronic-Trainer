@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Card, Row, Col, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // Dữ liệu mock mapping để lấy thông tin bài tập từ exercise_id
 const exerciseMockDB = {
@@ -25,9 +26,12 @@ const exerciseMockDB = {
 
 export default function CalorieTracker() {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [burnedCalories, setBurnedCalories] = useState(0);
+    const [displayCalories, setDisplayCalories] = useState(0);
     const [todaySessions, setTodaySessions] = useState([]);
     const [todayDetails, setTodayDetails] = useState([]);
+    const [animateChart, setAnimateChart] = useState(false);
 
     useEffect(() => {
         const loadCaloriesData = () => {
@@ -57,18 +61,43 @@ export default function CalorieTracker() {
         return () => window.removeEventListener('storage', loadCaloriesData);
     }, []);
 
+    // Animated counter
+    useEffect(() => {
+        if (burnedCalories === 0) return;
+        setAnimateChart(true);
+        let start = 0;
+        const duration = 1200;
+        const startTime = Date.now();
+        const tick = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setDisplayCalories(Math.round(eased * burnedCalories));
+            if (progress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }, [burnedCalories]);
+
     return (
-        <div className="bg-surface-main" style={{ minHeight: '100vh', paddingTop: '80px', paddingBottom: '100px' }}>
+        <div className="bg-surface-main" style={{ minHeight: '100vh', paddingTop: '80px', paddingBottom: '100px', position: 'relative', overflow: 'hidden' }}>
+            {/* Decorative background orbs */}
+            <div style={{ position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.06) 0%, transparent 70%)', top: '-100px', right: '-50px', filter: 'blur(60px)', pointerEvents: 'none' }}></div>
+            <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,229,255,0.04) 0%, transparent 70%)', bottom: '10%', left: '-50px', filter: 'blur(50px)', pointerEvents: 'none' }}></div>
             <Container style={{ maxWidth: '800px' }}>
-                <div className="d-flex align-items-center mb-4">
+                <div className="d-flex align-items-center mb-5">
                     <button
                         onClick={() => navigate(-1)}
-                        className="btn text-white p-0 me-3 d-flex align-items-center justify-content-center"
-                        style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}
+                        className="btn text-primary-dynamic p-0 me-3 d-flex align-items-center justify-content-center"
+                        style={{ width: '44px', height: '44px', background: 'rgba(var(--brand-neon-rgb),0.06)', borderRadius: '50%', border: '1px solid rgba(var(--brand-neon-rgb),0.15)', transition: 'all 0.3s ease' }}
+                        onMouseOver={e => { e.currentTarget.style.background = 'rgba(var(--brand-neon-rgb),0.12)'; }}
+                        onMouseOut={e => { e.currentTarget.style.background = 'rgba(var(--brand-neon-rgb),0.06)'; }}
                     >
                         <span className="fs-5">←</span>
                     </button>
-                    <h2 className="fw-bold text-primary-dynamic mb-0" style={{ letterSpacing: '1px' }}>QUẢN LÝ CALO</h2>
+                    <div>
+                        <div className="text-secondary fw-bold text-uppercase" style={{ fontSize: '0.7rem', letterSpacing: '2px', marginBottom: '2px' }}>TRACKING</div>
+                        <h2 className="fw-bold text-primary-dynamic mb-0" style={{ letterSpacing: '-0.5px' }}>{t('calorie_tracker.title')}</h2>
+                    </div>
                 </div>
 
                 <Row className="g-4 mb-5">
@@ -76,7 +105,7 @@ export default function CalorieTracker() {
                     <Col lg={5}>
                         <Card className="bg-surface-card-gradient border-surface p-4 text-center h-100 d-flex flex-column justify-content-center" style={{ borderRadius: '32px' }}>
 
-                            <h5 className="text-muted fw-bold mb-4" style={{ letterSpacing: '1px' }}>HÔM NAY</h5>
+                            <h5 className="text-muted fw-bold mb-4" style={{ letterSpacing: '1px' }}>{t('calorie_tracker.today')}</h5>
 
                             <div className="position-relative d-inline-block mx-auto mb-4" style={{ width: '220px', height: '220px' }}>
                                 <svg viewBox="0 0 100 100" className="w-100 h-100" style={{ filter: 'drop-shadow(0 0 10px rgba(204,255,0,0.3))' }}>
@@ -96,8 +125,8 @@ export default function CalorieTracker() {
                                     />
                                 </svg>
                                 <div className="position-absolute top-50 start-50 translate-middle w-100">
-                                    <div className="fw-bold text-primary-dynamic" style={{ fontSize: '3rem', lineHeight: '1' }}>{burnedCalories}</div>
-                                    <div className="text-neon fw-bold mt-1" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>KCAL ĐỐT</div>
+                                    <div className="fw-bold text-primary-dynamic" style={{ fontSize: '3rem', lineHeight: '1' }}>{displayCalories}</div>
+                                    <div className="text-neon fw-bold mt-1" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>{t('calorie_tracker.kcal_burned')}</div>
                                 </div>
                             </div>
                         </Card>
@@ -106,33 +135,36 @@ export default function CalorieTracker() {
                     {/* Chi Tiết Tập Luyện */}
                     <Col lg={7}>
                         <Card className="bg-surface-card border-surface p-4 h-100" style={{ borderRadius: '32px' }}>
-                            <h5 className="text-primary-dynamic fw-bold mb-4" style={{ fontSize: '1.1rem' }}>CHI TIẾT TIÊU HAO</h5>
+                            <h5 className="text-primary-dynamic fw-bold mb-4" style={{ fontSize: '1.1rem' }}>{t('calorie_tracker.details')}</h5>
 
                             {todayDetails.length === 0 ? (
                                 <div className="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
                                     <div className="fs-1 mb-2">😴</div>
-                                    <p className="mb-0">Chưa có dữ liệu bài tập hôm nay.</p>
-                                    <p className="small">Hãy bắt đầu tập luyện để AI ghi nhận!</p>
+                                    <p className="mb-0">{t('calorie_tracker.no_data')}</p>
+                                    <p className="small">{t('calorie_tracker.start_workout')}</p>
                                 </div>
                             ) : (
                                 <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '10px' }} className="custom-scroll">
                                     {todayDetails.map((detail, index) => {
                                         // Tìm session tương ứng để lấy calo của bài đó
                                         const parentSession = todaySessions.find(s => s.session_id === detail.session_id);
-                                        const exData = exerciseMockDB[detail.exercise_id] || { name: 'Bài tập ẩn danh', img: '' };
+                                        const exData = exerciseMockDB[detail.exercise_id] || { name: t('calorie_tracker.anonymous_exercise'), img: '' };
                                         
                                         // Thời gian tập (mô phỏng từ start/end time của session)
-                                        let durationStr = "1 phút";
+                                        let durationStr = `1 ${t('calorie_tracker.mins')}`;
                                         if (parentSession && parentSession.start_time && parentSession.end_time) {
                                             const start = new Date(parentSession.start_time);
                                             const end = new Date(parentSession.end_time);
                                             const diffMs = end - start;
                                             const diffMins = Math.max(1, Math.round(diffMs / 60000));
-                                            durationStr = `${diffMins} phút`;
+                                            durationStr = `${diffMins} ${t('calorie_tracker.mins')}`;
                                         }
 
                                         return (
-                                            <div key={index} className="d-flex align-items-center p-3 mb-3 rounded-4 border-surface" style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.03))', border: '1px solid' }}>
+                                            <div key={index} className="d-flex align-items-center p-3 mb-3 rounded-4 border-surface" style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.03))', border: '1px solid', transition: 'all 0.3s ease', animationDelay: `${index * 0.1}s`, animation: 'fadeSlideIn 0.4s ease forwards' }}
+                                                onMouseOver={e => { e.currentTarget.style.transform = 'translateX(6px)'; e.currentTarget.style.borderColor = 'rgba(var(--brand-neon-rgb),0.2)'; }}
+                                                onMouseOut={e => { e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.borderColor = ''; }}
+                                            >
                                                 <div style={{ width: '60px', height: '60px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }} className="me-3">
                                                     <img src={exData.img} alt="ex" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 </div>

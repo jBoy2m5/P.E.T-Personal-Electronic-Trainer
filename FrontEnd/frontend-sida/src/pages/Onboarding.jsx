@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button, ProgressBar, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import axiosClient from '../api/axiosClient';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -35,15 +36,22 @@ export default function Onboarding() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    console.log("=== DỮ LIỆU ONBOARDING MỚI ===");
-    console.log(formData);
-
-    const heightM = formData.height / 100;
-    const bmi = (formData.weight / (heightM * heightM)).toFixed(1);
-    console.log("Chỉ số BMI:", bmi);
-
-    navigate('/');
+  const handleSubmit = async () => {
+    try {
+      // Gọi API gửi dữ liệu Onboarding lên backend
+      const res = await axiosClient.put('/users/onboarding', formData);
+      
+      if (res.status === 'success') {
+        // Cập nhật lại thông tin user trong localStorage
+        localStorage.setItem('user-data', JSON.stringify(res.user));
+        navigate('/');
+      } else {
+        alert("Có lỗi xảy ra: " + (res.message || 'Không xác định'));
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật onboarding:", error);
+      alert("Cập nhật thất bại. Vui lòng thử lại.");
+    }
   };
 
   // Logic lấy ảnh động dựa theo bước và lựa chọn
@@ -74,19 +82,18 @@ export default function Onboarding() {
     return (
       <div
         onClick={() => handleSelect(field, value)}
-        className="p-3 p-md-4 rounded-4 text-center h-100 d-flex align-items-center justify-content-center"
+        className="p-3 p-md-4 rounded-4 text-center h-100 d-flex align-items-center justify-content-center bg-surface-card border-surface"
         style={{
           cursor: 'pointer',
-          backgroundColor: isSelected ? 'rgba(204,255,0,0.1)' : '#1a1a1a',
-          border: isSelected ? '3px solid #ccff00' : '3px solid #444',
+          border: isSelected ? '3px solid var(--brand-neon)' : '',
           transition: 'all 0.2s ease',
-          boxShadow: isSelected ? '0 0 20px rgba(204,255,0,0.2)' : 'none',
+          boxShadow: isSelected ? '0 0 20px rgba(var(--brand-neon-rgb),0.2)' : 'none',
           transform: isSelected ? 'scale(1.02)' : 'scale(1)'
         }}
         onMouseOver={e => { if (!isSelected) e.currentTarget.style.borderColor = '#666'; e.currentTarget.style.transform = 'scale(1.02)'; }}
         onMouseOut={e => { if (!isSelected) e.currentTarget.style.borderColor = '#444'; e.currentTarget.style.transform = isSelected ? 'scale(1.02)' : 'scale(1)'; }}
       >
-        <span className={`fw-bold fs-5 ${isSelected ? 'text-neon' : 'text-white'}`}>{label}</span>
+        <span className={`fw-bold fs-5 ${isSelected ? 'text-neon' : 'text-primary-dynamic'}`}>{label}</span>
       </div>
     );
   };
@@ -99,7 +106,7 @@ export default function Onboarding() {
           variant="outline-secondary"
           onClick={handleBack}
           className="fw-bold px-4 py-3 rounded-pill"
-          style={{ borderWidth: '2px', color: '#fff', minWidth: '130px' }}
+          style={{ borderWidth: '2px', minWidth: '130px' }}
         >
           QUAY LẠI
         </Button>
@@ -113,10 +120,11 @@ export default function Onboarding() {
           disabled={disableNext}
           className="fw-bold px-5 py-3 rounded-pill flex-grow-1 border-0"
           style={{
-            backgroundColor: disableNext ? '#333' : '#ccff00',
+            background: disableNext ? 'var(--surface-4, #333)' : 'linear-gradient(135deg, var(--brand-neon), #88ff44)',
             color: disableNext ? '#777' : '#000',
-            boxShadow: disableNext ? 'none' : '0 0 20px rgba(204,255,0,0.4)',
-            transition: 'all 0.3s ease'
+            boxShadow: disableNext ? 'none' : '0 4px 25px rgba(var(--brand-neon-rgb),0.4)',
+            transition: 'all 0.3s ease',
+            letterSpacing: '1px'
           }}
         >
           TIẾP TỤC
@@ -129,11 +137,12 @@ export default function Onboarding() {
     <Container fluid className="p-0 bg-black min-vh-100 d-flex align-items-center">
       <style type="text/css">
         {`
-          .bg-success { background-color: #ccff00 !important; }
-          .form-range::-webkit-slider-thumb { background: #ccff00; }
-          .form-range::-moz-range-thumb { background: #ccff00; }
-          .animate-fade-in { animation: fadeIn 0.4s ease-in-out; }
-          @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+          .bg-success { background-color: var(--brand-neon) !important; }
+          .form-range::-webkit-slider-thumb { background: var(--brand-neon); box-shadow: 0 0 10px rgba(var(--brand-neon-rgb),0.4); }
+          .form-range::-moz-range-thumb { background: var(--brand-neon); box-shadow: 0 0 10px rgba(var(--brand-neon-rgb),0.4); }
+          .form-range::-webkit-slider-runnable-track { background: rgba(var(--brand-neon-rgb),0.15); }
+          .animate-fade-in { animation: fadeSlideStep 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
+          @keyframes fadeSlideStep { from { opacity: 0; transform: translateY(20px) scale(0.98); filter: blur(4px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
         `}
       </style>
 
@@ -155,7 +164,7 @@ export default function Onboarding() {
         </Col>
 
         {/* Right Side: Form Wizard */}
-        <Col xs={12} lg={7} xl={6} className="d-flex flex-column justify-content-center p-4 p-md-5" style={{ backgroundColor: '#000' }}>
+        <Col xs={12} lg={7} xl={6} className="d-flex flex-column justify-content-center p-4 p-md-5 bg-surface-main">
 
           <div className="w-100 mx-auto" style={{ maxWidth: '600px' }}>
 
@@ -175,11 +184,10 @@ export default function Onboarding() {
             {/* Step 1: Giới tính */}
             {step === 1 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Giới tính của bạn là gì?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Giới tính của bạn là gì?</h2>
                 <Row className="g-3">
                   <Col xs={12}><OptionCard field="gender" value="Nam" label="Nam" /></Col>
                   <Col xs={12}><OptionCard field="gender" value="Nữ" label="Nữ" /></Col>
-                  <Col xs={12}><OptionCard field="gender" value="Khác" label="Khác" /></Col>
                 </Row>
                 <StepNavigation showNext={true} disableNext={!formData.gender} />
               </div>
@@ -188,7 +196,7 @@ export default function Onboarding() {
             {/* Step 2: Mục tiêu */}
             {step === 2 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Mục tiêu chính của bạn?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Mục tiêu chính của bạn?</h2>
                 <Row className="g-3">
                   <Col xs={6}><OptionCard field="goal" value="Giữ dáng" label="Giữ dáng" /></Col>
                   <Col xs={6}><OptionCard field="goal" value="Xây dựng cơ bắp" label="Tăng cơ" /></Col>
@@ -202,7 +210,7 @@ export default function Onboarding() {
             {/* Step 3: Tần suất */}
             {step === 3 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Tần suất tập luyện hiện tại?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Tần suất tập luyện hiện tại?</h2>
                 <Row className="g-3">
                   <Col xs={6}><OptionCard field="frequency" value="Ít" label="Rất ít khi" /></Col>
                   <Col xs={6}><OptionCard field="frequency" value="Hiếm khi" label="1-2 lần/tháng" /></Col>
@@ -216,7 +224,7 @@ export default function Onboarding() {
             {/* Step 4: Thể trạng */}
             {step === 4 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Đánh giá thể trạng hiện tại?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Đánh giá thể trạng hiện tại?</h2>
                 <Row className="g-3">
                   <Col xs={6}><OptionCard field="fitnessLevel" value="Mới bắt đầu" label="Mới bắt đầu" /></Col>
                   <Col xs={6}><OptionCard field="fitnessLevel" value="Đã có nền tảng" label="Có nền tảng" /></Col>
@@ -230,7 +238,7 @@ export default function Onboarding() {
             {/* Step 5: Số buổi tập */}
             {step === 5 && (
               <div className="animate-fade-in text-center">
-                <h2 className="display-6 fw-bold text-white mb-5">Bạn có thể tập bao nhiêu buổi 1 tuần?</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Bạn có thể tập bao nhiêu buổi 1 tuần?</h2>
                 <div className="display-1 text-neon fw-bold mb-5">{formData.sessionsPerWeek}</div>
                 <Form.Range
                   name="sessionsPerWeek"
@@ -248,11 +256,11 @@ export default function Onboarding() {
             {/* Step 6: Chiều cao & Cân nặng */}
             {step === 6 && (
               <div className="animate-fade-in">
-                <h2 className="display-6 fw-bold text-white mb-5">Chỉ số cơ thể của bạn</h2>
+                <h2 className="display-6 fw-bold text-primary-dynamic mb-5">Chỉ số cơ thể của bạn</h2>
 
-                <div className="mb-5 p-4 rounded-4" style={{ backgroundColor: '#111', border: '1px solid #333' }}>
+                <div className="mb-5 p-4 rounded-4 bg-surface-card border-surface">
                   <div className="d-flex justify-content-between align-items-end mb-4">
-                    <span className="text-light fw-bold text-uppercase" style={{ letterSpacing: '1px' }}>Chiều cao</span>
+                    <span className="text-primary-dynamic fw-bold text-uppercase" style={{ letterSpacing: '1px' }}>Chiều cao</span>
                     <span className="text-neon display-4 fw-bold">{formData.height} <span className="fs-5 text-muted">cm</span></span>
                   </div>
                   <Form.Range
@@ -264,9 +272,9 @@ export default function Onboarding() {
                   />
                 </div>
 
-                <div className="mb-5 p-4 rounded-4" style={{ backgroundColor: '#111', border: '1px solid #333' }}>
+                <div className="mb-5 p-4 rounded-4 bg-surface-card border-surface">
                   <div className="d-flex justify-content-between align-items-end mb-4">
-                    <span className="text-light fw-bold text-uppercase" style={{ letterSpacing: '1px' }}>Cân nặng</span>
+                    <span className="text-primary-dynamic fw-bold text-uppercase" style={{ letterSpacing: '1px' }}>Cân nặng</span>
                     <span className="text-neon display-4 fw-bold">{formData.weight} <span className="fs-5 text-muted">kg</span></span>
                   </div>
                   <Form.Range
@@ -283,14 +291,20 @@ export default function Onboarding() {
                     variant="outline-secondary"
                     onClick={handleBack}
                     className="fw-bold px-4 py-3 rounded-pill"
-                    style={{ borderWidth: '2px', color: '#fff', minWidth: '130px' }}
+                    style={{ borderWidth: '2px', minWidth: '130px' }}
                   >
                     QUAY LẠI
                   </Button>
                   <Button
                     onClick={handleSubmit}
                     className="w-100 py-3 fw-bold rounded-pill border-0 flex-grow-1"
-                    style={{ backgroundColor: '#ccff00', color: '#000', boxShadow: '0 0 20px rgba(204,255,0,0.5)', fontSize: '1.1rem' }}
+                    style={{ 
+                      background: 'linear-gradient(135deg, var(--brand-neon), #88ff44)', 
+                      color: '#000', 
+                      boxShadow: '0 4px 25px rgba(var(--brand-neon-rgb),0.5)', 
+                      fontSize: '1.1rem',
+                      letterSpacing: '1px'
+                    }}
                   >
                     HOÀN THÀNH & TẠO LỘ TRÌNH
                   </Button>

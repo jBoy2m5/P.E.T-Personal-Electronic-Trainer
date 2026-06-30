@@ -1,0 +1,10 @@
+.idea/
+myenv/
+venv/
+env/
+
+__pycache__/
+*.pyc
+
+.vscode/
+CLAUDE.md

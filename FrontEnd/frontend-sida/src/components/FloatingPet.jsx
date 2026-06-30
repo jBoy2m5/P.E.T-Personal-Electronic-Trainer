@@ -1,76 +1,96 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import petChatbot from '../assets/pet_chatbot.png';
-
-const PET_LEVELS = [
-  { level: 1, name: 'Trứng', minPoints: 0, icon: '🥚' },
-  { level: 2, name: 'Baby Pet', minPoints: 10, icon: '🐣' },
-  { level: 3, name: 'Pet nhỏ', minPoints: 50, icon: '🐥' },
-  { level: 4, name: 'Pet lớn', minPoints: 150, icon: '🐕' },
-  { level: 5, name: 'Pet mạnh', minPoints: 300, icon: '🦁' },
-  { level: 6, name: 'Pet chiến binh', minPoints: 600, icon: '🐉' },
-  { level: 7, name: 'Pet huyền thoại', minPoints: 1200, icon: '🦄' },
-  { level: 8, name: 'Pet thần thoại', minPoints: 2500, icon: '⭐' },
-];
+import usePetStore from '../store/usePetStore';
 
 export default function FloatingPet() {
   const navigate = useNavigate();
-  const [totalPoints, setTotalPoints] = useState(0);
+  const [hearts, setHearts] = useState([]);
+  
+  // Lấy dữ liệu trực tiếp từ Store (tự động re-render khi store thay đổi)
+  const currentLevel = usePetStore(state => state.getCurrentLevel());
 
-  const loadPoints = () => {
-    const saved = localStorage.getItem('pet-daily');
-    if (saved) {
-      const data = JSON.parse(saved);
-      setTotalPoints(data.totalPoints || 0);
-    }
+  const handleHover = () => {
+    const newHeart = {
+      id: Date.now(),
+      x: Math.random() * 40 - 20,
+      y: Math.random() * 20 - 10
+    };
+    
+    setHearts(prev => [...prev, newHeart]);
+    
+    setTimeout(() => {
+      setHearts(prev => prev.filter(h => h.id !== newHeart.id));
+    }, 1000);
   };
-
-  useEffect(() => {
-    loadPoints();
-    window.addEventListener('storage', loadPoints);
-    return () => window.removeEventListener('storage', loadPoints);
-  }, []);
-
-  const getCurrentLevel = () => {
-    let current = PET_LEVELS[0];
-    for (const lvl of PET_LEVELS) {
-      if (totalPoints >= lvl.minPoints) current = lvl;
-    }
-    return current;
-  };
-
-  const currentLevel = getCurrentLevel();
 
   return (
     <>
       {/* Floating Button */}
       <div 
+        className="floating-pet-container"
         onClick={() => navigate('/pet')}
         style={{
           position: 'fixed',
-          bottom: '20px',
-          right: '20px',
+          bottom: '30px',
+          right: '30px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
           zIndex: 9999,
-          transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-          filter: 'drop-shadow(0 15px 20px rgba(0,0,0,0.4))'
+          transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
         }}
-        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1) translateY(-10px)'}
+        onMouseOver={(e) => {
+          e.currentTarget.style.transform = 'scale(1.12) translateY(-10px)';
+          handleHover();
+        }}
         onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1) translateY(0)'}
       >
+        {/* Neon glow ring behind pet */}
+        <div style={{
+          position: 'absolute',
+          width: '110px',
+          height: '110px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.15) 0%, transparent 70%)',
+          animation: 'breathe 3s ease-in-out infinite',
+          filter: 'blur(8px)',
+          pointerEvents: 'none'
+        }}></div>
+
+        {hearts.map(heart => (
+          <div 
+            key={heart.id} 
+            style={{
+              position: 'absolute',
+              left: `calc(50% + ${heart.x}px)`,
+              top: `calc(50% + ${heart.y}px)`,
+              fontSize: '1.5rem',
+              pointerEvents: 'none',
+              animation: 'floatUpHeart 1s ease-out forwards',
+              zIndex: 10
+            }}
+          >
+            ❤️
+          </div>
+        ))}
         {currentLevel.level === 1 ? (
-          <span style={{ fontSize: '5rem', animation: 'petBounce 3s infinite ease-in-out' }}>{currentLevel.icon}</span>
+          <span style={{ fontSize: '5rem', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }}>{currentLevel.icon}</span>
         ) : (
-          <img src={petChatbot} alt="Pet" style={{ width: '90px', height: '90px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out' }} />
+          <img src={petChatbot} alt="Pet" style={{ width: '90px', height: '90px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }} />
         )}
         <Badge bg="dark" className="position-absolute" style={{
           top: '-10px', right: '-10px',
-          fontSize: '0.75rem', padding: '5px 8px', borderRadius: '12px',
-          border: '2px solid var(--brand-neon)', color: 'var(--brand-neon)'
+          fontSize: '0.7rem', padding: '5px 10px', borderRadius: '12px',
+          border: '2px solid var(--brand-neon)', 
+          color: 'var(--brand-neon)',
+          boxShadow: '0 0 12px rgba(var(--brand-neon-rgb),0.3)',
+          background: 'rgba(0,0,0,0.8)',
+          backdropFilter: 'blur(10px)',
+          fontWeight: '800',
+          letterSpacing: '0.5px'
         }}>
           Lv.{currentLevel.level}
         </Badge>
@@ -80,6 +100,10 @@ export default function FloatingPet() {
         @keyframes petBounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-10px); }
+        }
+        @keyframes floatUpHeart {
+          0% { transform: translateY(0) scale(1); opacity: 1; }
+          100% { transform: translateY(-80px) scale(1.2); opacity: 0; }
         }
       `}</style>
     </>

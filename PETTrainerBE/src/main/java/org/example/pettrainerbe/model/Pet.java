@@ -1,5 +1,6 @@
 package org.example.pettrainerbe.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -15,6 +16,7 @@ public class Pet {
 
     @OneToOne
     @JoinColumn(name = "user_id")
+    @JsonIgnoreProperties({"pet", "workoutSessions"})
     private User user;
 
     private String appearanceType;

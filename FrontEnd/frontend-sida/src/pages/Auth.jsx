@@ -1,28 +1,43 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-
-const GoogleIcon = () => (
-  <svg className="me-2" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-  </svg>
-);
+import { useTranslation } from 'react-i18next';
+import { GoogleLogin } from '@react-oauth/google';
+import axiosClient from '../api/axiosClient';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
-    // Giả lập xử lý đăng nhập Google
-    setTimeout(() => {
+    try {
+      const res = await axiosClient.post('/auth/google-login', {
+        credential: credentialResponse.credential
+      });
+      
+      // Save user data (since JWT is in HttpOnly cookie)
+      localStorage.setItem('user-data', JSON.stringify(res.user));
+
+      // Redirect based on onboarding status
+      if (res.needsOnboarding) {
+        navigate('/onboarding');
+      } else {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error("Google Login Failed", error);
+      alert("Đăng nhập thất bại. Vui lòng thử lại.");
+    } finally {
       setLoading(false);
-      navigate('/');
-    }, 1200);
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error('Login Failed');
+    alert("Đăng nhập Google bị hủy hoặc thất bại.");
   };
 
   const styleTag = `
@@ -76,12 +91,13 @@ export default function Auth() {
       color: #fff;
     }
     .auth-card {
-      background: rgba(20, 21, 26, 0.6) !important;
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-radius: 20px;
+      background: rgba(20, 21, 26, 0.5) !important;
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.06) !important;
+      border-radius: 24px;
       padding: 2.5rem;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05);
       transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease;
     }
     .btn-google {
@@ -104,19 +120,29 @@ export default function Auth() {
       margin-bottom: 2rem;
       position: relative;
       z-index: 2;
+      transition: transform 0.3s ease;
+    }
+    .feature-item:hover {
+      transform: translateX(8px);
     }
     .feature-icon-wrapper {
-      width: 48px;
-      height: 48px;
-      background: rgba(204, 255, 0, 0.1);
-      border: 1px solid rgba(204, 255, 0, 0.3);
-      border-radius: 12px;
+      width: 50px;
+      height: 50px;
+      background: rgba(204, 255, 0, 0.08);
+      border: 1px solid rgba(204, 255, 0, 0.2);
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #ccff00;
       margin-right: 1.25rem;
       transition: all 0.3s ease;
+      box-shadow: 0 0 20px rgba(204,255,0,0.05);
+    }
+    .feature-item:hover .feature-icon-wrapper {
+      background: rgba(204, 255, 0, 0.15);
+      box-shadow: 0 0 25px rgba(204,255,0,0.15);
+      transform: scale(1.05);
     }
     .feature-title {
       font-weight: 700;
@@ -156,9 +182,10 @@ export default function Auth() {
       background: linear-gradient(180deg, #f4f6f8 0%, #e5e7eb 100%);
     }
     [data-bs-theme="light"] .auth-card {
-      background: rgba(255, 255, 255, 0.8) !important;
-      border: 1px solid rgba(0, 0, 0, 0.08) !important;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+      background: rgba(255, 255, 255, 0.75) !important;
+      backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(0, 0, 0, 0.06) !important;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255,255,255,0.8);
     }
     [data-bs-theme="light"] .auth-card h1 {
       color: #111827 !important;
@@ -201,32 +228,47 @@ export default function Auth() {
           <Col lg={5} className="auth-left">
             <div className="mx-auto w-100" style={{ maxWidth: '440px' }}>
 
+              <div className="mb-4">
+                <Button 
+                  variant="link" 
+                  className="text-decoration-none p-0 d-flex align-items-center fw-bold" 
+                  style={{ color: '#9ca3af', transition: 'color 0.2s ease' }}
+                  onClick={() => navigate('/')}
+                  onMouseOver={(e) => e.currentTarget.style.color = '#ccff00'}
+                  onMouseOut={(e) => e.currentTarget.style.color = '#9ca3af'}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="me-2" viewBox="0 0 16 16">
+                    <path fillRule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                  </svg>
+                  Về trang chủ
+                </Button>
+              </div>
+
               {/* Card Form */}
               <Card className="auth-card">
                 <h1 className="fw-extrabold fs-2 mb-2 text-white">
-                  {isLogin ? 'Đăng nhập' : 'Tạo tài khoản'}
+                  {isLogin ? t('auth.login_title') : t('auth.register_title')}
                 </h1>
                 <p className="text-muted mb-4 small">
                   {isLogin 
-                    ? 'Chào mừng bạn quay trở lại với huấn luyện viên cá nhân P.E.T.'
-                    : 'Bắt đầu hành trình tập luyện thông minh với AI ngay hôm nay.'}
+                    ? t('auth.login_welcome')
+                    : t('auth.register_welcome')}
                 </p>
 
                 {/* Google Sign In Button */}
-                <Button 
-                  onClick={handleGoogleSignIn}
-                  disabled={loading}
-                  className="w-100 btn-google d-flex align-items-center justify-content-center mb-4"
-                >
-                  <GoogleIcon />
-                  {loading 
-                    ? 'Đang xử lý...' 
-                    : isLogin ? 'Tiếp tục với Google' : 'Đăng ký bằng Google'}
-                </Button>
+                <div className="d-flex justify-content-center mb-4">
+                  <GoogleLogin 
+                    onSuccess={handleGoogleSuccess} 
+                    onError={handleGoogleError}
+                    theme="filled_black"
+                    text={isLogin ? "signin_with" : "signup_with"}
+                    shape="rectangular"
+                  />
+                </div>
 
                 <div className="text-center mt-3">
                   <span className="text-muted small">
-                    {isLogin ? 'Bạn chưa có tài khoản? ' : 'Bạn đã có tài khoản? '}
+                    {isLogin ? t('auth.no_account') : t('auth.has_account')}
                   </span>
                   <a 
                     href="#toggle" 
@@ -236,7 +278,7 @@ export default function Auth() {
                     }}
                     className="toggle-link small"
                   >
-                    {isLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
+                    {isLogin ? t('auth.register_now') : t('auth.login_now')}
                   </a>
                 </div>
               </Card>
@@ -248,11 +290,11 @@ export default function Auth() {
             <div className="mx-auto" style={{ maxWidth: '600px' }}>
               <div className="mb-5">
                 <span className="badge bg-neon text-dark px-3 py-2 rounded-pill fw-bold mb-3" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>
-                  XU HƯỚNG TẬP LUYỆN TƯƠNG LAI
+                  {t('auth.badge_future')}
                 </span>
                 <h2 className="display-5 fw-extrabold text-white lh-base">
-                  Khám phá phiên bản <br />
-                  <span className="text-neon">tốt nhất của bạn</span> cùng P.E.T
+                  {t('auth.discover')} <br />
+                  <span className="text-neon">{t('auth.best_version')}</span>{t('auth.with_pet')}
                 </h2>
               </div>
 
@@ -266,9 +308,9 @@ export default function Auth() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="feature-title">Huấn luyện viên Động tác AI</h3>
+                    <h3 className="feature-title">{t('auth.feature_1_title')}</h3>
                     <p className="feature-desc">
-                      Nhận phản hồi thời gian thực qua camera để điều chỉnh đúng tư thế, giảm thiểu chấn thương tối đa.
+                      {t('auth.feature_1_desc')}
                     </p>
                   </div>
                 </div>
@@ -284,9 +326,9 @@ export default function Auth() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="feature-title">Lộ trình cá nhân hóa</h3>
+                    <h3 className="feature-title">{t('auth.feature_2_title')}</h3>
                     <p className="feature-desc">
-                      Hệ thống tự động thiết lập và cập nhật kế hoạch tập luyện phù hợp nhất với chỉ số thể trạng của bạn.
+                      {t('auth.feature_2_desc')}
                     </p>
                   </div>
                 </div>
@@ -301,9 +343,9 @@ export default function Auth() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="feature-title">Theo dõi tiến trình thông minh</h3>
+                    <h3 className="feature-title">{t('auth.feature_3_title')}</h3>
                     <p className="feature-desc">
-                      Thống kê lượng calo tiêu thụ và phân tích hiệu quả tập luyện trực quan qua biểu đồ sinh động.
+                      {t('auth.feature_3_desc')}
                     </p>
                   </div>
                 </div>
