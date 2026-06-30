@@ -105,7 +105,8 @@ export default function TopNav() {
                 style={{
                   width: 'auto',
                   objectFit: 'contain',
-                  mixBlendMode: 'screen',
+                  filter: isDark ? 'invert(1)' : 'none',
+                  mixBlendMode: isDark ? 'screen' : 'multiply',
                   transition: 'all 0.3s ease'
                 }}
               />
