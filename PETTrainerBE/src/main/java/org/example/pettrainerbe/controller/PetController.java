@@ -74,7 +74,10 @@ public class PetController {
                     if (body.containsKey("appearance_type")) pet.setAppearanceType((String) body.get("appearance_type"));
                     if (body.containsKey("emotional_state")) pet.setEmotionalState((String) body.get("emotional_state"));
                     if (body.containsKey("checkin_streak")) pet.setCheckinStreak((Integer) body.get("checkin_streak"));
-                    if (body.containsKey("last_checkin_date")) pet.setLastCheckinDate((String) body.get("last_checkin_date"));
+                    if (body.containsKey("last_checkin_date")) {
+                        String dateStr = (String) body.get("last_checkin_date");
+                        pet.setLastCheckinDate(dateStr != null ? java.time.LocalDate.parse(dateStr) : null);
+                    }
                     return ResponseEntity.ok(convertToDTO(petRepository.save(pet)));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -99,7 +102,7 @@ public class PetController {
         dto.setLevel(pet.getLevel());
         dto.setLastUpdated(pet.getLastUpdated());
         dto.setCheckinStreak(pet.getCheckinStreak() == null ? 0 : pet.getCheckinStreak());
-        dto.setLastCheckinDate(pet.getLastCheckinDate());
+        dto.setLastCheckinDate(pet.getLastCheckinDate() != null ? pet.getLastCheckinDate().toString() : null);
         if (pet.getUser() != null) {
             dto.setUserId(pet.getUser().getUserId());
         }
