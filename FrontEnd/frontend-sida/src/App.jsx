@@ -1,5 +1,31 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, Component } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error) {
+    console.error('Page error:', error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="d-flex flex-column justify-content-center align-items-center min-vh-100 text-center gap-3">
+          <p className="text-secondary">Có lỗi xảy ra khi tải trang.</p>
+          <button className="btn btn-outline-success btn-sm" onClick={() => { this.setState({ hasError: false }); window.location.href = '/'; }}>
+            Quay về trang chủ
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import TopNav from './components/TopNav';
 import BottomNav from './components/BottomNav';
 import FloatingPet from './components/FloatingPet';
@@ -57,6 +83,7 @@ function Layout() {
 
       {/* Nội dung các trang sẽ render ở dưới kèm theo hiệu ứng chuyển trang */}
       <div key={location.pathname} className="page-transition flex-grow-1 d-flex flex-column">
+        <ErrorBoundary key={location.pathname}>
         <Suspense fallback={<div className="d-flex justify-content-center align-items-center flex-grow-1"><div className="spinner-border text-neon" role="status"></div></div>}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -72,6 +99,7 @@ function Layout() {
             <Route path="/roadmap" element={<Roadmap />} />
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </div>
 
       {/* Ẩn cục Pet nhỏ lơ lửng nếu đang ở trong chính trang Pet */}

@@ -45,6 +45,7 @@ export default function ExerciseList() {
 
     const [groupData, setGroupData] = useState({ name: '', desc: '', exercises: [] });
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(false);
 
     useEffect(() => {
         const fetchGroup = async () => {
@@ -64,6 +65,7 @@ export default function ExerciseList() {
                 });
             } catch (err) {
                 console.error('Không thể tải bài tập:', err);
+                setFetchError(true);
             } finally {
                 setLoading(false);
             }
@@ -389,6 +391,15 @@ export default function ExerciseList() {
                     <span className="visually-hidden">Đang tải...</span>
                 </div>
                 <p className="mt-3 text-secondary fw-bold">Đang tải bài tập...</p>
+            </Container>
+        );
+    }
+
+    if (fetchError) {
+        return (
+            <Container className="py-5 text-center">
+                <p className="text-secondary">Không thể tải dữ liệu. Vui lòng thử lại.</p>
+                <Button variant="outline-success" size="sm" onClick={() => navigate(-1)}>Quay lại</Button>
             </Container>
         );
     }
