@@ -82,7 +82,7 @@ function Layout() {
       {!isPetPage && <TopNav />}
 
       {/* Nội dung các trang sẽ render ở dưới kèm theo hiệu ứng chuyển trang */}
-      <div key={location.pathname} className="page-transition flex-grow-1 d-flex flex-column">
+      <div className="flex-grow-1 d-flex flex-column">
         <ErrorBoundary key={location.pathname}>
         <Suspense fallback={<div className="d-flex justify-content-center align-items-center flex-grow-1"><div className="spinner-border text-neon" role="status"></div></div>}>
           <Routes>
