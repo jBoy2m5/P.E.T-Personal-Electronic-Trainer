@@ -43,6 +43,31 @@ const getCompletedToday = () => {
     return data[key]?.completedExercises || [];
 };
 
+const saveSessionToLocal = (kcal, reps, sets, startMs) => {
+    const sessionData = {
+        start_time: new Date(startMs).toISOString().slice(0, 19),
+        end_time: new Date().toISOString().slice(0, 19),
+        total_calories_burned: kcal,
+        total_valid_reps: reps * sets
+    };
+    const saved = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
+    saved.push(sessionData);
+    localStorage.setItem('workout-sessions', JSON.stringify(saved));
+    window.dispatchEvent(new Event('storage'));
+};
+
+const unlockNextDay = (dayId, allExercises, updatedCompleted) => {
+    if (!allExercises.every(ex => updatedCompleted.includes(ex.name))) return;
+    const raw = localStorage.getItem('roadmap-data');
+    if (!raw) return;
+    const roadmap = JSON.parse(raw);
+    const idx = roadmap.findIndex(d => d.dayId.toString() === dayId.toString());
+    if (idx === -1) return;
+    roadmap[idx].status = 'completed';
+    if (idx + 1 < roadmap.length) roadmap[idx + 1].status = 'active';
+    localStorage.setItem('roadmap-data', JSON.stringify(roadmap));
+};
+
 export default function DailyWorkout() {
     const navigate = useNavigate();
     const { dayId } = useParams();
@@ -314,15 +339,20 @@ export default function DailyWorkout() {
     const toLocalISOString = (date) => date.toISOString().slice(0, 19);
 
     const handleFinishManual = () => {
+        const updatedCompleted = [...completedExercises, currentExercise.name];
         markDayAsTrained(currentExercise.name);
-        setCompletedExercises(prev => [...prev, currentExercise.name]);
+        setCompletedExercises(updatedCompleted);
         setShowManualModal(false);
 
         const kcal = currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25;
+        const startMs = Date.now() - targetReps * targetSets * 2000;
         const result = addExp(kcal, currentExercise.name);
 
+        saveSessionToLocal(kcal, targetReps, targetSets, startMs);
+        unlockNextDay(dayId, dailyData?.exercises || [], updatedCompleted);
+
         axiosClient.post('/workout-sessions', {
-            start_time: toLocalISOString(new Date(Date.now() - targetReps * targetSets * 2000)),
+            start_time: toLocalISOString(new Date(startMs)),
             end_time: toLocalISOString(new Date()),
             total_calories_burned: kcal,
             total_valid_reps: targetReps * targetSets
@@ -393,18 +423,18 @@ export default function DailyWorkout() {
                         };
                         axiosClient.post('/workout-sessions', sessionData)
                             .catch(err => console.error('Could not save workout session:', err));
-                        const savedSessions = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
-                        savedSessions.push(sessionData);
-                        localStorage.setItem('workout-sessions', JSON.stringify(savedSessions));
+                        saveSessionToLocal(sessionCalories, targetReps, targetSets, Date.now() - 60000);
 
                         setTimeout(() => {
+                            const updatedCompleted = [...completedExercises, currentExercise.name];
                             markDayAsTrained(currentExercise.name);
-                            setCompletedExercises(prev => [...prev, currentExercise.name]);
+                            setCompletedExercises(updatedCompleted);
                             setShowAIModal(false);
                             stopAI();
 
                             const kcal = sessionData.total_calories_burned;
                             const result = addExp(kcal, currentExercise.name);
+                            unlockNextDay(dayId, dailyData?.exercises || [], updatedCompleted);
 
                             setSummaryData({
                                 exerciseName: currentExercise.name,

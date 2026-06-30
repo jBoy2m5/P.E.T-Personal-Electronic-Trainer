@@ -154,11 +154,7 @@ export const generateDynamicRoadmap = (userData, exercises = []) => {
         let workDayCount = 0;
         for (let d = 0; d < daysPerWeek; d++) {
             const isWorkDay = workDays.includes(d);
-            let status = 'locked';
-            
-            // Mock current day logic
-            if (globalDay < 4) status = 'completed';
-            else if (globalDay === 4) status = 'active';
+            let status = globalDay === 1 ? 'active' : 'locked';
 
             if (isWorkDay) {
                 const split = getSplitForDay(workDayCount);

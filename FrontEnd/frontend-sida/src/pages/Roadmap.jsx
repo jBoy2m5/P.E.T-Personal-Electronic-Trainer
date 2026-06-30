@@ -3,11 +3,12 @@ import { Container, Row, Col, Modal, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useRoadmapStore from '../store/useRoadmapStore';
+import usePetStore from '../store/usePetStore';
 
 export default function Roadmap() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { roadmapData, initialized, loadRoadmap } = useRoadmapStore();
+  const { roadmapData, initialized, loadRoadmap, generateRoadmap } = useRoadmapStore();
   const [selectedDay, setSelectedDay] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [aiAdvice, setAiAdvice] = useState('');
@@ -94,12 +95,20 @@ export default function Roadmap() {
           <h1 className="fw-black text-primary-dynamic m-0" style={{ fontSize: '2rem', letterSpacing: '2px', textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
             {t('roadmap.title_1')} <span className="text-neon">{t('roadmap.title_2')}</span>
           </h1>
-          <p className="text-light m-0 fw-bold" style={{ fontSize: '0.9rem', textShadow: '0 2px 5px rgba(0,0,0,0.8)' }}>
+          <p className="m-0 fw-bold" style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', textShadow: '0 2px 5px rgba(0,0,0,0.9)' }}>
             {t('roadmap.subtitle')}
           </p>
         </div>
         
-        <div style={{ width: '100px' }}></div>
+        <Button
+          variant="outline-danger"
+          size="sm"
+          className="rounded-pill px-3 fw-bold"
+          style={{ fontSize: '0.75rem' }}
+          onClick={() => { if (window.confirm('Reset lộ trình về ngày 1?')) { localStorage.removeItem('roadmap-data'); generateRoadmap(); } }}
+        >
+          ↺ Reset
+        </Button>
       </div>
 
       {/* AI Coach Advice Banner */}

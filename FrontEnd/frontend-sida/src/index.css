@@ -185,7 +185,7 @@ body {
   background: linear-gradient(180deg, #0d2818 0%, #1a0a2e 30%, #2d0a0a 70%, #000000 100%) !important;
 }
 [data-bs-theme="light"] .bg-roadmap-gradient {
-  background: linear-gradient(180deg, #d4ebd9 0%, #e8daf0 30%, #f5dbdb 70%, #f8f9fa 100%) !important;
+  background: linear-gradient(180deg, #0d2818 0%, #1a0a2e 30%, #2d0a0a 70%, #000000 100%) !important;
 }
 
 /* SVG Gradient stops cho Calorie Tracker */
