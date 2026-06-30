@@ -16,7 +16,7 @@ const POSE_CONNECTIONS = [
     [27,31],[28,32]
 ];
 
-const ERROR_KEYWORDS = ['too high','too low','too narrow','wider','go lower','tighten','straight','controlled','võng','sai','chưa đủ','hips'];
+const ERROR_KEYWORDS = ['widen','narrow','keep','warning','lower your','raise your','straighten','get down','no swinging','no air','pull higher','kick up','hang on','show','please show','go lower','go deeper','sai','võng','chưa đủ'];
 
 const isFormError = (status) =>
     status ? ERROR_KEYWORDS.some(k => status.toLowerCase().includes(k)) : false;
@@ -344,46 +344,148 @@ export default function DailyWorkout() {
                 document.head.appendChild(s);
             });
 
+            const dist3d = (a, b) => Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2);
+            const checkVis = (lms, indices) => indices.every(i => lms[i].visibility >= 0.5);
+
+            const exName = currentExercise.name.toLowerCase();
+            let aiMode = "SQUAT";
+            if (exName.includes("push") || exName.includes("hít đất")) aiMode = "PUSH-UP";
+            else if (exName.includes("plank")) aiMode = "PLANK";
+            else if (exName.includes("pull") || exName.includes("xà")) aiMode = "PULL-UP";
+            else if (exName.includes("handstand")) aiMode = "HANDSTAND";
+
             const onPoseResults = (results) => {
-                if (!results.poseLandmarks) return;
+                if (!results.poseLandmarks) { setAiStatus("Không phát hiện người!"); return; }
                 const lms = results.poseLandmarks;
                 const landmarks = lms.map(lm => ({ x: lm.x, y: lm.y, z: lm.z, visibility: lm.visibility }));
-                const exName = currentExercise.name.toLowerCase();
-                let feedback = "Form chuẩn! Đang theo dõi...";
+                const st = repStateRef.current;
 
-                if (exName.includes("squat")) {
-                    const angle = calcAngle(lms[23], lms[25], lms[27]);
-                    if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
-                    if (angle > 160 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
-                    if (angle < 70) feedback = "Xuống sâu hơn!";
-                } else if (exName.includes("push") || exName.includes("hít đất")) {
-                    const angle = calcAngle(lms[11], lms[13], lms[15]);
-                    if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
-                    if (angle > 150 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
-                    if (angle < 60) feedback = "Lên cao hơn!";
-                } else if (exName.includes("pull") || exName.includes("xà")) {
-                    const angle = calcAngle(lms[11], lms[13], lms[15]);
-                    if (angle < 90 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
-                    if (angle > 150 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
-                } else if (exName.includes("plank")) {
-                    feedback = "Siết cơ bụng, giữ thẳng người!";
+                // Visibility check
+                let isVisible = false;
+                if (aiMode === "SQUAT") isVisible = checkVis(lms, [11,12,23,25,27,28]);
+                else if (aiMode === "PUSH-UP" || aiMode === "PLANK") isVisible = checkVis(lms, [11,13,15,23,27]);
+                else if (aiMode === "PULL-UP" || aiMode === "HANDSTAND") isVisible = checkVis(lms, [11,12,13,15,23]);
+
+                let feedback = st.lastFeedback;
+
+                if (!isVisible) {
+                    feedback = (aiMode === "PULL-UP" || aiMode === "HANDSTAND")
+                        ? "SHOW UPPER BODY (WAIST UP)!"
+                        : "PLEASE SHOW FULL BODY!";
+                    if (st.isPlanking) { st.totalPlankTime += (Date.now() - st.plankStartTime) / 1000; st.isPlanking = false; }
                 } else {
-                    const angle = calcAngle(lms[23], lms[25], lms[27]);
-                    if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
-                    if (angle > 160 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
+                    const sh = lms[11], el = lms[13], wr = lms[15];
+                    const hip = lms[23], knee = lms[25], ankle = lms[27];
+
+                    if (aiMode === "SQUAT") {
+                        const kneeAngle = calcAngle(hip, knee, ankle);
+                        const backAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
+                        const stanceRatio = dist3d(lms[27], lms[28]) / (dist3d(lms[11], lms[12]) + 0.0001);
+                        feedback = "FORM: GOOD";
+                        if (kneeAngle > 150) {
+                            if (stanceRatio < 0.8) feedback = "WIDEN STANCE!";
+                            else if (stanceRatio > 1.6) feedback = "NARROW STANCE!";
+                        }
+                        if (backAngle > 65) feedback = "KEEP CHEST UP!";
+                        if (kneeAngle > 160) {
+                            if (st.stage === 'down') st.count++;
+                            st.stage = 'up';
+                        } else if (kneeAngle < 140) {
+                            if (hip.y >= knee.y - 0.04) { st.stage = 'down'; if (feedback === "FORM: GOOD") feedback = "PERFECT DEPTH!"; }
+                            else if (st.stage !== 'down' && feedback === "FORM: GOOD") feedback = "GO DEEPER!";
+                        }
+                        st.lastFeedback = feedback;
+
+                    } else if (aiMode === "PUSH-UP") {
+                        const armAngle = calcAngle(sh, el, wr);
+                        const bodyAngle = calcAngle(sh, hip, ankle);
+                        const torsoAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
+                        if (torsoAngle < 45) { feedback = "WARNING: STANDING!"; st.stage = null; }
+                        else if (bodyAngle < 155) { feedback = "KEEP BODY STRAIGHT!"; st.stage = null; }
+                        else {
+                            feedback = "FORM: GOOD";
+                            if (armAngle > 160) { if (st.stage === 'down') st.count++; st.stage = 'up'; }
+                            else if (armAngle < 110) {
+                                if (sh.y >= el.y - 0.05) { st.stage = 'down'; feedback = "PERFECT DEPTH!"; }
+                                else if (st.stage !== 'down') feedback = "GO LOWER!";
+                            }
+                        }
+                        st.lastFeedback = feedback;
+
+                    } else if (aiMode === "PLANK") {
+                        const bodyAngle = calcAngle(sh, hip, ankle);
+                        const torsoAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
+                        if (torsoAngle < 45) {
+                            feedback = "GET DOWN ON THE FLOOR!";
+                            if (st.isPlanking) { st.totalPlankTime += (Date.now() - st.plankStartTime) / 1000; st.isPlanking = false; }
+                        } else {
+                            const refY = (sh.y + ankle.y) / 2;
+                            if (bodyAngle > 165) {
+                                feedback = "FORM: PERFECT!";
+                                if (!st.isPlanking) { st.isPlanking = true; st.plankStartTime = Date.now(); }
+                            } else {
+                                if (st.isPlanking) { st.totalPlankTime += (Date.now() - st.plankStartTime) / 1000; st.isPlanking = false; }
+                                if (hip.y < refY - 0.05) feedback = "LOWER YOUR HIPS!";
+                                else if (hip.y > refY + 0.05) feedback = "RAISE YOUR HIPS!";
+                                else feedback = "STRAIGHTEN YOUR LEGS!";
+                            }
+                        }
+                        st.lastFeedback = feedback;
+                        const displayTime = st.isPlanking ? st.totalPlankTime + (Date.now() - st.plankStartTime) / 1000 : st.totalPlankTime;
+                        setSimReps(Math.round(displayTime));
+                        setAiStatus(feedback);
+                        drawSkeleton(landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
+                        if (workoutMode === 'time' && Math.round(displayTime) >= targetReps) handleSetComplete();
+                        return;
+
+                    } else if (aiMode === "PULL-UP") {
+                        const l_wr = lms[15], r_wr = lms[16], l_sh = lms[11], r_sh = lms[12], nose = lms[0];
+                        if (l_wr.y > l_sh.y) { feedback = "HANG ON THE BAR!"; st.stage = null; }
+                        else {
+                            const gripRatio = dist3d(l_wr, r_wr) / (dist3d(l_sh, r_sh) + 0.0001);
+                            const armAngle = calcAngle(sh, el, wr);
+                            const torsoAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
+                            const barY = (l_wr.y + r_wr.y) / 2;
+                            if (gripRatio < 1.2) feedback = "WIDEN GRIP (TARGET LATS)!";
+                            else if (torsoAngle > 25) feedback = "NO SWINGING! ENGAGE CORE.";
+                            else {
+                                feedback = "FORM: GOOD";
+                                if (armAngle > 140) { if (st.stage === 'up') st.count++; st.stage = 'down'; st.hangShoulderY = sh.y; }
+                                else if (armAngle < 110) {
+                                    if (st.hangShoulderY - sh.y < 0.04) { feedback = "NO AIR PULL-UPS! LIFT YOUR BODY."; st.stage = null; }
+                                    else if (nose.y <= barY + 0.05) { st.stage = 'up'; if (feedback === "FORM: GOOD") feedback = "CHIN OVER BAR!"; }
+                                    else if (st.stage !== 'up' && feedback === "FORM: GOOD") feedback = "PULL HIGHER!";
+                                }
+                            }
+                        }
+                        st.lastFeedback = feedback;
+
+                    } else if (aiMode === "HANDSTAND") {
+                        const armAngle = calcAngle(sh, el, wr);
+                        const torsoAngle = calcAngle(sh, hip, { x: hip.x, y: 0.0 });
+                        if (hip.y > sh.y) { feedback = "KICK UP INTO HANDSTAND!"; st.stage = null; }
+                        else if (torsoAngle > 25) { feedback = "KEEP CORE TIGHT & VERTICAL!"; st.stage = null; }
+                        else {
+                            feedback = "FORM: GOOD";
+                            if (armAngle > 150) { if (st.stage === 'down') st.count++; st.stage = 'up'; }
+                            else if (armAngle < 110) {
+                                if (sh.y >= el.y - 0.05) { st.stage = 'down'; feedback = "PERFECT DEPTH!"; }
+                                else if (st.stage !== 'down') feedback = "GO LOWER!";
+                            }
+                        }
+                        st.lastFeedback = feedback;
+                    }
                 }
 
-                const reps = repStateRef.current.count;
+                const reps = st.count;
                 setSimReps(reps);
                 setAiStatus(feedback);
                 drawSkeleton(landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
-                if ((workoutMode === 'reps' && reps >= targetReps) || (workoutMode === 'time' && reps >= targetReps)) {
-                    handleSetComplete();
-                }
+                if ((workoutMode === 'reps' && reps >= targetReps) || (workoutMode === 'time' && reps >= targetReps)) handleSetComplete();
             };
 
             const initInBrowserPose = async () => {
-                repStateRef.current = { count: 0, stage: 'up' };
+                repStateRef.current = { count: 0, stage: null, isPlanking: false, plankStartTime: 0, totalPlankTime: 0, hangShoulderY: 0, lastFeedback: "Đang chờ..." };
                 try {
                     setAiStatus("Đang tải AI...");
                     await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js');
