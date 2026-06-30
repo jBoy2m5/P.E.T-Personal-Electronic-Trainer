@@ -1,21 +1,33 @@
 package org.example.pettrainerbe.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
 
+    @Value("${FRONTEND_URL:}")
+    private String frontendUrl;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**") // Áp dụng cho toàn bộ API của bạn
-                .allowedOrigins(
-                        "http://localhost:3000", // Port mặc định của React (Create React App)
-                        "http://localhost:5173"  // Port mặc định của React (Vite)
-                )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Các phương thức cho phép
-                .allowedHeaders("*") // Cho phép mọi loại Header
+        List<String> origins = new ArrayList<>(Arrays.asList(
+                "http://localhost:3000",
+                "http://localhost:5173"
+        ));
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            origins.add(frontendUrl);
+        }
+        registry.addMapping("/**")
+                .allowedOrigins(origins.toArray(new String[0]))
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
                 .allowCredentials(true);
     }
 }
