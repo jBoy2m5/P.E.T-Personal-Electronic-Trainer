@@ -4,8 +4,10 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseCookie;
+
+import java.time.Duration;
 import org.example.pettrainerbe.model.User;
 import org.example.pettrainerbe.repository.UserRepository;
 import org.example.pettrainerbe.security.JwtUtil;
@@ -27,6 +29,9 @@ public class AuthController {
 
     @Value("${google.client.id}")
     private String clientId;
+
+    @Value("${COOKIE_SECURE:false}")
+    private boolean cookieSecure;
 
     public AuthController(UserRepository userRepository, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
@@ -69,12 +74,14 @@ public class AuthController {
 
                 String jwt = jwtUtil.generateToken(email);
 
-                Cookie cookie = new Cookie("jwt-token", jwt);
-                cookie.setHttpOnly(true);
-                cookie.setSecure(false);
-                cookie.setPath("/");
-                cookie.setMaxAge(5 * 60 * 60);
-                response.addCookie(cookie);
+                ResponseCookie cookie = ResponseCookie.from("jwt-token", jwt)
+                        .httpOnly(true)
+                        .secure(cookieSecure)
+                        .sameSite(cookieSecure ? "None" : "Lax")
+                        .path("/")
+                        .maxAge(Duration.ofHours(5))
+                        .build();
+                response.addHeader("Set-Cookie", cookie.toString());
 
                 Map<String, Object> responseBody = new HashMap<>();
                 responseBody.put("status", "success");
