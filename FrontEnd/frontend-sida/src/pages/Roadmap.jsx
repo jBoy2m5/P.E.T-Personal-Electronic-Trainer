@@ -185,7 +185,7 @@ export default function Roadmap() {
                     {isLocked && <span className="fs-5 text-muted">🔒</span>}
                   </div>
 
-                  <div className="saga-label-container d-none d-sm-block pointer-events-none">
+                  <div className="saga-label-container d-block pointer-events-none">
                      <div className="fw-black text-primary-dynamic" style={{ fontSize: '1rem', textShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>{t('roadmap.day')} {day.dayId}</div>
                      <div className="text-neon fw-bold mb-1" style={{ fontSize: '0.7rem' }}>{getTranslatedText('quest', day.quest)}</div>
                      <div className="text-muted fw-bold" style={{ fontSize: '0.75rem' }}>[{getTranslatedText('mg', day.muscleGroup)}]</div>
