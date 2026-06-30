@@ -3,6 +3,10 @@ import { Container, Row, Col, Card, Badge, Button, Modal, ProgressBar } from 're
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getMuscleGroupById } from '../api/exerciseApi';
+import confetti from 'canvas-confetti';
+
+const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
+
 const AI_EXERCISE_MODES = {
     'Push Up': 'PUSH-UP',
     'Bodyweight Squat': 'SQUAT',
@@ -10,9 +14,6 @@ const AI_EXERCISE_MODES = {
     'Pull Up': 'PULL-UP',
     'Handstand': 'HANDSTAND',
 };
-
-const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
-import confetti from 'canvas-confetti';
 
 const getTodayKey = () => {
     const d = new Date();
