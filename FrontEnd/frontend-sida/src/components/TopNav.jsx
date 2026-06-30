@@ -117,7 +117,7 @@ export default function TopNav() {
             <Navbar.Toggle aria-controls="basic-navbar-nav" className={isDark ? "border-secondary text-white" : "border-secondary text-dark"} />
             
             <Navbar.Collapse id="basic-navbar-nav">
-              <Nav className="mx-auto fw-bold" style={{ fontSize: '0.85rem' }}>
+              <Nav className="mx-auto fw-bold d-none d-lg-flex" style={{ fontSize: '0.85rem' }}>
                 <Nav.Link as={Link} to="/roadmap" className={`px-4 nav-link-custom ${location.pathname.startsWith('/roadmap') ? 'nav-link-active' : ''} ${isDark ? 'text-white' : 'text-dark'}`}>{t('nav.roadmap')}</Nav.Link>
                 <Nav.Link as={Link} to="/calories" className={`px-4 nav-link-custom ${location.pathname.startsWith('/calories') ? 'nav-link-active' : ''} ${isDark ? 'text-white' : 'text-dark'}`}>{t('nav.calories')}</Nav.Link>
                 <Nav.Link as={Link} to="/schedule" className={`px-4 nav-link-custom ${location.pathname.startsWith('/schedule') ? 'nav-link-active' : ''} ${isDark ? 'text-white' : 'text-dark'}`}>{t('nav.schedule')}</Nav.Link>
