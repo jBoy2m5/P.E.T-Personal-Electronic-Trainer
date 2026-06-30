@@ -9,52 +9,6 @@ import axiosClient from '../api/axiosClient';
 const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
 const PET_THRESHOLDS_LIST = [0, 10, 50, 150, 300, 600, 1200, 2500];
 
-const POSE_CONNECTIONS = [
-    [11,12],[11,13],[13,15],[12,14],[14,16],
-    [11,23],[12,24],[23,24],
-    [23,25],[25,27],[24,26],[26,28],
-    [27,31],[28,32]
-];
-
-const ERROR_KEYWORDS = ['widen','narrow','keep','warning','lower your','raise your','straighten','get down','no swinging','no air','pull higher','kick up','hang on','show','please show','go lower','go deeper','sai','võng','chưa đủ'];
-
-const isFormError = (status) =>
-    status ? ERROR_KEYWORDS.some(k => status.toLowerCase().includes(k)) : false;
-
-const drawSkeleton = (landmarks, hasError, canvas, video) => {
-    if (!canvas || !video || !landmarks?.length) return;
-    const vw = video.videoWidth || 640;
-    const vh = video.videoHeight || 480;
-    const cw = video.clientWidth || 640;
-    const ch = video.clientHeight || 480;
-    canvas.width = cw;
-    canvas.height = ch;
-    const scale = Math.min(cw / vw, ch / vh);
-    const ox = (cw - vw * scale) / 2;
-    const oy = (ch - vh * scale) / 2;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, cw, ch);
-    const color = hasError ? '#ff4444' : '#00ff88';
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.fillStyle = color;
-    POSE_CONNECTIONS.forEach(([i, j]) => {
-        const a = landmarks[i], b = landmarks[j];
-        if (a && b && a.visibility > 0.5 && b.visibility > 0.5) {
-            ctx.beginPath();
-            ctx.moveTo(ox + a.x * vw * scale, oy + a.y * vh * scale);
-            ctx.lineTo(ox + b.x * vw * scale, oy + b.y * vh * scale);
-            ctx.stroke();
-        }
-    });
-    landmarks.forEach(lm => {
-        if (lm.visibility > 0.5) {
-            ctx.beginPath();
-            ctx.arc(ox + lm.x * vw * scale, oy + lm.y * vh * scale, 5, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    });
-};
 
 const getTodayKey = () => {
     const d = new Date();
@@ -100,8 +54,6 @@ export default function DailyWorkout() {
     const isSadFn = usePetStore(state => state.isSad);
     const petIsSad = isSadFn();
     const petIcon = petIsSad ? '😢' : (PET_ICONS_LIST[PET_THRESHOLDS_LIST.filter(th => totalPoints >= th).length - 1] || '🥚');
-    const overlayCanvasRef = useRef(null);
-
     // States cho AI Camera Modal
     const [showAIModal, setShowAIModal] = useState(false);
     const [currentExercise, setCurrentExercise] = useState(null);
@@ -117,9 +69,6 @@ export default function DailyWorkout() {
     const socketRef = useRef(null);
     const streamRef = useRef(null);
     const animationFrameRef = useRef(null);
-    const poseRef = useRef(null);
-    const mediapipeCameraRef = useRef(null);
-    const repStateRef = useRef({ count: 0, stage: 'up' });
 
     // States cho Detailed Exercise Modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -338,27 +287,13 @@ export default function DailyWorkout() {
                     if (videoRef.current) videoRef.current.srcObject = stream;
 
                     setAiStatus("Đang kết nối AI Server...");
-                    socketRef.current = new WebSocket('ws://localhost:8765');
+                    const wsUrl = import.meta.env.VITE_AI_WS_URL || 'ws://localhost:8765';
+                    socketRef.current = new WebSocket(wsUrl);
                     socketRef.current.onopen = () => { setAiStatus("Đã kết nối! Bắt đầu phân tích..."); sendFrames(); };
-                    const errorLogCooldownRef = { last: 0 };
                     socketRef.current.onmessage = (event) => {
                         const data = JSON.parse(event.data);
-                        const feedback = data.feedback || "Form chuẩn! Đang theo dõi...";
-                        setAiStatus(feedback);
+                        setAiStatus(data.feedback || "Đang theo dõi...");
                         setSimReps(data.reps || 0);
-                        if (data.landmarks?.length) {
-                            drawSkeleton(data.landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
-                        }
-                        if (isFormError(feedback)) {
-                            const now = Date.now();
-                            if (now - errorLogCooldownRef.last > 5000) {
-                                errorLogCooldownRef.last = now;
-                                axiosClient.post('/error-logs', {
-                                    error_description: feedback,
-                                    created_at: new Date().toISOString().slice(0, 19)
-                                }).catch(() => {});
-                            }
-                        }
                         if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
                             handleSetComplete();
                         }
@@ -422,7 +357,7 @@ export default function DailyWorkout() {
                     } else {
                         setAiStatus(t('exercise_list.ai_rest', 'Nghỉ ngơi 1 lát...'));
                         setSimReps(0);
-                        setTimeout(() => { if (showAIModal) { setAiStatus(t('exercise_list.ai_tracking', 'Form chuẩn! Đang theo dõi...')); sendFrames(); } }, 2000);
+                        setTimeout(() => { if (showAIModal) { sendFrames(); } }, 2000);
                         return newSets;
                     }
                 });
@@ -435,8 +370,6 @@ export default function DailyWorkout() {
     const stopAI = () => {
         if (animationFrameRef.current) clearTimeout(animationFrameRef.current);
         if (socketRef.current) { socketRef.current.close(); socketRef.current = null; }
-        if (mediapipeCameraRef.current) { mediapipeCameraRef.current.stop(); mediapipeCameraRef.current = null; }
-        if (poseRef.current) { poseRef.current.close(); poseRef.current = null; }
         if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     };
 
@@ -645,7 +578,6 @@ export default function DailyWorkout() {
                     <div style={{ height: '100vh', width: '100%', background: '#000', position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain', transform: 'scaleX(-1)' }}></video>
                         <canvas ref={canvasRef} width="640" height="480" style={{ display: 'none' }}></canvas>
-                        <canvas ref={overlayCanvasRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', transform: 'scaleX(-1)', pointerEvents: 'none', zIndex: 1 }}></canvas>
                         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'var(--brand-neon)', boxShadow: '0 0 15px var(--brand-neon)', animation: 'scan 2s linear infinite' }}></div>
                     </div>
 
@@ -661,14 +593,8 @@ export default function DailyWorkout() {
                             <Button variant="link" className="text-white p-0 m-0 text-decoration-none" onClick={() => setShowAIModal(false)}><span className="fs-1 fw-bold text-shadow">&times;</span></Button>
                         </div>
 
-                        {/* Pet animation + speech bubble */}
+                        {/* Pet animation */}
                         <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '200px', right: '24px', zIndex: 2 }}>
-                            {isFormError(aiStatus) && (
-                                <div className="mb-2 px-3 py-2 rounded-3 fw-bold text-dark" style={{ background: '#ff4444', fontSize: '0.75rem', maxWidth: '160px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)', position: 'relative' }}>
-                                    {aiStatus}
-                                    <div style={{ position: 'absolute', bottom: '-8px', right: '20px', width: 0, height: 0, borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '8px solid #ff4444' }}></div>
-                                </div>
-                            )}
                             <div className="pet-working" style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>{petIcon}</div>
                         </div>
 

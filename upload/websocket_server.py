@@ -42,9 +42,11 @@ async def handle_client(websocket):
         print(f"Client disconnected: {websocket.remote_address}", flush=True)
 
 async def main():
-    print("AI WebSocket Server running at ws://localhost:8765", flush=True)
+    port = int(os.environ.get("PORT", 8765))
+    host = "0.0.0.0"
+    print(f"AI WebSocket Server running at ws://{host}:{port}", flush=True)
     print("Press Ctrl+C to stop.", flush=True)
-    async with websockets.serve(handle_client, "localhost", 8765):
+    async with websockets.serve(handle_client, host, port):
         await asyncio.Future()
 
 if __name__ == "__main__":
