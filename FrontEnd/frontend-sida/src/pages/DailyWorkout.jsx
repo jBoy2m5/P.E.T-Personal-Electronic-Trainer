@@ -117,6 +117,9 @@ export default function DailyWorkout() {
     const socketRef = useRef(null);
     const streamRef = useRef(null);
     const animationFrameRef = useRef(null);
+    const poseRef = useRef(null);
+    const mediapipeCameraRef = useRef(null);
+    const repStateRef = useRef({ count: 0, stage: 'up' });
 
     // States cho Detailed Exercise Modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -326,6 +329,73 @@ export default function DailyWorkout() {
 
     useEffect(() => {
         if (showAIModal && currentExercise) {
+            const calcAngle = (a, b, c) => {
+                const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+                let angle = Math.abs(rad * 180 / Math.PI);
+                if (angle > 180) angle = 360 - angle;
+                return angle;
+            };
+
+            const initInBrowserPose = () => {
+                repStateRef.current = { count: 0, stage: 'up' };
+                import('@mediapipe/pose').then(({ Pose }) => {
+                    const pose = new Pose({
+                        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
+                    });
+                    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, enableSegmentation: false, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+
+                    pose.onResults((results) => {
+                        if (!results.poseLandmarks) return;
+                        const lms = results.poseLandmarks;
+                        const landmarks = lms.map(lm => ({ x: lm.x, y: lm.y, z: lm.z, visibility: lm.visibility }));
+                        const exName = currentExercise.name.toLowerCase();
+                        let feedback = "Form chuẩn! Đang theo dõi...";
+
+                        if (exName.includes("squat") || exName.includes("squats")) {
+                            const angle = calcAngle(lms[23], lms[25], lms[27]);
+                            if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
+                            if (angle > 160 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
+                            if (angle < 70) feedback = "Xuống sâu hơn!";
+                        } else if (exName.includes("push") || exName.includes("hít đất")) {
+                            const angle = calcAngle(lms[11], lms[13], lms[15]);
+                            if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
+                            if (angle > 150 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
+                            if (angle < 60) feedback = "Lên cao hơn!";
+                        } else if (exName.includes("pull") || exName.includes("xà")) {
+                            const angle = calcAngle(lms[11], lms[13], lms[15]);
+                            if (angle < 90 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
+                            if (angle > 150 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
+                        } else if (exName.includes("plank")) {
+                            feedback = "Siết cơ bụng, giữ thẳng người!";
+                        } else {
+                            const angle = calcAngle(lms[23], lms[25], lms[27]);
+                            if (angle < 90 && repStateRef.current.stage === 'up') repStateRef.current.stage = 'down';
+                            if (angle > 160 && repStateRef.current.stage === 'down') { repStateRef.current.stage = 'up'; repStateRef.current.count++; }
+                        }
+
+                        const reps = repStateRef.current.count;
+                        setSimReps(reps);
+                        setAiStatus(feedback);
+                        drawSkeleton(landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
+                        if ((workoutMode === 'reps' && reps >= targetReps) || (workoutMode === 'time' && reps >= targetReps)) {
+                            handleSetComplete();
+                        }
+                    });
+
+                    poseRef.current = pose;
+
+                    import('@mediapipe/camera_utils').then(({ Camera }) => {
+                        const cam = new Camera(videoRef.current, {
+                            onFrame: async () => { if (poseRef.current) await poseRef.current.send({ image: videoRef.current }); },
+                            width: 640, height: 480
+                        });
+                        cam.start();
+                        mediapipeCameraRef.current = cam;
+                        setAiStatus("AI đang phân tích... Bắt đầu tập!");
+                    });
+                }).catch(() => setAiStatus("Không thể tải AI!"));
+            };
+
             const initAI = async () => {
                 try {
                     setAiStatus("Đang yêu cầu quyền Camera...");
@@ -333,33 +403,38 @@ export default function DailyWorkout() {
                     streamRef.current = stream;
                     if (videoRef.current) videoRef.current.srcObject = stream;
 
-                    setAiStatus("Đang kết nối AI Server...");
-                    socketRef.current = new WebSocket('ws://localhost:8765');
-                    socketRef.current.onopen = () => { setAiStatus("Đã kết nối! Bắt đầu phân tích..."); sendFrames(); };
-                    const errorLogCooldownRef = { last: 0 };
-                    socketRef.current.onmessage = (event) => {
-                        const data = JSON.parse(event.data);
-                        const feedback = data.feedback || "Form chuẩn! Đang theo dõi...";
-                        setAiStatus(feedback);
-                        setSimReps(data.reps || 0);
-                        if (data.landmarks?.length) {
-                            drawSkeleton(data.landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
-                        }
-                        if (isFormError(feedback)) {
-                            const now = Date.now();
-                            if (now - errorLogCooldownRef.last > 5000) {
-                                errorLogCooldownRef.last = now;
-                                axiosClient.post('/error-logs', {
-                                    error_description: feedback,
-                                    created_at: new Date().toISOString().slice(0, 19)
-                                }).catch(() => {});
+                    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                    if (isLocal) {
+                        setAiStatus("Đang kết nối AI Server...");
+                        socketRef.current = new WebSocket('ws://localhost:8765');
+                        socketRef.current.onopen = () => { setAiStatus("Đã kết nối! Bắt đầu phân tích..."); sendFrames(); };
+                        const errorLogCooldownRef = { last: 0 };
+                        socketRef.current.onmessage = (event) => {
+                            const data = JSON.parse(event.data);
+                            const feedback = data.feedback || "Form chuẩn! Đang theo dõi...";
+                            setAiStatus(feedback);
+                            setSimReps(data.reps || 0);
+                            if (data.landmarks?.length) {
+                                drawSkeleton(data.landmarks, isFormError(feedback), overlayCanvasRef.current, videoRef.current);
                             }
-                        }
-                        if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
-                            handleSetComplete();
-                        }
-                    };
-                    socketRef.current.onerror = (error) => { console.error('WebSocket Error:', error); setAiStatus("Lỗi kết nối tới AI Server!"); };
+                            if (isFormError(feedback)) {
+                                const now = Date.now();
+                                if (now - errorLogCooldownRef.last > 5000) {
+                                    errorLogCooldownRef.last = now;
+                                    axiosClient.post('/error-logs', {
+                                        error_description: feedback,
+                                        created_at: new Date().toISOString().slice(0, 19)
+                                    }).catch(() => {});
+                                }
+                            }
+                            if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
+                                handleSetComplete();
+                            }
+                        };
+                        socketRef.current.onerror = () => { console.warn('WebSocket không khả dụng, dùng AI trình duyệt...'); initInBrowserPose(); };
+                    } else {
+                        initInBrowserPose();
+                    }
                 } catch (err) { setAiStatus("Không thể mở Camera!"); }
             };
 
@@ -435,8 +510,10 @@ export default function DailyWorkout() {
 
     const stopAI = () => {
         if (animationFrameRef.current) clearTimeout(animationFrameRef.current);
-        if (socketRef.current) socketRef.current.close();
-        if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+        if (socketRef.current) { socketRef.current.close(); socketRef.current = null; }
+        if (mediapipeCameraRef.current) { mediapipeCameraRef.current.stop(); mediapipeCameraRef.current = null; }
+        if (poseRef.current) { poseRef.current.close(); poseRef.current = null; }
+        if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     };
 
     if (!dailyData) return null;
