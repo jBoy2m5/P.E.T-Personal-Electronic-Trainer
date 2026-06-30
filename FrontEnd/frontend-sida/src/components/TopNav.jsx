@@ -83,7 +83,7 @@ export default function TopNav() {
   return (
     <Navbar 
       expand="lg" 
-      className={`sticky-top py-3 d-none d-lg-flex`} 
+      className={`sticky-top py-2`}
       style={{ 
         zIndex: 1000,
         background: isDark ? 'rgba(10,10,12,0.85)' : 'rgba(255,255,255,0.85)',
