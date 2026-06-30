@@ -436,8 +436,8 @@ body {
 }
 
 .tool-btn {
-  background: rgba(255,255,255,0.03);
-  color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.85);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 6px 10px;

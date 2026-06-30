@@ -106,7 +106,7 @@ export default function Onboarding() {
           variant="outline-secondary"
           onClick={handleBack}
           className="fw-bold px-4 py-3 rounded-pill"
-          style={{ borderWidth: '2px', color: '#fff', minWidth: '130px' }}
+          style={{ borderWidth: '2px', minWidth: '130px' }}
         >
           QUAY LẠI
         </Button>
@@ -291,7 +291,7 @@ export default function Onboarding() {
                     variant="outline-secondary"
                     onClick={handleBack}
                     className="fw-bold px-4 py-3 rounded-pill"
-                    style={{ borderWidth: '2px', color: '#fff', minWidth: '130px' }}
+                    style={{ borderWidth: '2px', minWidth: '130px' }}
                   >
                     QUAY LẠI
                   </Button>
