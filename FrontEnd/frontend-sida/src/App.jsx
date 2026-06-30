@@ -1,5 +1,6 @@
-import React, { Suspense, lazy, Component } from 'react';
+import React, { Suspense, lazy, Component, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import usePetStore from './store/usePetStore';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -45,10 +46,15 @@ const UserProfile = lazy(() => import('./pages/UserProfile'));
 
 function Layout() {
   const location = useLocation();
+  const syncPet = usePetStore(state => state.syncFromBackend);
   const userDataString = localStorage.getItem('user-data');
   const userData = userDataString ? JSON.parse(userDataString) : null;
   const isAuthenticated = !!userData;
-  
+
+  useEffect(() => {
+    if (isAuthenticated) syncPet();
+  }, [userData?.userId]);
+
   // Check if user still needs onboarding
   const needsOnboarding = isAuthenticated && (!userData.height || !userData.weight);
 

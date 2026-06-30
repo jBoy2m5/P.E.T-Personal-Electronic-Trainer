@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import axiosClient from '../api/axiosClient';
 
 const PET_LEVELS = [
   { level: 1, name: 'Trứng', minPoints: 0, icon: '🥚' },
@@ -11,31 +12,86 @@ const PET_LEVELS = [
   { level: 8, name: 'Pet thần thoại', minPoints: 2500, icon: '⭐' },
 ];
 
+const getUserId = () => {
+  try {
+    const saved = localStorage.getItem('user-data');
+    return saved ? JSON.parse(saved)?.userId : null;
+  } catch { return null; }
+};
+
+const getPetKey = (userId) => {
+  const uid = userId || getUserId();
+  return uid ? `pet-daily-${uid}` : 'pet-daily';
+};
+
 const getTodayKey = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const calcLevel = (totalPoints) => {
+  let current = PET_LEVELS[0];
+  for (const lvl of PET_LEVELS) {
+    if (totalPoints >= lvl.minPoints) current = lvl;
+  }
+  return current.level;
 };
 
 const getInitialState = () => {
-  const saved = localStorage.getItem('pet-daily');
+  const userId = getUserId();
+  const key = getPetKey(userId);
   const todayStr = getTodayKey();
-  
-  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr };
-  
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    data = { ...data, ...parsed };
-    if (data.date !== todayStr) {
+  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null };
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      data = { ...data, ...parsed };
+      if (data.date !== todayStr) {
         data.date = todayStr;
         data.pointsEarnedToday = 0;
         data.exercisesTrained = [];
+      }
     }
-  }
+  } catch { /* ignore */ }
   return data;
 };
 
 const usePetStore = create((set, get) => ({
   ...getInitialState(),
+
+  syncFromBackend: async () => {
+    const userId = getUserId();
+    if (!userId) return;
+    try {
+      const pet = await axiosClient.get(`/pets/user/${userId}`);
+      if (pet?.pet_id) {
+        const totalPoints = pet.total_exp || 0;
+        const key = getPetKey(userId);
+        const todayStr = getTodayKey();
+        const existing = JSON.parse(localStorage.getItem(key) || '{}');
+        const needsReset = existing.date !== todayStr;
+        const newState = {
+          totalPoints,
+          petId: pet.pet_id,
+          pointsEarnedToday: needsReset ? 0 : (existing.pointsEarnedToday || 0),
+          exercisesTrained: needsReset ? [] : (existing.exercisesTrained || []),
+          date: todayStr
+        };
+        localStorage.setItem(key, JSON.stringify(newState));
+        set(newState);
+      } else {
+        // New user: create pet in backend with level 1, exp 0
+        const newPet = await axiosClient.post('/pets', { user_id: userId, level: 1, total_exp: 0 });
+        if (newPet?.pet_id) {
+          set({ petId: newPet.pet_id, totalPoints: 0 });
+          const key = getPetKey(userId);
+          const existing = JSON.parse(localStorage.getItem(key) || '{}');
+          localStorage.setItem(key, JSON.stringify({ ...existing, petId: newPet.pet_id, totalPoints: 0 }));
+        }
+      }
+    } catch { /* backend unavailable, use local */ }
+  },
 
   getCurrentLevel: () => {
     const { totalPoints } = get();
@@ -61,42 +117,51 @@ const usePetStore = create((set, get) => ({
 
   addExp: (kcal, exerciseName) => {
     const MAX_DAILY_EXP = 300;
-    
-    // Đảm bảo qua ngày mới reset điểm
     const todayStr = getTodayKey();
-    
+    const userId = getUserId();
+    const key = getPetKey(userId);
+
     set((state) => {
-        let currentPointsToday = state.date === todayStr ? state.pointsEarnedToday : 0;
-        let exercisesTrained = state.date === todayStr ? [...(state.exercisesTrained || [])] : [];
+      let currentPointsToday = state.date === todayStr ? state.pointsEarnedToday : 0;
+      let exercisesTrained = state.date === todayStr ? [...(state.exercisesTrained || [])] : [];
 
-        let expGained = Math.max(1, Math.round(kcal * 0.1));
-        let isCapped = false;
+      let expGained = Math.max(1, Math.round(kcal * 0.1));
+      let isCapped = false;
 
-        if (currentPointsToday + expGained > MAX_DAILY_EXP) {
-            expGained = Math.max(0, MAX_DAILY_EXP - currentPointsToday);
-            isCapped = true;
-        }
+      if (currentPointsToday + expGained > MAX_DAILY_EXP) {
+        expGained = Math.max(0, MAX_DAILY_EXP - currentPointsToday);
+        isCapped = true;
+      }
 
-        if (exerciseName && !exercisesTrained.includes(exerciseName)) {
-            exercisesTrained.push(exerciseName);
-        }
+      if (exerciseName && !exercisesTrained.includes(exerciseName)) {
+        exercisesTrained.push(exerciseName);
+      }
 
-        const newState = {
-            totalPoints: state.totalPoints + expGained,
-            pointsEarnedToday: currentPointsToday + expGained,
-            exercisesTrained,
-            date: todayStr
-        };
+      const newTotalPoints = state.totalPoints + expGained;
+      const newState = {
+        totalPoints: newTotalPoints,
+        pointsEarnedToday: currentPointsToday + expGained,
+        exercisesTrained,
+        date: todayStr,
+        petId: state.petId
+      };
 
-        // Lưu vào localStorage
-        localStorage.setItem('pet-daily', JSON.stringify(newState));
+      localStorage.setItem(key, JSON.stringify(newState));
 
-        return { ...newState, lastExpGained: expGained, lastIsCapped: isCapped };
+      // Sync to backend
+      if (state.petId) {
+        axiosClient.put(`/pets/${state.petId}`, {
+          total_exp: newTotalPoints,
+          level: calcLevel(newTotalPoints)
+        }).catch(() => {});
+      }
+
+      return { ...newState, lastExpGained: expGained, lastIsCapped: isCapped };
     });
 
-    return { 
-        exp: get().lastExpGained, 
-        isCapped: get().lastIsCapped 
+    return {
+      exp: get().lastExpGained,
+      isCapped: get().lastIsCapped
     };
   }
 }));

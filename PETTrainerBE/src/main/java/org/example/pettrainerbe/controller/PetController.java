@@ -31,6 +31,15 @@ public class PetController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<PetDTO> getPetByUserId(@PathVariable Integer userId) {
+        return petRepository.findAll().stream()
+                .filter(p -> p.getUser() != null && p.getUser().getUserId().equals(userId))
+                .findFirst()
+                .map(pet -> ResponseEntity.ok(convertToDTO(pet)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     public ResponseEntity<PetDTO> createPet(@RequestBody Pet pet) {
         Pet savedPet = petRepository.save(pet);

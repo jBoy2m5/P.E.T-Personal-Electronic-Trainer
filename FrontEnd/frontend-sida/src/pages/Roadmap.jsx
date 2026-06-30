@@ -105,7 +105,15 @@ export default function Roadmap() {
           size="sm"
           className="rounded-pill px-3 fw-bold"
           style={{ fontSize: '0.75rem' }}
-          onClick={() => { if (window.confirm('Reset lộ trình về ngày 1?')) { localStorage.removeItem('roadmap-data'); generateRoadmap(); } }}
+          onClick={() => {
+            if (window.confirm('Reset lộ trình về ngày 1?')) {
+              const saved = localStorage.getItem('user-data');
+              const userId = saved ? JSON.parse(saved)?.userId : null;
+              const key = userId ? `roadmap-data-${userId}` : 'roadmap-data';
+              localStorage.removeItem(key);
+              generateRoadmap();
+            }
+          }}
         >
           ↺ Reset
         </Button>

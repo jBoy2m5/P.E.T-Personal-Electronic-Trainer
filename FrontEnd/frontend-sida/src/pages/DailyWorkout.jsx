@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Badge, Button, Modal, ProgressBar } from 're
 import { useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import usePetStore from '../store/usePetStore';
+import useRoadmapStore from '../store/useRoadmapStore';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
 
@@ -56,17 +57,6 @@ const saveSessionToLocal = (kcal, reps, sets, startMs) => {
     window.dispatchEvent(new Event('storage'));
 };
 
-const unlockNextDay = (dayId, allExercises, updatedCompleted) => {
-    if (!allExercises.every(ex => updatedCompleted.includes(ex.name))) return;
-    const raw = localStorage.getItem('roadmap-data');
-    if (!raw) return;
-    const roadmap = JSON.parse(raw);
-    const idx = roadmap.findIndex(d => d.dayId.toString() === dayId.toString());
-    if (idx === -1) return;
-    roadmap[idx].status = 'completed';
-    if (idx + 1 < roadmap.length) roadmap[idx + 1].status = 'active';
-    localStorage.setItem('roadmap-data', JSON.stringify(roadmap));
-};
 
 export default function DailyWorkout() {
     const navigate = useNavigate();
@@ -75,6 +65,7 @@ export default function DailyWorkout() {
     const [completedExercises, setCompletedExercises] = useState(getCompletedToday());
     const [dailyData, setDailyData] = useState(null);
     const addExp = usePetStore(state => state.addExp);
+    const markDayComplete = useRoadmapStore(state => state.markDayComplete);
     const totalPoints = usePetStore(state => state.totalPoints);
     const isSadFn = usePetStore(state => state.isSad);
     const petIsSad = isSadFn();
@@ -349,7 +340,9 @@ export default function DailyWorkout() {
         const result = addExp(kcal, currentExercise.name);
 
         saveSessionToLocal(kcal, targetReps, targetSets, startMs);
-        unlockNextDay(dayId, dailyData?.exercises || [], updatedCompleted);
+        if ((dailyData?.exercises || []).every(ex => updatedCompleted.includes(ex.name))) {
+            markDayComplete(dayId);
+        }
 
         axiosClient.post('/workout-sessions', {
             start_time: toLocalISOString(new Date(startMs)),
@@ -434,7 +427,9 @@ export default function DailyWorkout() {
 
                             const kcal = sessionData.total_calories_burned;
                             const result = addExp(kcal, currentExercise.name);
-                            unlockNextDay(dayId, dailyData?.exercises || [], updatedCompleted);
+                            if ((dailyData?.exercises || []).every(ex => updatedCompleted.includes(ex.name))) {
+                                markDayComplete(dayId);
+                            }
 
                             setSummaryData({
                                 exerciseName: currentExercise.name,
