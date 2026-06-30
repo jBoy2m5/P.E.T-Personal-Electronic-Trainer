@@ -1,6 +1,7 @@
 package org.example.pettrainerbe.dto;
 
 import lombok.Data;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -11,5 +12,8 @@ public class PetDTO {
     private Integer totalExp;
     private Integer level;
     private LocalDateTime lastUpdated;
-    private Integer userId; // Chỉ lấy ID của User, ngắt vòng lặp
+    private Integer userId;
+    private Integer checkinStreak;
+    private LocalDate lastCheckinDate;
+    private Integer checkinExpGained;
 }

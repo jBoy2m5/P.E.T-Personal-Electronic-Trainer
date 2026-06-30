@@ -41,7 +41,7 @@ const getInitialState = () => {
   const userId = getUserId();
   const key = getPetKey(userId);
   const todayStr = getTodayKey();
-  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null, claimedMissions: {} };
+  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null, claimedMissions: {}, checkinStreak: 0, lastCheckinDate: null };
   try {
     const saved = localStorage.getItem(key);
     if (saved) {
@@ -76,6 +76,8 @@ const usePetStore = create((set, get) => ({
         pointsEarnedToday: needsReset ? 0 : (existing.pointsEarnedToday || 0),
         exercisesTrained: needsReset ? [] : (existing.exercisesTrained || []),
         claimedMissions: existing.claimedMissions || {},
+        checkinStreak: pet.checkin_streak || 0,
+        lastCheckinDate: pet.last_checkin_date || null,
         date: todayStr
       };
       localStorage.setItem(key, JSON.stringify(newState));
@@ -114,6 +116,30 @@ const usePetStore = create((set, get) => ({
       if (data[fmt(d)]?.trained) return false;
     }
     return !data[fmt(today)]?.trained;
+  },
+
+  performCheckin: async () => {
+    const userId = getUserId();
+    const key = getPetKey(userId);
+    const todayStr = getTodayKey();
+    const { petId } = get();
+    if (!petId) return null;
+    try {
+      const result = await axiosClient.post(`/pets/${petId}/checkin`);
+      const expGained = result.checkin_exp_gained || 0;
+      const newState = {
+        totalPoints: result.total_exp || 0,
+        checkinStreak: result.checkin_streak || 0,
+        lastCheckinDate: result.last_checkin_date || todayStr,
+        petId: result.pet_id,
+      };
+      set((state) => {
+        const merged = { ...state, ...newState };
+        localStorage.setItem(key, JSON.stringify(merged));
+        return merged;
+      });
+      return expGained;
+    } catch { return null; }
   },
 
   claimMission: (missionId, expReward) => {

@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -82,6 +84,41 @@ public class PetController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/{id}/checkin")
+    public ResponseEntity<PetDTO> checkin(@PathVariable Integer id) {
+        return petRepository.findById(id).map(pet -> {
+            LocalDate today = LocalDate.now();
+            LocalDate last = pet.getLastCheckinDate();
+
+            if (last != null && last.equals(today)) {
+                // Already checked in today
+                return ResponseEntity.ok(convertToDTO(pet));
+            }
+
+            int currentStreak = pet.getCheckinStreak() == null ? 0 : pet.getCheckinStreak();
+            int newStreak = (last != null && last.equals(today.minusDays(1)))
+                    ? currentStreak + 1
+                    : 1;
+
+            int dayInCycle = ((newStreak - 1) % 7) + 1;
+            int[] expRewards = {10, 15, 20, 25, 30, 40, 100};
+            int expGained = expRewards[dayInCycle - 1];
+
+            int newTotalExp = (pet.getTotalExp() == null ? 0 : pet.getTotalExp()) + expGained;
+            int newLevel = calcLevel(newTotalExp);
+
+            pet.setCheckinStreak(newStreak);
+            pet.setLastCheckinDate(today);
+            pet.setTotalExp(newTotalExp);
+            pet.setLevel(newLevel);
+            petRepository.save(pet);
+
+            PetDTO dto = convertToDTO(pet);
+            dto.setCheckinExpGained(expGained);
+            return ResponseEntity.ok(dto);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePet(@PathVariable Integer id) {
         if (petRepository.existsById(id)) {
@@ -100,9 +137,22 @@ public class PetController {
         dto.setTotalExp(pet.getTotalExp());
         dto.setLevel(pet.getLevel());
         dto.setLastUpdated(pet.getLastUpdated());
+        dto.setCheckinStreak(pet.getCheckinStreak() == null ? 0 : pet.getCheckinStreak());
+        dto.setLastCheckinDate(pet.getLastCheckinDate());
         if (pet.getUser() != null) {
             dto.setUserId(pet.getUser().getUserId());
         }
         return dto;
+    }
+
+    private int calcLevel(int exp) {
+        if (exp >= 2500) return 8;
+        if (exp >= 1200) return 7;
+        if (exp >= 600) return 6;
+        if (exp >= 300) return 5;
+        if (exp >= 150) return 4;
+        if (exp >= 50) return 3;
+        if (exp >= 10) return 2;
+        return 1;
     }
 }

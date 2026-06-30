@@ -20,7 +20,7 @@ const PET_LEVELS = [
 export default function PetProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { totalPoints, exercisesTrained, getCurrentLevel, claimedMissions, claimMission } = usePetStore();
+  const { totalPoints, exercisesTrained, getCurrentLevel, claimedMissions, claimMission, checkinStreak, lastCheckinDate, performCheckin } = usePetStore();
   const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
   const [petData, setPetData] = useState({
@@ -31,6 +31,8 @@ export default function PetProfile() {
   });
 
   const [tasks, setTasks] = useState([]);
+  const [checkinDone, setCheckinDone] = useState(false);
+  const [checkinExpGained, setCheckinExpGained] = useState(0);
 
   // Modal States
   const [showEditName, setShowEditName] = useState(false);
@@ -101,11 +103,9 @@ export default function PetProfile() {
 
     setTasks(loadedTasks);
 
-    // Auto-claim login mission
-    if (!todayClaimed.includes('login')) {
-      claimMission('login', 10);
-    }
-  }, [totalPoints, exercisesTrained, claimedMissions]);
+    // Sync checkin state
+    setCheckinDone(lastCheckinDate === todayKey);
+  }, [totalPoints, exercisesTrained, claimedMissions, lastCheckinDate]);
 
   const currentLevelObj = PET_LEVELS.find(l => l.level === petData.level) || PET_LEVELS[0];
   const nextLevelObj = PET_LEVELS.find(l => l.minPoints > petData.total_exp);
@@ -113,6 +113,15 @@ export default function PetProfile() {
   // Progress Bar Width
   const maxExp = nextLevelObj ? nextLevelObj.minPoints : petData.total_exp;
   const progressPercent = Math.min((petData.total_exp / maxExp) * 100, 100);
+
+  const handleCheckin = async () => {
+    if (checkinDone) return;
+    const exp = await performCheckin();
+    if (exp !== null) {
+      setCheckinDone(true);
+      setCheckinExpGained(exp);
+    }
+  };
 
   const handleNameSave = () => {
     if (editNameValue.trim()) {
@@ -273,6 +282,83 @@ export default function PetProfile() {
                   💖 {t('pet_profile.donation')}
                 </button>
               </div>
+
+              {/* Check-in Card */}
+              <Card className={`border shadow-sm rounded-4 mb-4 ${isDark ? 'bg-dark text-white border-secondary' : 'bg-white text-dark'}`}>
+                <Card.Body className="p-4">
+                  {/* Header */}
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <div>
+                      <div style={{ fontSize: '0.7rem', color: '#adb5bd', letterSpacing: '1px', textTransform: 'uppercase' }}>Tiêu hao calo, tích lũy điểm số</div>
+                      <h5 className="fw-black mb-0" style={{ fontSize: '1.1rem' }}>ĐIỂM DANH & <span style={{ color: '#c8f000' }}>NHIỆM VỤ</span></h5>
+                    </div>
+                    <div className="fw-bold rounded-pill px-3 py-1" style={{ background: '#c8f000', color: '#000', fontSize: '0.85rem' }}>
+                      CHUỖI NGÀY: {checkinStreak || 0}
+                    </div>
+                  </div>
+
+                  {/* Weekly progress */}
+                  <div className={`rounded-3 p-3 mt-3 mb-3 ${isDark ? 'bg-black' : 'bg-light'}`}>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <span className="fw-bold" style={{ fontSize: '0.9rem' }}>Tiến độ tuần này</span>
+                      <span style={{ fontSize: '0.75rem', color: checkinDone ? '#c8f000' : '#adb5bd', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                        Trạng thái: {checkinDone ? 'Đã điểm danh' : 'Chưa điểm danh'}
+                      </span>
+                    </div>
+                    {(() => {
+                      const expPerDay = [10, 15, 20, 25, 30, 40, 100];
+                      const streak = checkinStreak || 0;
+                      const dayInCycle = streak === 0 ? 0 : ((streak - 1) % 7) + 1;
+                      return (
+                        <div className="d-flex justify-content-between align-items-start position-relative">
+                          <div className="position-absolute" style={{ top: '22px', left: '8%', right: '8%', height: '2px', background: isDark ? '#333' : '#dee2e6', zIndex: 0 }}></div>
+                          {expPerDay.map((exp, i) => {
+                            const day = i + 1;
+                            const done = day <= dayInCycle;
+                            const isCurrent = day === dayInCycle + 1 && !checkinDone;
+                            return (
+                              <div key={day} className="d-flex flex-column align-items-center z-1" style={{ width: '14%' }}>
+                                <div className="d-flex align-items-center justify-content-center rounded-circle fw-bold mb-1" style={{
+                                  width: '44px', height: '44px',
+                                  background: done ? '#c8f000' : (isCurrent ? 'rgba(200,240,0,0.15)' : (isDark ? '#222' : '#f8f9fa')),
+                                  border: done ? 'none' : `2px solid ${isCurrent ? '#c8f000' : (isDark ? '#444' : '#dee2e6')}`,
+                                  color: done ? '#000' : (isDark ? '#fff' : '#333'),
+                                  fontSize: done ? '1.1rem' : '0.9rem'
+                                }}>
+                                  {done ? '✓' : day}
+                                </div>
+                                <div style={{ fontSize: '0.65rem', color: '#adb5bd', textAlign: 'center' }}>NGÀY {day}</div>
+                                <div style={{ fontSize: '0.7rem', color: done ? '#c8f000' : '#adb5bd', fontWeight: 'bold' }}>+{exp} EXP</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {checkinExpGained > 0 && (
+                    <div className="text-center mb-2 fw-bold" style={{ color: '#c8f000', fontSize: '0.9rem' }}>
+                      +{checkinExpGained} EXP đã được cộng!
+                    </div>
+                  )}
+
+                  <button
+                    className="btn w-100 fw-bold py-3 rounded-3"
+                    style={{
+                      background: checkinDone ? (isDark ? '#333' : '#e9ecef') : '#c8f000',
+                      color: checkinDone ? '#adb5bd' : '#000',
+                      border: 'none',
+                      cursor: checkinDone ? 'not-allowed' : 'pointer',
+                      letterSpacing: '1px'
+                    }}
+                    disabled={checkinDone}
+                    onClick={handleCheckin}
+                  >
+                    {checkinDone ? 'ĐÃ HOÀN THÀNH ĐIỂM DANH HÔM NAY' : 'ĐIỂM DANH NGAY'}
+                  </button>
+                </Card.Body>
+              </Card>
 
               {/* Task Card */}
               <Card className={`border shadow-sm rounded-4 mb-4 ${isDark ? 'bg-dark text-white border-secondary' : 'bg-white text-dark'}`} style={{ transition: 'all 0.3s ease' }}
