@@ -213,7 +213,9 @@ const usePetStore = create((set, get) => ({
       }
 
       const newTotalPoints = state.totalPoints + expGained;
+      // Giữ nguyên toàn bộ state (claimedMissions, checkinStreak, lastCheckinDate...) để không bị mất sau refresh
       const newState = {
+        ...state,
         totalPoints: newTotalPoints,
         pointsEarnedToday: currentPointsToday + expGained,
         exercisesTrained,
