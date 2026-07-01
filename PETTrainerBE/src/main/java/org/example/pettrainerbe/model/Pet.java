@@ -27,4 +27,14 @@ public class Pet {
     private LocalDateTime lastUpdated;
     private Integer checkinStreak;
     private LocalDate lastCheckinDate;
+
+    // Trạng thái nhiệm vụ hằng ngày (đồng bộ giữa các trình duyệt)
+    private String petDailyDate;          // Ngày áp dụng "YYYY-MM-DD"
+    private Integer pointsEarnedToday;    // EXP đã nhận trong ngày (giới hạn 300)
+
+    @Column(columnDefinition = "TEXT")
+    private String exercisesTrained;      // JSON mảng tên bài đã tập hôm nay
+
+    @Column(columnDefinition = "TEXT")
+    private String claimedMissions;       // JSON mảng id nhiệm vụ đã nhận hôm nay
 }

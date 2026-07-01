@@ -14,4 +14,8 @@ public class PetDTO {
     private Integer userId;
     private Integer checkinStreak;
     private String lastCheckinDate;
+    private String petDailyDate;
+    private Integer pointsEarnedToday;
+    private String exercisesTrained;
+    private String claimedMissions;
 }

@@ -78,6 +78,10 @@ public class PetController {
                         String dateStr = (String) body.get("last_checkin_date");
                         pet.setLastCheckinDate(dateStr != null ? java.time.LocalDate.parse(dateStr) : null);
                     }
+                    if (body.containsKey("pet_daily_date")) pet.setPetDailyDate((String) body.get("pet_daily_date"));
+                    if (body.containsKey("points_earned_today")) pet.setPointsEarnedToday((Integer) body.get("points_earned_today"));
+                    if (body.containsKey("exercises_trained")) pet.setExercisesTrained((String) body.get("exercises_trained"));
+                    if (body.containsKey("claimed_missions")) pet.setClaimedMissions((String) body.get("claimed_missions"));
                     return ResponseEntity.ok(convertToDTO(petRepository.save(pet)));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -103,6 +107,10 @@ public class PetController {
         dto.setLastUpdated(pet.getLastUpdated());
         dto.setCheckinStreak(pet.getCheckinStreak() == null ? 0 : pet.getCheckinStreak());
         dto.setLastCheckinDate(pet.getLastCheckinDate() != null ? pet.getLastCheckinDate().toString() : null);
+        dto.setPetDailyDate(pet.getPetDailyDate());
+        dto.setPointsEarnedToday(pet.getPointsEarnedToday() == null ? 0 : pet.getPointsEarnedToday());
+        dto.setExercisesTrained(pet.getExercisesTrained());
+        dto.setClaimedMissions(pet.getClaimedMissions());
         if (pet.getUser() != null) {
             dto.setUserId(pet.getUser().getUserId());
         }

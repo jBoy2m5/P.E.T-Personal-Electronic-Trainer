@@ -37,6 +37,18 @@ const calcLevel = (totalPoints) => {
   return current.level;
 };
 
+const parseJsonArray = (s) => {
+  try { return s ? JSON.parse(s) : []; } catch { return []; }
+};
+
+// Ảnh chụp trạng thái nhiệm vụ hằng ngày để gửi lên server (nguồn dữ liệu chính)
+const dailyPayload = (state, todayStr) => ({
+  pet_daily_date: todayStr,
+  points_earned_today: state.pointsEarnedToday || 0,
+  exercises_trained: JSON.stringify(state.exercisesTrained || []),
+  claimed_missions: JSON.stringify(state.claimedMissions?.[todayStr] || []),
+});
+
 const getInitialState = () => {
   const userId = getUserId();
   const key = getPetKey(userId);
@@ -68,14 +80,14 @@ const usePetStore = create((set, get) => ({
     try {
       const pet = await axiosClient.get(`/pets/user/${userId}`);
       const totalPoints = pet.total_exp || 0;
-      const existing = JSON.parse(localStorage.getItem(key) || '{}');
-      const needsReset = existing.date !== todayStr;
+      // Nguồn chính là server. Trạng thái nhiệm vụ chỉ áp dụng nếu là của hôm nay
+      const sameDay = pet.pet_daily_date === todayStr;
       const newState = {
         totalPoints,
         petId: pet.pet_id,
-        pointsEarnedToday: needsReset ? 0 : (existing.pointsEarnedToday || 0),
-        exercisesTrained: needsReset ? [] : (existing.exercisesTrained || []),
-        claimedMissions: existing.claimedMissions || {},
+        pointsEarnedToday: sameDay ? (pet.points_earned_today || 0) : 0,
+        exercisesTrained: sameDay ? parseJsonArray(pet.exercises_trained) : [],
+        claimedMissions: { [todayStr]: sameDay ? parseJsonArray(pet.claimed_missions) : [] },
         checkinStreak: pet.checkin_streak || 0,
         lastCheckinDate: pet.last_checkin_date || null,
         date: todayStr
@@ -182,7 +194,8 @@ const usePetStore = create((set, get) => ({
       if (state.petId) {
         axiosClient.put(`/pets/${state.petId}`, {
           total_exp: newTotalPoints,
-          level: calcLevel(newTotalPoints)
+          level: calcLevel(newTotalPoints),
+          ...dailyPayload(newState, todayStr)
         }).catch(() => {});
       }
 
@@ -225,11 +238,12 @@ const usePetStore = create((set, get) => ({
 
       localStorage.setItem(key, JSON.stringify(newState));
 
-      // Sync to backend
+      // Sync to backend (nguồn dữ liệu chính)
       if (state.petId) {
         axiosClient.put(`/pets/${state.petId}`, {
           total_exp: newTotalPoints,
-          level: calcLevel(newTotalPoints)
+          level: calcLevel(newTotalPoints),
+          ...dailyPayload(newState, todayStr)
         }).catch(() => {});
       }
 
