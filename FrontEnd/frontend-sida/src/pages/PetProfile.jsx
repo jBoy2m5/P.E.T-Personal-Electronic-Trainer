@@ -82,24 +82,12 @@ export default function PetProfile() {
 
     const todayClaimed = claimedMissions?.[todayKey] || [];
 
-    let loadedTasks = [
+    // Chỉ giữ 3 nhiệm vụ cố định, không sinh thêm nhiệm vụ theo từng bài tập
+    const loadedTasks = [
       { id: 'login', name: t('pet_profile.task_login'), expReward: 10, completed: true, claimed: todayClaimed.includes('login') },
       { id: 'exercise_1', name: t('pet_profile.task_complete_1'), expReward: 20, completed: trainedArray.length > 0, claimed: todayClaimed.includes('exercise_1') },
       { id: 'exercise_3', name: t('pet_profile.task_complete_3'), expReward: 50, completed: trainedArray.length >= 3, claimed: todayClaimed.includes('exercise_3') }
     ];
-
-    if (trainedArray.length > 0) {
-      trainedArray.slice(0, 2).forEach((ex) => {
-        const id = `ex_${ex}`;
-        loadedTasks.push({
-          id,
-          name: t('pet_profile.task_complete_ex', { ex }),
-          expReward: 15,
-          completed: true,
-          claimed: todayClaimed.includes(id)
-        });
-      });
-    }
 
     setTasks(loadedTasks);
 
