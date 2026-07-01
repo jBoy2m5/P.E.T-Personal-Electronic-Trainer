@@ -350,7 +350,11 @@ export default function DailyWorkout() {
             start_time: toLocalISOString(new Date(startMs)),
             end_time: toLocalISOString(new Date()),
             total_calories_burned: kcal,
-            total_valid_reps: targetReps * targetSets
+            total_valid_reps: targetReps * targetSets,
+            workout_details: currentExercise.exercise_id ? [{
+                reps_completed: targetReps * targetSets,
+                exercise: { exercise_id: currentExercise.exercise_id }
+            }] : []
         }).catch(err => console.error('Could not save workout session:', err));
 
         setSummaryData({
@@ -414,7 +418,11 @@ export default function DailyWorkout() {
                             start_time: new Date(Date.now() - 60000).toISOString().slice(0, 19),
                             end_time: new Date().toISOString().slice(0, 19),
                             total_calories_burned: sessionCalories,
-                            total_valid_reps: targetReps * targetSets
+                            total_valid_reps: targetReps * targetSets,
+                            workout_details: currentExercise.exercise_id ? [{
+                                reps_completed: targetReps * targetSets,
+                                exercise: { exercise_id: currentExercise.exercise_id }
+                            }] : []
                         };
                         axiosClient.post('/workout-sessions', sessionData)
                             .catch(err => console.error('Could not save workout session:', err));

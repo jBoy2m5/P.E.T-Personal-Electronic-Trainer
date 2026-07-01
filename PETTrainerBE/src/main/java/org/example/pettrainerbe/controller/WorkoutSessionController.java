@@ -4,8 +4,11 @@ import org.example.pettrainerbe.dto.ErrorLogDTO;
 import org.example.pettrainerbe.dto.ExerciseDTO;
 import org.example.pettrainerbe.dto.WorkoutDetailDTO;
 import org.example.pettrainerbe.dto.WorkoutSessionDTO;
+import org.example.pettrainerbe.model.Exercise;
 import org.example.pettrainerbe.model.User;
+import org.example.pettrainerbe.model.WorkoutDetail;
 import org.example.pettrainerbe.model.WorkoutSession;
+import org.example.pettrainerbe.repository.ExerciseRepository;
 import org.example.pettrainerbe.repository.UserRepository;
 import org.example.pettrainerbe.repository.WorkoutSessionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +17,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,11 +33,31 @@ public class WorkoutSessionController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ExerciseRepository exerciseRepository;
+
     @GetMapping
     public List<WorkoutSessionDTO> getAllSessions() {
         return workoutSessionRepository.findAll().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    @GetMapping("/today")
+    public ResponseEntity<List<WorkoutSessionDTO>> getTodaySessions() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+        List<WorkoutSessionDTO> sessions = workoutSessionRepository
+                .findByUser_UserIdAndStartTimeBetween(user.getUserId(), startOfDay, endOfDay)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(sessions);
     }
 
     @GetMapping("/{id}")
@@ -49,6 +75,24 @@ public class WorkoutSessionController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         session.setUser(user);
+
+        if (session.getWorkoutDetails() != null) {
+            List<WorkoutDetail> validDetails = new ArrayList<>();
+            for (WorkoutDetail detail : session.getWorkoutDetails()) {
+                if (detail.getExercise() == null || detail.getExercise().getExerciseId() == null) {
+                    continue;
+                }
+                Exercise exercise = exerciseRepository.findById(detail.getExercise().getExerciseId()).orElse(null);
+                if (exercise == null) {
+                    continue;
+                }
+                detail.setExercise(exercise);
+                detail.setWorkoutSession(session);
+                validDetails.add(detail);
+            }
+            session.setWorkoutDetails(validDetails);
+        }
+
         WorkoutSession savedSession = workoutSessionRepository.save(session);
         return ResponseEntity.ok(convertToDTO(savedSession));
     }

@@ -81,7 +81,8 @@
     "no_data": "Chưa có dữ liệu bài tập hôm nay.",
     "start_workout": "Hãy bắt đầu tập luyện để AI ghi nhận!",
     "mins": "phút",
-    "anonymous_exercise": "Bài tập ẩn danh"
+    "anonymous_exercise": "Bài tập ẩn danh",
+    "workout_session": "Buổi tập"
   },
   "pet_profile": {
     "hello_ai": "Chào đằng ấy! Cần mình tư vấn gì về lịch tập hay dinh dưỡng không?",

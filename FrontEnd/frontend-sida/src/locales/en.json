@@ -81,7 +81,8 @@
     "no_data": "No workout data for today.",
     "start_workout": "Start working out to let AI track it!",
     "mins": "mins",
-    "anonymous_exercise": "Anonymous Exercise"
+    "anonymous_exercise": "Anonymous Exercise",
+    "workout_session": "Workout session"
   },
   "pet_profile": {
     "hello_ai": "Hey there! Do you need advice on workouts or nutrition?",

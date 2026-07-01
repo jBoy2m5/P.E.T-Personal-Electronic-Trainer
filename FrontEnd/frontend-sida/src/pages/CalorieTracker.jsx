@@ -2,27 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Card, Row, Col, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-
-// Dữ liệu mock mapping để lấy thông tin bài tập từ exercise_id
-const exerciseMockDB = {
-    101: { name: 'Hít đất cơ bản', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600' },
-    102: { name: 'Hít đất hẹp tay', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600' },
-    103: { name: 'Đẩy ngực với tạ đơn', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600' },
-    201: { name: 'Hít xà đơn', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600' },
-    202: { name: 'Kéo lưng với dây kháng lực', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600' },
-    301: { name: 'Đẩy vai tạ đơn', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600' },
-    302: { name: 'Nâng vai ngang', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600' },
-    401: { name: 'Cuốn tạ đơn', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600' },
-    402: { name: 'Đẩy tay sau', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600' },
-    501: { name: 'Gập bụng', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600' },
-    502: { name: 'Plank', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600' },
-    601: { name: 'Squat cơ bản', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600' },
-    602: { name: 'Lunge (Chùng chân)', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600' },
-    701: { name: 'Glute Bridge', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600' },
-    702: { name: 'Kickback', img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600' },
-    801: { name: 'Handstand', img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600' },
-    802: { name: 'Muscle-up', img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600' }
-};
+import axiosClient from '../api/axiosClient';
 
 export default function CalorieTracker() {
     const navigate = useNavigate();
@@ -30,7 +10,6 @@ export default function CalorieTracker() {
     const [burnedCalories, setBurnedCalories] = useState(0);
     const [displayCalories, setDisplayCalories] = useState(0);
     const [todaySessions, setTodaySessions] = useState([]);
-    const [todayDetails, setTodayDetails] = useState([]);
     const [animateChart, setAnimateChart] = useState(false);
     const [isDark, setIsDark] = useState(true);
 
@@ -45,25 +24,14 @@ export default function CalorieTracker() {
     }, []);
 
     useEffect(() => {
-        const loadCaloriesData = () => {
-            const todayStr = new Date().toISOString().split('T')[0];
-
-            // Load Sessions
-            const sessionsStr = localStorage.getItem('workout-sessions');
-            let sessions = [];
-            if (sessionsStr) {
-                sessions = JSON.parse(sessionsStr).filter(s => s.start_time.startsWith(todayStr));
-                const todayBurn = sessions.reduce((sum, s) => sum + (s.total_calories_burned || 0), 0);
+        const loadCaloriesData = async () => {
+            try {
+                const sessions = await axiosClient.get('/workout-sessions/today');
+                const todayBurn = (sessions || []).reduce((sum, s) => sum + (s.total_calories_burned || 0), 0);
                 setBurnedCalories(Math.round(todayBurn));
-                setTodaySessions(sessions);
-            }
-
-            // Load Details
-            const detailsStr = localStorage.getItem('workout-details');
-            if (detailsStr) {
-                const sessionIds = sessions.map(s => s.session_id);
-                const details = JSON.parse(detailsStr).filter(d => sessionIds.includes(d.session_id));
-                setTodayDetails(details);
+                setTodaySessions(sessions || []);
+            } catch (err) {
+                console.error('Không thể tải dữ liệu calo hôm nay:', err);
             }
         };
 
@@ -162,7 +130,7 @@ export default function CalorieTracker() {
                         <Card className="bg-surface-card border-surface p-4 h-100" style={{ borderRadius: '32px' }}>
                             <h5 className="text-primary-dynamic fw-bold mb-4" style={{ fontSize: '1.1rem' }}>{t('calorie_tracker.details')}</h5>
 
-                            {todayDetails.length === 0 ? (
+                            {todaySessions.length === 0 ? (
                                 <div className="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
                                     <div className="fs-1 mb-2">😴</div>
                                     <p className="mb-0">{t('calorie_tracker.no_data')}</p>
@@ -170,38 +138,39 @@ export default function CalorieTracker() {
                                 </div>
                             ) : (
                                 <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '10px' }} className="custom-scroll">
-                                    {todayDetails.map((detail, index) => {
-                                        // Tìm session tương ứng để lấy calo của bài đó
-                                        const parentSession = todaySessions.find(s => s.session_id === detail.session_id);
-                                        const exData = exerciseMockDB[detail.exercise_id] || { name: t('calorie_tracker.anonymous_exercise'), img: '' };
-                                        
-                                        // Thời gian tập (mô phỏng từ start/end time của session)
+                                    {todaySessions.map((session, index) => {
+                                        // Thời gian tập lấy từ start/end time của session
                                         let durationStr = `1 ${t('calorie_tracker.mins')}`;
-                                        if (parentSession && parentSession.start_time && parentSession.end_time) {
-                                            const start = new Date(parentSession.start_time);
-                                            const end = new Date(parentSession.end_time);
+                                        if (session.start_time && session.end_time) {
+                                            const start = new Date(session.start_time);
+                                            const end = new Date(session.end_time);
                                             const diffMs = end - start;
                                             const diffMins = Math.max(1, Math.round(diffMs / 60000));
                                             durationStr = `${diffMins} ${t('calorie_tracker.mins')}`;
                                         }
 
+                                        // Bài tập thật lấy từ workout_details (nếu session có gắn exercise)
+                                        const exercise = session.workout_details?.[0]?.exercise;
+
                                         return (
-                                            <div key={index} className="d-flex align-items-center p-3 mb-3 rounded-4 border-surface" style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.03))', border: '1px solid', transition: 'all 0.3s ease', animationDelay: `${index * 0.1}s`, animation: 'fadeSlideIn 0.4s ease forwards' }}
+                                            <div key={session.session_id ?? index} className="d-flex align-items-center p-3 mb-3 rounded-4 border-surface" style={{ background: 'var(--bs-tertiary-bg, rgba(255,255,255,0.03))', border: '1px solid', transition: 'all 0.3s ease', animationDelay: `${index * 0.1}s`, animation: 'fadeSlideIn 0.4s ease forwards' }}
                                                 onMouseOver={e => { e.currentTarget.style.transform = 'translateX(6px)'; e.currentTarget.style.borderColor = 'rgba(var(--brand-neon-rgb),0.2)'; }}
                                                 onMouseOut={e => { e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.borderColor = ''; }}
                                             >
-                                                <div style={{ width: '60px', height: '60px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }} className="me-3">
-                                                    <img src={exData.img} alt="ex" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <div style={{ width: '60px', height: '60px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0 }} className="me-3 d-flex align-items-center justify-content-center fs-3">
+                                                    {exercise?.media_url ? (
+                                                        <img src={exercise.media_url} alt={exercise.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : '🏋️'}
                                                 </div>
                                                 <div className="flex-grow-1">
-                                                    <div className="fw-bold text-primary-dynamic mb-1">{exData.name}</div>
+                                                    <div className="fw-bold text-primary-dynamic mb-1">{exercise?.name || t('calorie_tracker.workout_session')}</div>
                                                     <div className="d-flex gap-3 text-muted small">
                                                         <span>⏱ {durationStr}</span>
-                                                        <span>🔄 {detail.reps_completed} Reps</span>
+                                                        <span>🔄 {session.total_valid_reps} Reps</span>
                                                     </div>
                                                 </div>
                                                 <div className="text-end ms-2">
-                                                    <div className="fw-bold text-neon fs-5">+{parentSession?.total_calories_burned || 0}</div>
+                                                    <div className="fw-bold text-neon fs-5">+{session.total_calories_burned || 0}</div>
                                                     <div className="text-muted" style={{ fontSize: '0.7rem' }}>KCAL</div>
                                                 </div>
                                             </div>
