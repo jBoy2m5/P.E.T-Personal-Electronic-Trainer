@@ -60,6 +60,21 @@ public class WorkoutSessionController {
         return ResponseEntity.ok(sessions);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<List<WorkoutSessionDTO>> getMySessions() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        List<WorkoutSessionDTO> sessions = workoutSessionRepository
+                .findByUser_UserId(user.getUserId())
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(sessions);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<WorkoutSessionDTO> getSessionById(@PathVariable Integer id) {
         return workoutSessionRepository.findById(id)

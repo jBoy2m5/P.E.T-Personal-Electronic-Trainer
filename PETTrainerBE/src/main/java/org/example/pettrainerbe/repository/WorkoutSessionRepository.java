@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, Integer> {
     List<WorkoutSession> findByUser_UserIdAndStartTimeBetween(Integer userId, LocalDateTime start, LocalDateTime end);
+    List<WorkoutSession> findByUser_UserId(Integer userId);
 }

@@ -28,33 +28,22 @@ export default function Daily() {
 
   const [actualCompletedToday, setActualCompletedToday] = useState([]);
 
-  // Trạng thái điểm danh lấy từ DB server qua usePetStore (đồng bộ giữa các trình duyệt)
+  // Điểm danh + nhiệm vụ đã nhận lấy từ DB server qua usePetStore (đồng bộ giữa các trình duyệt)
   const checkinStreak = usePetStore((s) => s.checkinStreak);
   const lastCheckinDate = usePetStore((s) => s.lastCheckinDate);
   const syncFromBackend = usePetStore((s) => s.syncFromBackend);
   const performCheckin = usePetStore((s) => s.performCheckin);
-
-  const [dailyData, setDailyData] = useState(() => {
-    const saved = localStorage.getItem('pet-daily');
-    const defaultData = {
-      totalPoints: 0,
-      checkinStreak: 0,
-      lastCheckinDate: null,
-      claimedMissions: {},
-      checkinHistory: [],
-    };
-    if (!saved) return defaultData;
-    const parsed = JSON.parse(saved);
-    return { ...defaultData, ...parsed, claimedMissions: parsed.claimedMissions || {}, checkinHistory: parsed.checkinHistory || [] };
-  });
+  const claimedMissions = usePetStore((s) => s.claimedMissions);
+  const claimMission = usePetStore((s) => s.claimMission);
 
   const todayKey = getTodayKey();
   const todayMissions = getDailyMissions(todayKey);
-  const claimedToday = dailyData.claimedMissions[todayKey] || [];
+  const claimedToday = claimedMissions?.[todayKey] || [];
   // Đã điểm danh hôm nay hay chưa được xác định bằng dữ liệu trên DB server
   const hasCheckedInToday = lastCheckinDate === todayKey;
 
   useEffect(() => {
+    // Bài đã tập hôm nay đọc từ pet-schedule (khớp tên nhiệm vụ theo lộ trình)
     const syncSchedule = () => {
       const scheduleSaved = localStorage.getItem('pet-schedule');
       if (scheduleSaved) {
@@ -71,12 +60,6 @@ export default function Daily() {
 
   // Tải trạng thái điểm danh mới nhất từ DB server khi mở trang
   useEffect(() => { syncFromBackend(); }, [syncFromBackend]);
-
-  const saveData = (newData) => {
-    setDailyData(newData);
-    localStorage.setItem('pet-daily', JSON.stringify(newData));
-    window.dispatchEvent(new Event('storage'));
-  };
 
   const handleCheckin = async () => {
     if (hasCheckedInToday) return;
@@ -120,17 +103,9 @@ export default function Daily() {
     if (claimedToday.includes(mission.id)) return;
     if (!actualCompletedToday.includes(mission.title)) return;
 
-    const newClaimed = { ...dailyData.claimedMissions };
-    newClaimed[todayKey] = [...claimedToday, mission.id];
+    // Nhận thưởng nhiệm vụ và lưu lên server (claimedMissions + EXP)
+    claimMission(mission.id, mission.points);
 
-    const newData = {
-      ...dailyData,
-      totalPoints: dailyData.totalPoints + mission.points,
-      claimedMissions: newClaimed,
-    };
-
-    saveData(newData);
-    
     confetti({
       particleCount: 50,
       spread: 60,

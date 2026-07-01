@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Modal, Button, Form } from 'react-bootstrap';
 
 import { useTranslation } from 'react-i18next';
+import useScheduleStore from '../store/useScheduleStore';
 
 export default function Schedule() {
   const { t } = useTranslation();
@@ -16,11 +17,10 @@ export default function Schedule() {
     'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
   ];
 
-  // State lưu dữ liệu ngày tập & ghi chú (đọc từ localStorage - được ExerciseList tự động ghi vào)
-  const [scheduleData, setScheduleData] = useState(() => {
-    const saved = localStorage.getItem('pet-schedule');
-    return saved ? JSON.parse(saved) : {};
-  });
+  // Dữ liệu ngày tập & ghi chú lấy từ server (workout-sessions + schedule-notes)
+  const scheduleData = useScheduleStore((s) => s.scheduleData);
+  const loadSchedule = useScheduleStore((s) => s.loadSchedule);
+  const saveNote = useScheduleStore((s) => s.saveNote);
 
   // Modal state (chỉ dùng để xem chi tiết + thêm ghi chú)
   const [showModal, setShowModal] = useState(false);
@@ -32,28 +32,11 @@ export default function Schedule() {
 
   useEffect(() => {
     setAnimateIn(true);
-  }, []);
-
-  // Lắng nghe thay đổi từ localStorage (khi ExerciseList ghi vào)
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem('pet-schedule');
-      if (saved) setScheduleData(JSON.parse(saved));
-    };
-    window.addEventListener('storage', handleStorageChange);
-    // Cũng poll mỗi 2 giây để bắt thay đổi cùng tab
-    const interval = setInterval(() => {
-      const saved = localStorage.getItem('pet-schedule');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setScheduleData(prev => {
-          if (JSON.stringify(prev) !== JSON.stringify(parsed)) return parsed;
-          return prev;
-        });
-      }
-    }, 2000);
-    return () => { window.removeEventListener('storage', handleStorageChange); clearInterval(interval); };
-  }, []);
+    loadSchedule();
+    const onStorage = () => loadSchedule();
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [loadSchedule]);
 
   // Helpers
   const getDateKey = (year, month, day) => {
@@ -90,21 +73,9 @@ export default function Schedule() {
     setShowModal(true);
   };
 
-  // Lưu ghi chú (chỉ ghi chú, không thay đổi trained status)
-  const handleSaveNote = () => {
-    const updated = { ...scheduleData };
-    const existing = updated[selectedDate.key] || {};
-    if (noteText.trim()) {
-      updated[selectedDate.key] = { ...existing, note: noteText.trim() };
-    } else if (!existing.trained) {
-      // Nếu không có ghi chú và chưa tập → xóa luôn
-      delete updated[selectedDate.key];
-    } else {
-      // Có trained nhưng xóa ghi chú
-      updated[selectedDate.key] = { ...existing, note: '' };
-    }
-    setScheduleData(updated);
-    localStorage.setItem('pet-schedule', JSON.stringify(updated));
+  // Lưu ghi chú lên server (chỉ ghi chú, không thay đổi trained status)
+  const handleSaveNote = async () => {
+    await saveNote(selectedDate.key, noteText);
     setShowModal(false);
   };
 
