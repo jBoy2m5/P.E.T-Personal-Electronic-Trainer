@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Badge, Button, Modal, ProgressBar } from 're
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getMuscleGroupById } from '../api/exerciseApi';
+import axiosClient from '../api/axiosClient';
 import confetti from 'canvas-confetti';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
@@ -29,6 +30,30 @@ const markDayAsTrained = () => {
     
     // Đẩy event để component Daily cập nhật ngay lập tức nếu cần
     window.dispatchEvent(new Event('storage'));
+};
+
+// Định dạng thời gian (bỏ 'Z') để backend parse LocalDateTime; khớp cách DailyWorkout & filter /today theo ngày UTC
+const toLocalISOString = (date) => date.toISOString().slice(0, 19);
+
+// Lưu buổi tập lên DB để trang Quản lý calo (đọc /workout-sessions/today) hiển thị được
+const saveSessionToBackend = async (exercise, totalReps, kcal) => {
+    try {
+        const now = new Date();
+        const start = new Date(now.getTime() - 60000);
+        await axiosClient.post('/workout-sessions', {
+            start_time: toLocalISOString(start),
+            end_time: toLocalISOString(now),
+            total_calories_burned: kcal,
+            total_valid_reps: totalReps,
+            workout_details: exercise?.exercise_id
+                ? [{ exercise: { exercise_id: exercise.exercise_id }, reps_completed: totalReps }]
+                : []
+        });
+        // Báo cho CalorieTracker tải lại dữ liệu hôm nay từ DB
+        window.dispatchEvent(new Event('storage'));
+    } catch (err) {
+        console.error('Không thể lưu buổi tập lên server:', err);
+    }
 };
 
 export default function ExerciseList() {
@@ -220,6 +245,9 @@ export default function ExerciseList() {
         const kcalPerRep = currentExercise.kcalPerRep || currentExercise.estimated_calories_per_rep || 1;
         const kcal = Math.round(kcalPerRep * targetReps * targetSets);
         let expGained = Math.max(1, Math.round(kcal * 0.1));
+
+        // Lưu buổi tập lên DB để hiển thị ở trang Quản lý calo
+        saveSessionToBackend(currentExercise, targetReps * targetSets, kcal);
         
         // Giới hạn điểm mỗi ngày (300 EXP)
         const dailySaved = localStorage.getItem('pet-daily');
@@ -310,6 +338,8 @@ export default function ExerciseList() {
                             total_calories_burned: Math.round((currentExercise.kcalPerRep || currentExercise.estimated_calories_per_rep || 1) * targetReps * targetSets),
                             total_valid_reps: targetReps * targetSets
                         };
+                        // Lưu buổi tập lên DB để hiển thị ở trang Quản lý calo
+                        saveSessionToBackend(currentExercise, sessionData.total_valid_reps, sessionData.total_calories_burned);
                         const savedSessions = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
                         savedSessions.push(sessionData);
                         localStorage.setItem('workout-sessions', JSON.stringify(savedSessions));
