@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import { useTranslation } from 'react-i18next';
 
 import { ALL_MISSIONS, getTodayKey, getDailyMissions } from '../services/rewards';
+import usePetStore from '../store/usePetStore';
 
 const CHECKIN_REWARDS = [
   { day: 1, points: 10 },
@@ -23,8 +24,15 @@ export default function Daily() {
   const { t } = useTranslation();
   const [animateIn, setAnimateIn] = useState(false);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
-  
+  const [checkinReward, setCheckinReward] = useState(0);
+
   const [actualCompletedToday, setActualCompletedToday] = useState([]);
+
+  // Trạng thái điểm danh lấy từ DB server qua usePetStore (đồng bộ giữa các trình duyệt)
+  const checkinStreak = usePetStore((s) => s.checkinStreak);
+  const lastCheckinDate = usePetStore((s) => s.lastCheckinDate);
+  const syncFromBackend = usePetStore((s) => s.syncFromBackend);
+  const performCheckin = usePetStore((s) => s.performCheckin);
 
   const [dailyData, setDailyData] = useState(() => {
     const saved = localStorage.getItem('pet-daily');
@@ -43,7 +51,8 @@ export default function Daily() {
   const todayKey = getTodayKey();
   const todayMissions = getDailyMissions(todayKey);
   const claimedToday = dailyData.claimedMissions[todayKey] || [];
-  const hasCheckedInToday = dailyData.checkinHistory.includes(todayKey);
+  // Đã điểm danh hôm nay hay chưa được xác định bằng dữ liệu trên DB server
+  const hasCheckedInToday = lastCheckinDate === todayKey;
 
   useEffect(() => {
     const syncSchedule = () => {
@@ -60,33 +69,23 @@ export default function Daily() {
 
   useEffect(() => { setAnimateIn(true); }, []);
 
+  // Tải trạng thái điểm danh mới nhất từ DB server khi mở trang
+  useEffect(() => { syncFromBackend(); }, [syncFromBackend]);
+
   const saveData = (newData) => {
     setDailyData(newData);
     localStorage.setItem('pet-daily', JSON.stringify(newData));
     window.dispatchEvent(new Event('storage'));
   };
 
-  const handleCheckin = () => {
+  const handleCheckin = async () => {
     if (hasCheckedInToday) return;
 
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    // Ghi điểm danh lên DB server; trả về EXP nhận được (hoặc null nếu lỗi/chưa có pet)
+    const expGained = await performCheckin();
+    if (expGained === null || expGained === undefined) return;
 
-    const isConsecutive = dailyData.lastCheckinDate === yesterdayKey;
-    const newStreak = isConsecutive ? dailyData.checkinStreak + 1 : 1;
-    const rewardDay = Math.max(0, newStreak - 1) % 7;
-    const rewardPoints = CHECKIN_REWARDS[rewardDay].points;
-
-    const newData = {
-      ...dailyData,
-      totalPoints: dailyData.totalPoints + rewardPoints,
-      checkinStreak: newStreak,
-      lastCheckinDate: todayKey,
-      checkinHistory: [...dailyData.checkinHistory, todayKey],
-    };
-
-    saveData(newData);
+    setCheckinReward(expGained);
     setShowCheckinModal(true);
 
     const duration = 2000;
@@ -164,7 +163,7 @@ export default function Daily() {
             </div>
             <div className="mt-4 mt-md-0">
               <div className="gym-streak-badge">
-                {t('daily.streak')} <span className="fw-black" style={{ color: '#000', fontSize: '1.2rem', marginLeft: '5px' }}>{dailyData.checkinStreak}</span>
+                {t('daily.streak')} <span className="fw-black" style={{ color: '#000', fontSize: '1.2rem', marginLeft: '5px' }}>{checkinStreak}</span>
               </div>
             </div>
           </div>
@@ -187,8 +186,8 @@ export default function Daily() {
                 <div className="gym-track-line border-surface"></div>
                 
                 {CHECKIN_REWARDS.map((reward, idx) => {
-                  const isClaimed = hasCheckedInToday ? idx < ((dailyData.checkinStreak - 1) % 7 + 1) : idx < (dailyData.checkinStreak % 7);
-                  const isCurrentDay = !hasCheckedInToday && idx === (dailyData.checkinStreak % 7);
+                  const isClaimed = hasCheckedInToday ? idx < ((checkinStreak - 1) % 7 + 1) : idx < (checkinStreak % 7);
+                  const isCurrentDay = !hasCheckedInToday && idx === (checkinStreak % 7);
 
                   return (
                     <div key={idx} className="text-center" style={{ position: 'relative', zIndex: 1, minWidth: '70px', flex: '1' }}>
@@ -286,7 +285,7 @@ export default function Daily() {
           </div>
           <h3 className="fw-black text-primary-dynamic mb-2 text-uppercase">{t('daily.success_title')}</h3>
           <div className="fw-black mb-4" style={{ color: 'var(--brand-neon)', fontSize: '2.5rem' }}>
-            +{CHECKIN_REWARDS[Math.max(0, dailyData.checkinStreak - 1) % 7].points} EXP
+            +{checkinReward} EXP
           </div>
           <button className="gym-btn w-100 py-3" onClick={() => setShowCheckinModal(false)}>
             {t('daily.awesome')}
