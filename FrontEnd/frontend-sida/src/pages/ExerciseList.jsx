@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getMuscleGroupById } from '../api/exerciseApi';
 import axiosClient from '../api/axiosClient';
+import usePetStore from '../store/usePetStore';
 import confetti from 'canvas-confetti';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
@@ -60,6 +61,7 @@ export default function ExerciseList() {
     const navigate = useNavigate();
     const { id } = useParams();
     const { t } = useTranslation();
+    const addExp = usePetStore((s) => s.addExp);
 
     const [groupData, setGroupData] = useState({ name: '', desc: '', exercises: [] });
     const [loading, setLoading] = useState(true);
@@ -244,25 +246,12 @@ export default function ExerciseList() {
         
         const kcalPerRep = currentExercise.kcalPerRep || currentExercise.estimated_calories_per_rep || 1;
         const kcal = Math.round(kcalPerRep * targetReps * targetSets);
-        let expGained = Math.max(1, Math.round(kcal * 0.1));
 
         // Lưu buổi tập lên DB để hiển thị ở trang Quản lý calo
         saveSessionToBackend(currentExercise, targetReps * targetSets, kcal);
-        
-        // Giới hạn điểm mỗi ngày (300 EXP)
-        const dailySaved = localStorage.getItem('pet-daily');
-        const dailyParsed = dailySaved ? JSON.parse(dailySaved) : { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: getTodayKey() };
-        
-        const todayStr = getTodayKey();
-        if (dailyParsed.date !== todayStr) {
-            dailyParsed.date = todayStr;
-            dailyParsed.pointsEarnedToday = 0;
-        }
-        
-        const MAX_DAILY_EXP = 300;
-        if (dailyParsed.pointsEarnedToday + expGained > MAX_DAILY_EXP) {
-            expGained = Math.max(0, MAX_DAILY_EXP - dailyParsed.pointsEarnedToday);
-        }
+
+        // Cộng EXP + ghi nhận bài đã tập qua store (cập nhật nhiệm vụ thú cưng & sync backend)
+        const result = addExp(kcal, currentExercise.name);
 
         setSummaryData({
             exerciseName: currentExercise.name,
@@ -270,19 +259,9 @@ export default function ExerciseList() {
             reps: targetReps,
             sets: targetSets,
             kcal: kcal,
-            exp: expGained,
-            isCapped: dailyParsed.pointsEarnedToday + expGained >= MAX_DAILY_EXP
+            exp: result.exp,
+            isCapped: result.isCapped
         });
-        
-        // Thêm điểm vào LocalStorage
-        dailyParsed.pointsEarnedToday += expGained;
-        dailyParsed.totalPoints = (dailyParsed.totalPoints || 0) + expGained;
-        if(!dailyParsed.exercisesTrained) dailyParsed.exercisesTrained = [];
-        if(!dailyParsed.exercisesTrained.includes(currentExercise.name)) {
-            dailyParsed.exercisesTrained.push(currentExercise.name);
-        }
-        localStorage.setItem('pet-daily', JSON.stringify(dailyParsed));
-        window.dispatchEvent(new Event('storage')); // Cập nhật FloatingPet
 
         setShowSummaryModal(true);
         triggerConfetti();
@@ -350,21 +329,9 @@ export default function ExerciseList() {
                             stopAI();
 
                             const kcal = sessionData.total_calories_burned;
-                            let expGained = Math.max(1, Math.round(kcal * 0.1));
-                            
-                            const dailySaved = localStorage.getItem('pet-daily');
-                            const dailyParsed = dailySaved ? JSON.parse(dailySaved) : { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: getTodayKey() };
-                            
-                            const todayStr = getTodayKey();
-                            if (dailyParsed.date !== todayStr) {
-                                dailyParsed.date = todayStr;
-                                dailyParsed.pointsEarnedToday = 0;
-                            }
-                            
-                            const MAX_DAILY_EXP = 300;
-                            if (dailyParsed.pointsEarnedToday + expGained > MAX_DAILY_EXP) {
-                                expGained = Math.max(0, MAX_DAILY_EXP - dailyParsed.pointsEarnedToday);
-                            }
+
+                            // Cộng EXP + ghi nhận bài đã tập qua store (cập nhật nhiệm vụ thú cưng & sync backend)
+                            const result = addExp(kcal, currentExercise.name);
 
                             setSummaryData({
                                 exerciseName: currentExercise.name,
@@ -372,18 +339,9 @@ export default function ExerciseList() {
                                 reps: targetReps,
                                 sets: targetSets,
                                 kcal: kcal,
-                                exp: expGained,
-                                isCapped: dailyParsed.pointsEarnedToday + expGained >= MAX_DAILY_EXP
+                                exp: result.exp,
+                                isCapped: result.isCapped
                             });
-
-                            dailyParsed.pointsEarnedToday += expGained;
-                            dailyParsed.totalPoints = (dailyParsed.totalPoints || 0) + expGained;
-                            if(!dailyParsed.exercisesTrained) dailyParsed.exercisesTrained = [];
-                            if(!dailyParsed.exercisesTrained.includes(currentExercise.name)) {
-                                dailyParsed.exercisesTrained.push(currentExercise.name);
-                            }
-                            localStorage.setItem('pet-daily', JSON.stringify(dailyParsed));
-                            window.dispatchEvent(new Event('storage'));
 
                             setShowSummaryModal(true);
                             triggerConfetti();
@@ -400,7 +358,7 @@ export default function ExerciseList() {
             initAI();
             return () => stopAI();
         }
-    }, [showAIModal, currentExercise, targetReps, targetSets, workoutMode]);
+    }, [showAIModal, currentExercise, targetReps, targetSets, workoutMode, addExp]);
 
     const stopAI = () => {
         if (animationFrameRef.current) clearTimeout(animationFrameRef.current);
