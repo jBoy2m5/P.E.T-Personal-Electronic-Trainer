@@ -393,33 +393,7 @@ export default function PetProfile() {
                 </Card.Body>
               </Card>
 
-              {/* Streak Card */}
-              <Card className={`border shadow-sm rounded-4 mb-5 ${isDark ? 'bg-dark text-white border-secondary' : 'bg-white text-dark'}`} style={{ transition: 'all 0.3s ease' }}
-                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)'; }}
-                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = ''; }}
-              >
-                <Card.Body className="p-4">
-                  <h5 className="fw-black mb-4">{t('pet_profile.streak_badges')}</h5>
-                  <div className="d-flex justify-content-between align-items-center position-relative">
-                    <div className="position-absolute" style={{ top: '35%', left: '10%', right: '10%', height: '2px', background: isDark ? '#424242' : '#e9ecef', zIndex: 0 }}></div>
-                    {[3, 10, 30, 100, 200].map(days => {
-                      const achieved = petData.checkin_streak >= days;
-                      return (
-                        <div key={days} className="d-flex flex-column align-items-center position-relative z-1" style={{ width: '50px' }}>
-                          <div className={`mb-2 d-flex align-items-center justify-content-center ${isDark ? 'bg-dark' : 'bg-white'}`} style={{ 
-                            width: '45px', height: '45px', borderRadius: '50%',
-                            border: achieved ? '2px solid #ff9900' : `2px solid ${isDark ? '#424242' : '#e9ecef'}`,
-                            boxShadow: achieved ? '0 5px 15px rgba(255,153,0,0.3)' : 'none'
-                          }}>
-                            <span style={{ fontSize: '1.5rem', filter: achieved ? 'none' : 'grayscale(100%) opacity(0.3)' }}>🔥</span>
-                          </div>
-                          <span className="fw-bold" style={{ fontSize: '0.8rem', color: achieved ? '#ff9900' : '#adb5bd' }}>{days}d</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </Card.Body>
-              </Card>
+
             </div>
           </Col>
 
@@ -485,18 +459,22 @@ export default function PetProfile() {
             <span className="fw-black text-primary fs-5">{petData.total_exp}</span>
           </div>
           <div className="d-flex gap-3 justify-content-center flex-wrap">
-            <div className={`p-3 border rounded-3 ${petData.total_exp >= 150 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '120px', opacity: petData.total_exp >= 150 ? 1 : 0.7 }}>
-              <div style={{ fontSize: '3rem' }}>🧢</div>
-              <div className="fw-bold mt-2 small">Mũ Snapback</div>
+            <div className={`p-3 border rounded-3 d-flex flex-column justify-content-between ${petData.total_exp >= 150 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '120px', height: '160px', opacity: petData.total_exp >= 150 ? 1 : 0.7 }}>
+              <div>
+                <div style={{ fontSize: '3rem' }}>🧢</div>
+                <div className="fw-bold mt-2 small">Mũ Snapback</div>
+              </div>
               {petData.total_exp >= 150 ? (
                 <Button size="sm" variant="primary" className="mt-2 fw-bold w-100">Trang bị</Button>
               ) : (
                 <Button size="sm" variant="outline-secondary" disabled className="mt-2 fw-bold w-100">🔒 150 EXP</Button>
               )}
             </div>
-            <div className={`p-3 border rounded-3 ${petData.total_exp >= 200 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '120px', opacity: petData.total_exp >= 200 ? 1 : 0.7 }}>
-              <div style={{ fontSize: '3rem' }}>🕶️</div>
-              <div className="fw-bold mt-2 small">Kính râm</div>
+            <div className={`p-3 border rounded-3 d-flex flex-column justify-content-between ${petData.total_exp >= 200 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '120px', height: '160px', opacity: petData.total_exp >= 200 ? 1 : 0.7 }}>
+              <div>
+                <div style={{ fontSize: '3rem' }}>🕶️</div>
+                <div className="fw-bold mt-2 small">Kính râm</div>
+              </div>
               {petData.total_exp >= 200 ? (
                 <Button size="sm" variant="primary" className="mt-2 fw-bold w-100">Trang bị</Button>
               ) : (

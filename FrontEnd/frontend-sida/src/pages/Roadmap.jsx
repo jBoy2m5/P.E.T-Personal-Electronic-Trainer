@@ -92,7 +92,7 @@ export default function Roadmap() {
         </Button>
         
         <div className="text-center">
-          <h1 className="fw-black text-primary-dynamic m-0" style={{ fontSize: '2rem', letterSpacing: '2px', textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+          <h1 className="fw-black text-white m-0" style={{ fontSize: '2rem', letterSpacing: '2px', textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
             {t('roadmap.title_1')} <span className="text-neon">{t('roadmap.title_2')}</span>
           </h1>
           <p className="m-0 fw-bold" style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', textShadow: '0 2px 5px rgba(0,0,0,0.9)' }}>
@@ -203,7 +203,7 @@ export default function Roadmap() {
                   </div>
 
                   <div className="saga-label-container d-block pointer-events-none">
-                     <div className="fw-black text-primary-dynamic" style={{ fontSize: '1rem', textShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>{t('roadmap.day')} {day.dayId}</div>
+                     <div className="fw-black text-white" style={{ fontSize: '1rem', textShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>{t('roadmap.day')} {day.dayId}</div>
                      <div className="text-neon fw-bold mb-1" style={{ fontSize: '0.7rem' }}>{getTranslatedText('quest', day.quest)}</div>
                      <div className="text-muted fw-bold" style={{ fontSize: '0.75rem' }}>[{getTranslatedText('mg', day.muscleGroup)}]</div>
                    </div>

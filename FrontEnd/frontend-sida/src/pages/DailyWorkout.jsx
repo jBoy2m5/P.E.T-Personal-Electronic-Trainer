@@ -477,7 +477,7 @@ export default function DailyWorkout() {
             {/* Motivational Quote */}
             <div className="mb-4 p-4 bg-surface-card border-surface rounded-4 text-center position-relative overflow-hidden" style={{ boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
                 <div className="position-absolute" style={{ top: '-20px', left: '10px', fontSize: '6rem', color: 'rgba(var(--brand-neon-rgb), 0.1)', lineHeight: 1, fontFamily: 'serif' }}>"</div>
-                <h5 className="fw-bold text-white fst-italic position-relative z-1 mb-2 px-md-4" style={{ lineHeight: 1.6 }}>
+                <h5 className="fw-bold text-primary-dynamic fst-italic position-relative z-1 mb-2 px-md-4" style={{ lineHeight: 1.6 }}>
                     {dayId % 5 === 1 ? t('daily_workout.quote_1') :
                      dayId % 5 === 2 ? t('daily_workout.quote_2') :
                      dayId % 5 === 3 ? t('daily_workout.quote_3') :
@@ -552,7 +552,7 @@ export default function DailyWorkout() {
                                 </div>
                                 <div className="ms-4 flex-grow-1 d-flex flex-column justify-content-center">
                                     <div className="d-flex justify-content-between align-items-center mb-1">
-                                        <h5 className="fw-black text-white mb-0 fs-5">{t(`exercises.${ex.exercise_id}`, ex.name)}</h5>
+                                        <h5 className="fw-black text-primary-dynamic mb-0 fs-5">{t(`exercises.${ex.exercise_id}`, ex.name)}</h5>
                                         <Badge bg="dark" className="ms-2 opacity-75">{ex.level === 'Cơ bản' ? t('exercises.level_basic') : ex.level === 'Trung bình' ? t('exercises.level_intermediate') : t('exercises.level_advanced')}</Badge>
                                     </div>
                                     <div className="text-secondary fw-bold small mb-2 text-truncate" style={{ maxWidth: '400px' }}>{t(`exercises.desc_${ex.exercise_id}`, ex.technical_description)}</div>
