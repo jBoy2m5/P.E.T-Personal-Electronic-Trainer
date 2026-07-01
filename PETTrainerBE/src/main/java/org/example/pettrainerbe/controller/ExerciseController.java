@@ -74,6 +74,8 @@ public class ExerciseController {
         dto.setName(exercise.getName());
         dto.setTechnicalDescription(exercise.getTechnicalDescription());
         dto.setSafetyNotes(exercise.getSafetyNotes());
+        dto.setTechnicalDescriptionVi(exercise.getTechnicalDescriptionVi());
+        dto.setSafetyNotesVi(exercise.getSafetyNotesVi());
         dto.setMediaUrl(exercise.getMediaUrl());
         dto.setStandardAngles(exercise.getStandardAngles());
         dto.setEstimatedCaloriesPerRep(exercise.getEstimatedCaloriesPerRep());

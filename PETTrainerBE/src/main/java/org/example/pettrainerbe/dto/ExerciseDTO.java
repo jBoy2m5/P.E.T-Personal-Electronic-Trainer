@@ -8,6 +8,8 @@ public class ExerciseDTO {
     private String name;
     private String technicalDescription;
     private String safetyNotes;
+    private String technicalDescriptionVi;
+    private String safetyNotesVi;
     private String mediaUrl;
     private String standardAngles;
     private Float estimatedCaloriesPerRep;

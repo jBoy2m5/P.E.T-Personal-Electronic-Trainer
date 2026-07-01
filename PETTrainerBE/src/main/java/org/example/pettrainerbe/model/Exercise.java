@@ -22,6 +22,11 @@ public class Exercise {
     private String name;
     private String technicalDescription;
     private String safetyNotes;
+
+    @Column(length = 1000)
+    private String technicalDescriptionVi;
+    @Column(length = 1000)
+    private String safetyNotesVi;
     private String mediaUrl;
     private String standardAngles;
     private Float estimatedCaloriesPerRep;

@@ -60,7 +60,8 @@ const saveSessionToBackend = async (exercise, totalReps, kcal) => {
 export default function ExerciseList() {
     const navigate = useNavigate();
     const { id } = useParams();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const isVi = (i18n.language || '').toLowerCase().startsWith('vi');
     const addExp = usePetStore((s) => s.addExp);
 
     const [groupData, setGroupData] = useState({ name: '', desc: '', exercises: [] });
@@ -472,13 +473,13 @@ export default function ExerciseList() {
                                     <div className="mb-4">
                                         <h6 className="fw-black text-secondary text-uppercase mb-2" style={{ fontSize: '0.85rem' }}>{t('exercise_list.desc_benefits')}</h6>
                                         <p className="text-primary-dynamic mb-0" style={{ fontSize: '0.95rem', lineHeight: '1.6' }}>
-                                            {t(`exercises.desc_${selectedDetail.exercise_id}`, selectedDetail.technical_description)}
+                                            {isVi && selectedDetail.technical_description_vi ? selectedDetail.technical_description_vi : selectedDetail.technical_description}
                                         </p>
                                     </div>
                                     <div>
                                         <h6 className="fw-black text-secondary text-uppercase mb-2" style={{ fontSize: '0.85rem' }}>{t('exercise_list.safety_notes')}</h6>
                                         <p className="text-danger fw-bold mb-0" style={{ fontSize: '0.9rem' }}>
-                                            {t(`exercises.safety_${selectedDetail.exercise_id}`, selectedDetail.safety_notes) || t('exercise_list.safety_notes')}
+                                            {(isVi && selectedDetail.safety_notes_vi ? selectedDetail.safety_notes_vi : selectedDetail.safety_notes) || t('exercise_list.safety_notes')}
                                         </p>
                                     </div>
                                 </Col>

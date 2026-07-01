@@ -11,7 +11,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/seed")
@@ -218,6 +220,49 @@ public class SeedController {
                 "Requires advanced shoulder, core, and grip strength.",
                 "Body remains horizontal throughout the hold.",
                 null, 1.60f, 1, 5, "3", null, null));
+
+        // Mô tả & lưu ý an toàn bằng tiếng Việt (áp theo tên bài) — [descVi, safetyVi]
+        Map<String, String[]> vi = new HashMap<>();
+        vi.put("Knee Push Up", new String[]{"Hạ ngực về phía sàn trong khi giữ đầu gối trên mặt đất, sau đó đẩy người lên lại.", "Giữ cơ trung tâm (core) siết chặt và tránh võng lưng dưới."});
+        vi.put("Push Up", new String[]{"Hạ ngực xuống gần sát sàn rồi đẩy người trở về tư thế ban đầu.", "Không để hông võng xuống hoặc khuỷu tay xòe ra quá mức."});
+        vi.put("Diamond Push Up", new String[]{"Thực hiện chống đẩy với hai tay chụm lại để tăng kích hoạt cơ tam đầu và ngực trong.", "Giữ cổ tay thoải mái và tránh xòe khuỷu tay quá mức."});
+        vi.put("Decline Push Up", new String[]{"Đặt chân lên ghế hoặc băng ghế rồi chống đẩy để tăng kích hoạt ngực trên và vai.", "Giữ cơ core siết chặt và không để hông võng xuống."});
+        vi.put("Superman", new String[]{"Nằm sấp, nâng tay, ngực và chân khỏi sàn, sau đó hạ xuống từ từ.", "Tránh ngửa cổ ra sau quá mức."});
+        vi.put("Australian Pull Up", new String[]{"Treo người dưới thanh xà thấp và kéo ngực về phía thanh, sau đó hạ xuống có kiểm soát.", "Tránh buông người xuống nhanh hoặc rụt vai."});
+        vi.put("Pull Up", new String[]{"Kéo người lên bằng cơ lưng và tay, sau đó hạ xuống có kiểm soát.", "Tránh đung đưa thân người."});
+        vi.put("Commando Pull Up", new String[]{"Kéo người lên bên cạnh thanh xà, luân phiên đổi vai tiến sát thanh ở mỗi lần.", "Tránh vặn lưng dưới và kiểm soát khi hạ người."});
+        vi.put("Pike Push Up", new String[]{"Hạ đầu về phía sàn rồi đẩy người trở lại tư thế ban đầu.", "Giữ cơ core siết chặt trong suốt động tác."});
+        vi.put("Wall Handstand Hold", new String[]{"Đá chân lên trồng chuối dựa vào tường để hỗ trợ và giữ nguyên tư thế.", "Giữ vai hoạt động và khóa khuỷu tay."});
+        vi.put("Elevated Pike Push Up", new String[]{"Thực hiện pike push-up với chân kê cao để tăng tải cho vai.", "Hạ người có kiểm soát và giữ khuỷu tay khoảng 45°."});
+        vi.put("Planche Lean", new String[]{"Giữ tư thế nghiêng người về trước để phát triển sức mạnh cho động tác planche.", "Tăng độ khó từ từ để tránh căng cổ tay."});
+        vi.put("Close Grip Push Up", new String[]{"Chống đẩy trong khi giữ khuỷu tay sát vào thân người.", "Giữ thân người thẳng và tránh xòe khuỷu tay."});
+        vi.put("Bench Dips", new String[]{"Dùng ghế hoặc băng ghế để hạ và nâng cơ thể bằng lực của cánh tay.", "Tránh hạ người quá sâu nếu thấy khó chịu ở vai."});
+        vi.put("Chin Up", new String[]{"Kéo người lên đến khi cằm vượt qua thanh xà rồi hạ xuống từ từ.", "Tránh đung đưa và giữ đủ biên độ chuyển động."});
+        vi.put("Bodyweight Triceps Extension", new String[]{"Dùng mép bàn chắc chắn, thanh xà hoặc dây treo, gập khuỷu tay hạ trán về phía bàn tay rồi duỗi tay để trở về tư thế ban đầu.", "Giữ khuỷu tay sát thân và không để hông võng xuống."});
+        vi.put("Plank", new String[]{"Chống người trên cẳng tay và mũi chân, giữ cơ core siết chặt và thân người thẳng hàng.", "Tránh để hông võng xuống hoặc nâng lên quá cao."});
+        vi.put("Leg Raise", new String[]{"Nâng chân lên đến khi vuông góc với sàn, sau đó hạ xuống từ từ.", "Không đung đưa chân hoặc ưỡn lưng dưới."});
+        vi.put("Hollow Body Hold", new String[]{"Nâng vai và chân khỏi sàn trong khi giữ tư thế thân lõm (hollow body).", "Giữ cơ core siết chặt trong suốt thời gian giữ."});
+        vi.put("Dragon Flag", new String[]{"Nâng và hạ cơ thể trong khi chỉ có phần vai còn tựa trên băng ghế.", "Chỉ nên thực hiện sau khi đã đủ sức mạnh cơ core."});
+        vi.put("Bodyweight Squat", new String[]{"Hạ người xuống bằng cách gập hông và gối, sau đó đứng thẳng trở lại.", "Giữ đầu gối thẳng hàng với mũi chân."});
+        vi.put("Walking Lunges", new String[]{"Bước tới thành tư thế lunge và luân phiên đổi chân khi bước đi.", "Giữ thân trên thẳng đứng trong suốt động tác."});
+        vi.put("Bulgarian Split Squat", new String[]{"Hạ người bằng chân trước trong khi chân sau kê cao.", "Giữ thăng bằng và tránh nghiêng người về trước."});
+        vi.put("Pistol Squat", new String[]{"Thực hiện squat sâu bằng một chân trong khi giữ chân còn lại khỏi mặt đất.", "Cần thăng bằng, độ linh hoạt và sức mạnh chân tốt."});
+        vi.put("Glute Bridge", new String[]{"Dồn lực vào gót chân để nâng hông lên đến khi cơ thể tạo thành đường thẳng.", "Tránh ưỡn lưng dưới quá mức."});
+        vi.put("Hip Thrust", new String[]{"Nâng hông lên đến khi duỗi hết trong khi siết chặt cơ mông.", "Giữ cằm thu vào và tránh ưỡn lưng."});
+        vi.put("Single Leg Glute Bridge", new String[]{"Thực hiện glute bridge trong khi nâng một chân khỏi mặt đất.", "Giữ hông cân bằng trong suốt bài tập."});
+        vi.put("Single Leg Hip Thrust", new String[]{"Thực hiện hip thrust bằng một chân để tăng kích hoạt cơ mông.", "Di chuyển chậm rãi và tránh xoay hông."});
+        vi.put("Bear Crawl", new String[]{"Di chuyển về trước bằng tay và chân đối nghịch trong khi giữ cơ core siết chặt.", "Giữ cột sống trung tính trong suốt động tác."});
+        vi.put("L-Sit", new String[]{"Chống người trên thanh parallette hoặc ghế chắc chắn trong khi giữ chân duỗi thẳng.", "Khóa khuỷu tay và giữ vai hạ xuống."});
+        vi.put("Handstand", new String[]{"Giữ thăng bằng lộn ngược trên hai tay trong khi giữ cơ thể thẳng hàng.", "Tập dựa tường trước khi thử trồng chuối tự do."});
+        vi.put("Human Flag", new String[]{"Giữ cơ thể song song với mặt đất trong khi bám vào cột dọc.", "Cần sức mạnh vai, core và lực nắm ở trình độ cao."});
+
+        for (Exercise e : all) {
+            String[] content = vi.get(e.getName());
+            if (content != null) {
+                e.setTechnicalDescriptionVi(content[0]);
+                e.setSafetyNotesVi(content[1]);
+            }
+        }
 
         exerciseRepository.saveAll(all);
 

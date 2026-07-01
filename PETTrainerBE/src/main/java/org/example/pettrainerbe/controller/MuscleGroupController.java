@@ -72,6 +72,8 @@ public class MuscleGroupController {
                         eDto.setName(ex.getName());
                         eDto.setTechnicalDescription(ex.getTechnicalDescription());
                         eDto.setSafetyNotes(ex.getSafetyNotes());
+                        eDto.setTechnicalDescriptionVi(ex.getTechnicalDescriptionVi());
+                        eDto.setSafetyNotesVi(ex.getSafetyNotesVi());
                         eDto.setMediaUrl(ex.getMediaUrl());
                         eDto.setStandardAngles(ex.getStandardAngles());
                         eDto.setEstimatedCaloriesPerRep(ex.getEstimatedCaloriesPerRep());
