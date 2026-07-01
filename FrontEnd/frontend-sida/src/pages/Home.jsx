@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Tilt from 'react-parallax-tilt';
+import axiosClient from '../api/axiosClient';
 import heroBanner from '../assets/hero_banner.png';
 import petChatbot from '../assets/pet_chatbot.png';
 
@@ -27,6 +28,8 @@ export default function Home() {
 
   const [burnedCalories, setBurnedCalories] = useState(0);
   const [displayCalories, setDisplayCalories] = useState(0);
+  const [totalMinutes, setTotalMinutes] = useState(0);
+  const [sessionCount, setSessionCount] = useState(0);
 
   useEffect(() => {
     // 1. Load User Data
@@ -35,16 +38,24 @@ export default function Home() {
       setUserData(JSON.parse(saved));
     }
 
-    // 3. Load Calories
-    const loadCalories = () => {
-      const sessionsStr = localStorage.getItem('workout-sessions');
-      if (sessionsStr) {
-        const sessions = JSON.parse(sessionsStr);
-        const todayStr = new Date().toISOString().split('T')[0];
-        const todayBurn = sessions
-          .filter(s => s.start_time.startsWith(todayStr))
-          .reduce((sum, s) => sum + (s.total_calories_burned || 0), 0);
+    // 3. Load Calories từ DB server (đồng bộ với trang Quản lý calo)
+    const loadCalories = async () => {
+      try {
+        const sessions = await axiosClient.get('/workout-sessions/today');
+        const list = sessions || [];
+        const todayBurn = list.reduce((sum, s) => sum + (s.total_calories_burned || 0), 0);
+        const minutes = list.reduce((sum, s) => {
+          if (s.start_time && s.end_time) {
+            const diffMins = Math.round((new Date(s.end_time) - new Date(s.start_time)) / 60000);
+            return sum + Math.max(1, diffMins);
+          }
+          return sum + 1;
+        }, 0);
         setBurnedCalories(Math.round(todayBurn));
+        setTotalMinutes(minutes);
+        setSessionCount(list.length);
+      } catch (err) {
+        console.error('Không thể tải dữ liệu calo hôm nay:', err);
       }
     };
 
@@ -285,7 +296,7 @@ export default function Home() {
                   borderRadius: '14px',
                   border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`
                 }}>
-                  <div className="fw-bold" style={{ color: isDark ? '#00e5ff' : '#0891b2', fontSize: '1.3rem' }}>0</div>
+                  <div className="fw-bold" style={{ color: isDark ? '#00e5ff' : '#0891b2', fontSize: '1.3rem' }}>{totalMinutes}</div>
                   <div style={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.45)', fontSize: '0.75rem', letterSpacing: '1px' }}>PHÚT TẬP</div>
                 </div>
                 <div className="px-3 py-2" style={{
@@ -293,7 +304,7 @@ export default function Home() {
                   borderRadius: '14px',
                   border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`
                 }}>
-                  <div className="fw-bold" style={{ color: isDark ? '#a855f7' : '#7c3aed', fontSize: '1.3rem' }}>0</div>
+                  <div className="fw-bold" style={{ color: isDark ? '#a855f7' : '#7c3aed', fontSize: '1.3rem' }}>{sessionCount}</div>
                   <div style={{ color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.45)', fontSize: '0.75rem', letterSpacing: '1px' }}>BÀI TẬP</div>
                 </div>
               </div>
