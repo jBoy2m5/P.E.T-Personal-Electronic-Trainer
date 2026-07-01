@@ -41,6 +41,23 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
+    @PutMapping("/avatar")
+    public ResponseEntity<?> updateAvatar(@RequestBody Map<String, Object> payload) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email);
+        if (user == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+
+        if (payload.containsKey("picture_url")) {
+            user.setPictureUrl((String) payload.get("picture_url"));
+            userRepository.save(user);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("picture_url", user.getPictureUrl());
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/onboarding")
     public ResponseEntity<?> updateOnboarding(@RequestBody Map<String, Object> payload) {
         try {

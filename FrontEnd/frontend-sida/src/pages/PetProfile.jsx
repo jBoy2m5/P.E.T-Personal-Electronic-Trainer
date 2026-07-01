@@ -20,7 +20,7 @@ const PET_LEVELS = [
 export default function PetProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { totalPoints, exercisesTrained, getCurrentLevel, claimedMissions, claimMission, checkinStreak, lastCheckinDate, performCheckin } = usePetStore();
+  const { totalPoints, exercisesTrained, getCurrentLevel, claimedMissions, claimMission, checkinStreak, lastCheckinDate, performCheckin, petName, updatePetName } = usePetStore();
   const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
   const [petData, setPetData] = useState({
@@ -70,13 +70,8 @@ export default function PetProfile() {
       if (exp >= lvl.minPoints) currentLevelObj = lvl;
     }
 
-    const petSaved = localStorage.getItem('pet-data');
-    let pet_name = 'Vô Danh';
-    if (exp >= 10) pet_name = 'Quẹc';
-    if (petSaved) {
-      const parsedPet = JSON.parse(petSaved);
-      if (parsedPet.pet_name) pet_name = parsedPet.pet_name;
-    }
+    // Tên pet lấy từ server (usePetStore), không dùng localStorage
+    const pet_name = petName || (exp >= 10 ? 'Quẹc' : 'Vô Danh');
 
     setPetData({ pet_name, total_exp: exp, checkin_streak: 0, level: currentLevelObj.level });
 
@@ -93,7 +88,7 @@ export default function PetProfile() {
 
     // Sync checkin state
     setCheckinDone(lastCheckinDate === todayKey);
-  }, [totalPoints, exercisesTrained, claimedMissions, lastCheckinDate]);
+  }, [totalPoints, exercisesTrained, claimedMissions, lastCheckinDate, petName]);
 
   const currentLevelObj = PET_LEVELS.find(l => l.level === petData.level) || PET_LEVELS[0];
   const nextLevelObj = PET_LEVELS.find(l => l.minPoints > petData.total_exp);
@@ -111,11 +106,12 @@ export default function PetProfile() {
     }
   };
 
-  const handleNameSave = () => {
-    if (editNameValue.trim()) {
-      const newData = { ...petData, pet_name: editNameValue.trim() };
-      setPetData(newData);
-      localStorage.setItem('pet-data', JSON.stringify(newData));
+  const handleNameSave = async () => {
+    const trimmed = editNameValue.trim().slice(0, 20);
+    if (trimmed) {
+      // Lưu tên pet lên server
+      await updatePetName(trimmed);
+      setPetData(prev => ({ ...prev, pet_name: trimmed }));
     }
     setShowEditName(false);
   };
@@ -168,10 +164,10 @@ export default function PetProfile() {
               
               <div 
                 className={`fw-bold fs-5 d-flex align-items-center gap-2 px-4 py-2 rounded-pill border ${isDark ? 'text-white border-secondary' : 'text-dark border-light'}`}
-                style={{ cursor: 'pointer', background: isDark ? 'rgba(255,255,255,0.05)' : '#f8f9fa' }}
+                style={{ cursor: 'pointer', background: isDark ? 'rgba(255,255,255,0.05)' : '#f8f9fa', maxWidth: '260px' }}
                 onClick={() => { setEditNameValue(petData.pet_name); setShowEditName(true); }}
               >
-                {petData.pet_name} ✏️
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{petData.pet_name}</span> ✏️
               </div>
 
               <div className="position-relative">
@@ -386,16 +382,16 @@ export default function PetProfile() {
           </Col>
 
           {/* CỘT PHẢI: Pet Center Stage */}
-          <Col lg={7} xl={8} className="d-flex flex-column align-items-center justify-content-center p-0 order-1 order-lg-2 position-relative" style={{ minHeight: '40vh', backgroundImage: `url(${petBgImage})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#e0c3fc' }}>
+          <Col lg={7} xl={8} className="d-flex flex-column align-items-center justify-content-center p-0 order-1 order-lg-2 position-relative" style={{ minHeight: '40vh', backgroundImage: `url(${petBgImage})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#e0c3fc', userSelect: 'none', WebkitUserSelect: 'none' }}>
             
             {/* Animated Glow behind Pet (Giữ lại để pet nổi bật trên nền) */}
             <div className="position-absolute rounded-circle" style={{ width: '40vw', height: '40vw', maxWidth: '500px', maxHeight: '500px', background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)', filter: 'blur(20px)', animation: 'pulseGlow 4s infinite alternate' }}></div>
 
-            <div className="z-2 text-center position-relative" onClick={handlePetClick} style={{ cursor: 'pointer' }}>
+            <div className="z-2 text-center position-relative" onClick={handlePetClick} style={{ cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none' }}>
               {petData.level === 1 ? (
-                <span style={{ fontSize: '15vw', animation: 'petFloat 3s ease-in-out infinite', display: 'inline-block', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.2))' }}>🥚</span>
+                <span style={{ fontSize: '15vw', animation: 'petFloat 3s ease-in-out infinite', display: 'inline-block', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.2))', userSelect: 'none' }}>🥚</span>
               ) : (
-                <img src={petChatbot} alt="Pet" className="pet-img" style={{ width: '40vw', maxWidth: '400px', minWidth: '200px', height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 25px 35px rgba(0,0,0,0.3))', animation: 'petFloat 3s ease-in-out infinite' }} />
+                <img src={petChatbot} alt="Pet" className="pet-img" draggable={false} style={{ width: '40vw', maxWidth: '400px', minWidth: '200px', height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 25px 35px rgba(0,0,0,0.3))', animation: 'petFloat 3s ease-in-out infinite', userSelect: 'none', WebkitUserSelect: 'none', WebkitUserDrag: 'none' }} />
               )}
               {/* Hiển thị các trái tim */}
               {hearts.map(heart => (
@@ -431,7 +427,8 @@ export default function PetProfile() {
       <Modal show={showEditName} onHide={() => setShowEditName(false)} centered>
         <Modal.Body className="text-center p-4">
           <h5 className="fw-black mb-3">{t('pet_profile.rename_pet')}</h5>
-          <Form.Control type="text" value={editNameValue} onChange={(e) => setEditNameValue(e.target.value)} className="mb-3 text-center fw-bold" placeholder={t('pet_profile.enter_new_name')} autoFocus />
+          <Form.Control type="text" value={editNameValue} maxLength={20} onChange={(e) => setEditNameValue(e.target.value)} className="mb-1 text-center fw-bold" placeholder={t('pet_profile.enter_new_name')} autoFocus />
+          <div className="text-muted small mb-3">{editNameValue.length}/20</div>
           <Button className="w-100 fw-bold rounded-pill" onClick={handleNameSave} style={{ background: '#00b4d8', border: 'none' }}>{t('pet_profile.save_name')}</Button>
         </Modal.Body>
       </Modal>

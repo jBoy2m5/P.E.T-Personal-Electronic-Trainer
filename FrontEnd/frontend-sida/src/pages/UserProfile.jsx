@@ -3,6 +3,8 @@ import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import axiosClient from '../api/axiosClient';
+import usePetStore from '../store/usePetStore';
 
 export default function UserProfile() {
   const { t } = useTranslation();
@@ -10,17 +12,24 @@ export default function UserProfile() {
   const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState({ totalWorkouts: 0, totalCalories: 0, streak: 0 });
   const fileInputRef = useRef(null);
+  const checkinStreak = usePetStore((s) => s.checkinStreak);
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const base64String = reader.result;
         const updatedData = { ...userData, pictureUrl: base64String };
         setUserData(updatedData);
         localStorage.setItem('user-data', JSON.stringify(updatedData));
         window.dispatchEvent(new Event('storage'));
+        // Lưu avatar lên server để không mất khi đăng xuất/đăng nhập lại
+        try {
+          await axiosClient.put('/users/avatar', { picture_url: base64String });
+        } catch (err) {
+          console.error('Không thể lưu avatar lên server:', err);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -33,50 +42,22 @@ export default function UserProfile() {
       setUserData(JSON.parse(saved));
     } else {
       navigate('/login');
+      return;
     }
 
-    // 2. Load Stats
-    const scheduleSaved = localStorage.getItem('pet-schedule');
-    const sessionsSaved = localStorage.getItem('workout-sessions');
-    
-    let totalW = 0;
-    let totalC = 0;
-    let currentStreak = 0;
-
-    if (scheduleSaved) {
-        const parsed = JSON.parse(scheduleSaved);
-        totalW = Object.keys(parsed).filter(k => parsed[k].trained).length;
-        currentStreak = calculateStreak(parsed);
-    }
-    
-    if (sessionsSaved) {
-        const parsedSess = JSON.parse(sessionsSaved);
-        totalC = parsedSess.reduce((sum, s) => sum + (s.total_calories_burned || 0), 0);
-    }
-
-    setStats({ totalWorkouts: totalW, totalCalories: Math.round(totalC), streak: currentStreak });
-
-  }, [navigate]);
-
-  const calculateStreak = (scheduleData) => {
-    let streak = 0;
-    let d = new Date();
-    while(true) {
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (scheduleData[key] && scheduleData[key].trained) {
-            streak++;
-            d.setDate(d.getDate() - 1);
-        } else {
-            if (streak === 0 && d.toDateString() === new Date().toDateString()) {
-                // Ignore today if not trained yet
-                d.setDate(d.getDate() - 1);
-            } else {
-                break;
-            }
-        }
-    }
-    return streak;
-  };
+    // 2. Load Stats từ server (buổi tập + kcal hôm nay); streak lấy từ pet store (server)
+    const loadStats = async () => {
+      try {
+        const sessions = await axiosClient.get('/workout-sessions/today');
+        const list = sessions || [];
+        const totalC = list.reduce((sum, s) => sum + (s.total_calories_burned || 0), 0);
+        setStats({ totalWorkouts: list.length, totalCalories: Math.round(totalC), streak: checkinStreak || 0 });
+      } catch (err) {
+        console.error('Không thể tải thống kê từ server:', err);
+      }
+    };
+    loadStats();
+  }, [navigate, checkinStreak]);
 
   const handleLogout = () => {
     localStorage.removeItem('user-data');

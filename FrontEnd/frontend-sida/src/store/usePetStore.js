@@ -53,7 +53,7 @@ const getInitialState = () => {
   const userId = getUserId();
   const key = getPetKey(userId);
   const todayStr = getTodayKey();
-  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null, claimedMissions: {}, checkinStreak: 0, lastCheckinDate: null };
+  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null, petName: null, claimedMissions: {}, checkinStreak: 0, lastCheckinDate: null };
   try {
     const saved = localStorage.getItem(key);
     if (saved) {
@@ -85,6 +85,7 @@ const usePetStore = create((set, get) => ({
       const newState = {
         totalPoints,
         petId: pet.pet_id,
+        petName: pet.pet_name || null,
         pointsEarnedToday: sameDay ? (pet.points_earned_today || 0) : 0,
         exercisesTrained: sameDay ? parseJsonArray(pet.exercises_trained) : [],
         claimedMissions: { [todayStr]: sameDay ? parseJsonArray(pet.claimed_missions) : [] },
@@ -162,6 +163,23 @@ const usePetStore = create((set, get) => ({
       });
       return expGained;
     } catch { return null; }
+  },
+
+  updatePetName: async (name) => {
+    const userId = getUserId();
+    const key = getPetKey(userId);
+    const { petId } = get();
+    const trimmed = (name || '').trim().slice(0, 20);
+    if (!trimmed || !petId) return false;
+    try {
+      await axiosClient.put(`/pets/${petId}`, { pet_name: trimmed });
+      set((state) => {
+        const merged = { ...state, petName: trimmed };
+        localStorage.setItem(key, JSON.stringify(merged));
+        return merged;
+      });
+      return true;
+    } catch { return false; }
   },
 
   claimMission: (missionId, expReward) => {

@@ -20,6 +20,7 @@ public class Pet {
     @JsonIgnoreProperties({"pet", "workoutSessions"})
     private User user;
 
+    private String petName;
     private String appearanceType;
     private String emotionalState;
     private Integer totalExp;

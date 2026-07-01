@@ -71,6 +71,14 @@ public class PetController {
                 .map(pet -> {
                     if (body.containsKey("total_exp")) pet.setTotalExp((Integer) body.get("total_exp"));
                     if (body.containsKey("level")) pet.setLevel((Integer) body.get("level"));
+                    if (body.containsKey("pet_name")) {
+                        String petName = (String) body.get("pet_name");
+                        if (petName != null) {
+                            petName = petName.trim();
+                            if (petName.length() > 20) petName = petName.substring(0, 20);
+                            pet.setPetName(petName);
+                        }
+                    }
                     if (body.containsKey("appearance_type")) pet.setAppearanceType((String) body.get("appearance_type"));
                     if (body.containsKey("emotional_state")) pet.setEmotionalState((String) body.get("emotional_state"));
                     if (body.containsKey("checkin_streak")) pet.setCheckinStreak((Integer) body.get("checkin_streak"));
@@ -100,6 +108,7 @@ public class PetController {
     private PetDTO convertToDTO(Pet pet) {
         PetDTO dto = new PetDTO();
         dto.setPetId(pet.getPetId());
+        dto.setPetName(pet.getPetName());
         dto.setAppearanceType(pet.getAppearanceType());
         dto.setEmotionalState(pet.getEmotionalState());
         dto.setTotalExp(pet.getTotalExp());

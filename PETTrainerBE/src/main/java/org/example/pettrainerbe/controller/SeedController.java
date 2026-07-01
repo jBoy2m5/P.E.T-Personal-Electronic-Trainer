@@ -35,6 +35,9 @@ public class SeedController {
         jdbcTemplate.execute("ALTER TABLE exercises AUTO_INCREMENT = 1");
         jdbcTemplate.execute("ALTER TABLE muscle_groups AUTO_INCREMENT = 1");
 
+        // Đảm bảo cột avatar đủ lớn để chứa ảnh base64 (ddl-auto=update không tự đổi kiểu cột cũ)
+        try { jdbcTemplate.execute("ALTER TABLE users MODIFY picture_url LONGTEXT"); } catch (Exception ignored) {}
+
         List<Exercise> all = new ArrayList<>();
 
         // ===== 1. CHEST =====
@@ -266,7 +269,7 @@ public class SeedController {
 
         exerciseRepository.saveAll(all);
 
-        return String.format("✅ Seed thành công! 8 nhóm cơ, %d bài tập đã được thêm vào database.", all.size());
+        return String.format("✅ Seed thành công! 8 nhóm cơ, %d bài tập đã được thêm vào database. [v2-avatar-petname]", all.size());
     }
 
     private MuscleGroup saveGroup(String name, String description) {

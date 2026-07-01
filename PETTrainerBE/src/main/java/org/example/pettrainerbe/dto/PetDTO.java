@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 @Data
 public class PetDTO {
     private Integer petId;
+    private String petName;
     private String appearanceType;
     private String emotionalState;
     private Integer totalExp;

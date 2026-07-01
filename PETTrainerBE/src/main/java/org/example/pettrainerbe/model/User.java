@@ -16,6 +16,8 @@ public class User {
 
     private String email;
     private String name;
+
+    @Column(columnDefinition = "LONGTEXT")
     private String pictureUrl;
     private String passwordHash;
     private Float height;
