@@ -102,7 +102,7 @@ public class SeedController {
                 "Hold a forward lean position to develop planche strength.",
                 "Progress gradually to avoid wrist strain.",
                 "Lean your shoulders forward beyond your wrists.",
-                null, 1.00f, 1, 4, "3", null, null));
+                null, 1.10f, 1, 4, "3", null, null));
 
         // ===== 4. ARMS =====
         MuscleGroup arms = saveGroup("Tay", "Nhóm cơ tay - bắp tay săn chắc mạnh mẽ.");

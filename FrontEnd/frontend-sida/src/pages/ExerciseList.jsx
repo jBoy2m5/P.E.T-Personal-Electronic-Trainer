@@ -53,7 +53,7 @@ export default function ExerciseList() {
                         img: ex.media_url || DEFAULT_IMG,
                         reps: ex.reps != null ? String(ex.reps) : '12',
                         sets: ex.sets != null ? ex.sets : 3,
-                        kcal: ex.kcal != null ? Math.round(ex.kcal) : Math.round((ex.estimated_calories_per_rep || 1) * (ex.reps || 12) * (ex.sets || 3))
+                        kcalPerRep: ex.estimated_calories_per_rep != null ? ex.estimated_calories_per_rep : 1
                     }))
                 });
             } catch (err) {
@@ -217,7 +217,8 @@ export default function ExerciseList() {
         markDayAsTrained();
         setShowManualModal(false);
         
-        const kcal = currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25;
+        const kcalPerRep = currentExercise.kcalPerRep || currentExercise.estimated_calories_per_rep || 1;
+        const kcal = Math.round(kcalPerRep * targetReps * targetSets);
         let expGained = Math.max(1, Math.round(kcal * 0.1));
         
         // Giới hạn điểm mỗi ngày (300 EXP)
@@ -306,7 +307,7 @@ export default function ExerciseList() {
                             session_id: sessionId, user_id: 1,
                             start_time: new Date(Date.now() - 60000).toISOString(),
                             end_time: new Date().toISOString(),
-                            total_calories_burned: currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25,
+                            total_calories_burned: Math.round((currentExercise.kcalPerRep || currentExercise.estimated_calories_per_rep || 1) * targetReps * targetSets),
                             total_valid_reps: targetReps * targetSets
                         };
                         const savedSessions = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
@@ -436,7 +437,7 @@ export default function ExerciseList() {
                                 <Card.Body className="d-flex flex-column p-4">
                                     <div className="d-flex justify-content-between align-items-center text-secondary small fw-bold mt-auto">
                                         <span>🔄 {ex.sets} Sets x {ex.reps} Reps</span>
-                                        <span style={{ color: 'var(--brand-neon)' }}>🔥 {ex.kcal} kcal</span>
+                                        <span style={{ color: 'var(--brand-neon)' }}>🔥 {ex.kcalPerRep} {t('exercise_list.kcal_per_rep')}</span>
                                     </div>
                                 </Card.Body>
                             </Card>
@@ -468,6 +469,9 @@ export default function ExerciseList() {
                                     <h3 className="fw-black text-primary-dynamic mb-1">{t(`exercises.${selectedDetail.exercise_id}`, selectedDetail.name)}</h3>
                                     <div className="text-secondary fw-bold text-uppercase" style={{ fontSize: '0.85rem', letterSpacing: '1px' }}>
                                         {t('exercise_list.muscle_group')} <span style={{ color: 'var(--brand-neon)' }}>{t(`exercises.group_${id}_name`, groupData.name)}</span>
+                                    </div>
+                                    <div className="fw-black mt-2" style={{ color: 'var(--brand-neon)', fontSize: '0.95rem' }}>
+                                        🔥 {selectedDetail.kcalPerRep} {t('exercise_list.kcal_per_rep')}
                                     </div>
                                 </div>
                                 <div className="text-warning fs-4" style={{ letterSpacing: '2px' }}>

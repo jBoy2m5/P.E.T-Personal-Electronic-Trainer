@@ -138,6 +138,7 @@
     "workout_summary": "WORKOUT SUMMARY",
     "reps": "Reps",
     "sets": "Sets",
+    "kcal_per_rep": "kcal/rep",
     "exp_limit_reached": "Daily EXP limit reached (300 EXP)",
     "continue": "CONTINUE",
     "done": "DONE!",
