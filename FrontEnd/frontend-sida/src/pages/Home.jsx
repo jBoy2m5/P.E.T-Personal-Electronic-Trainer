@@ -39,7 +39,9 @@ export default function Home() {
     }
 
     // 3. Load Calories từ DB server (đồng bộ với trang Quản lý calo)
+    // Chỉ gọi API khi đã đăng nhập; Home là route công khai, tránh bị 401 đá về /login
     const loadCalories = async () => {
+      if (!localStorage.getItem('user-data')) return;
       try {
         const sessions = await axiosClient.get('/workout-sessions/today');
         const list = sessions || [];
