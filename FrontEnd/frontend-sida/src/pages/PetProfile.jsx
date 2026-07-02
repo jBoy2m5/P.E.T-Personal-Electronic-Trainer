@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import usePetStore from '../store/usePetStore';
 import petChatbot from '../assets/pet_chatbot.png';
-import petBgImage from '../assets/pet_bg.png'; // File background ảnh thật
+import petBgImage from '../assets/pet_bg.webp'; // File background ảnh thật
 
 const PET_LEVELS = [
   { level: 1, name: 'Trứng', minPoints: 0, icon: '🥚' },

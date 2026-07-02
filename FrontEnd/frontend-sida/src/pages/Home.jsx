@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Tilt from 'react-parallax-tilt';
 import axiosClient from '../api/axiosClient';
-import heroBanner from '../assets/hero_banner.png';
+import heroBanner from '../assets/hero_banner.webp';
 import petChatbot from '../assets/pet_chatbot.png';
 
 export default function Home() {
