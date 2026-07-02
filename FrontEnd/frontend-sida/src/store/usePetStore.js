@@ -38,7 +38,10 @@ const calcLevel = (totalPoints) => {
 };
 
 const parseJsonArray = (s) => {
-  try { return s ? JSON.parse(s) : []; } catch { return []; }
+  try {
+    const v = s ? JSON.parse(s) : [];
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
 };
 
 // Ảnh chụp trạng thái nhiệm vụ hằng ngày để gửi lên server (nguồn dữ liệu chính)
@@ -53,7 +56,7 @@ const getInitialState = () => {
   const userId = getUserId();
   const key = getPetKey(userId);
   const todayStr = getTodayKey();
-  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null, petName: null, claimedMissions: {}, checkinStreak: 0, lastCheckinDate: null };
+  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null, petName: null, claimedMissions: {}, checkinStreak: 0, lastCheckinDate: null, equippedOutfits: [] };
   try {
     const saved = localStorage.getItem(key);
     if (saved) {
@@ -91,6 +94,7 @@ const usePetStore = create((set, get) => ({
         claimedMissions: { [todayStr]: sameDay ? parseJsonArray(pet.claimed_missions) : [] },
         checkinStreak: pet.checkin_streak || 0,
         lastCheckinDate: pet.last_checkin_date || null,
+        equippedOutfits: parseJsonArray(pet.appearance_type),
         date: todayStr
       };
       localStorage.setItem(key, JSON.stringify(newState));
@@ -180,6 +184,25 @@ const usePetStore = create((set, get) => ({
       });
       return true;
     } catch { return false; }
+  },
+
+  // Mặc/cởi trang phục cho pet — trạng thái lưu trong cột appearance_type (JSON array) trên server.
+  // Không trừ EXP: chỉ cần tổng EXP đạt ngưỡng của món đồ (kiểm tra ở UI) là trang bị được.
+  toggleOutfit: (outfitId) => {
+    const userId = getUserId();
+    const key = getPetKey(userId);
+    set((state) => {
+      const current = state.equippedOutfits || [];
+      const next = current.includes(outfitId)
+        ? current.filter((o) => o !== outfitId)
+        : [...current, outfitId];
+      const newState = { ...state, equippedOutfits: next };
+      localStorage.setItem(key, JSON.stringify(newState));
+      if (state.petId) {
+        axiosClient.put(`/pets/${state.petId}`, { appearance_type: JSON.stringify(next) }).catch(() => {});
+      }
+      return newState;
+    });
   },
 
   claimMission: (missionId, expReward) => {

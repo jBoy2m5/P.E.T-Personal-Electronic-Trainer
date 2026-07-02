@@ -6,6 +6,12 @@ import usePetStore from '../store/usePetStore';
 import petChatbot from '../assets/pet_chatbot.png';
 import petBgImage from '../assets/pet_bg.webp'; // File background ảnh thật
 
+// Trang phục cho pet — mở khóa khi tổng EXP đạt ngưỡng (không trừ EXP)
+const OUTFITS = [
+  { id: 'cap', icon: '🧢', nameKey: 'outfit_cap', minExp: 150 },
+  { id: 'glasses', icon: '🕶️', nameKey: 'outfit_glasses', minExp: 200 },
+];
+
 const PET_LEVELS = [
   { level: 1, name: 'Trứng', minPoints: 0, icon: '🥚' },
   { level: 2, name: 'Baby Pet', minPoints: 10, icon: '🐣' },
@@ -20,7 +26,7 @@ const PET_LEVELS = [
 export default function PetProfile() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { totalPoints, exercisesTrained, getCurrentLevel, claimedMissions, claimMission, checkinStreak, lastCheckinDate, performCheckin, petName, updatePetName } = usePetStore();
+  const { totalPoints, exercisesTrained, getCurrentLevel, claimedMissions, claimMission, checkinStreak, lastCheckinDate, performCheckin, petName, updatePetName, equippedOutfits, toggleOutfit } = usePetStore();
   const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
   const [petData, setPetData] = useState({
@@ -387,7 +393,16 @@ export default function PetProfile() {
               {petData.level === 1 ? (
                 <span style={{ fontSize: '15vw', animation: 'petFloat 3s ease-in-out infinite', display: 'inline-block', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.2))', userSelect: 'none' }}>🥚</span>
               ) : (
-                <img src={petChatbot} alt="Pet" className="pet-img" draggable={false} style={{ width: '40vw', maxWidth: '400px', minWidth: '200px', height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 25px 35px rgba(0,0,0,0.3))', animation: 'petFloat 3s ease-in-out infinite', userSelect: 'none', WebkitUserSelect: 'none', WebkitUserDrag: 'none' }} />
+                <div className="position-relative d-inline-block" style={{ animation: 'petFloat 3s ease-in-out infinite' }}>
+                  <img src={petChatbot} alt="Pet" className="pet-img" draggable={false} style={{ width: '40vw', maxWidth: '400px', minWidth: '200px', height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 25px 35px rgba(0,0,0,0.3))', userSelect: 'none', WebkitUserSelect: 'none', WebkitUserDrag: 'none' }} />
+                  {/* Trang phục pet đang mặc (đồng bộ từ server qua appearance_type) */}
+                  {(equippedOutfits || []).includes('cap') && (
+                    <span style={{ position: 'absolute', top: '-6%', left: '50%', transform: 'translateX(-50%) rotate(-8deg)', fontSize: 'clamp(45px, 8vw, 85px)', pointerEvents: 'none', userSelect: 'none', filter: 'drop-shadow(0 6px 8px rgba(0,0,0,0.3))' }}>🧢</span>
+                  )}
+                  {(equippedOutfits || []).includes('glasses') && (
+                    <span style={{ position: 'absolute', top: '16%', left: '50%', transform: 'translateX(-50%)', fontSize: 'clamp(35px, 6vw, 65px)', pointerEvents: 'none', userSelect: 'none', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}>🕶️</span>
+                  )}
+                </div>
               )}
               {/* Hiển thị các trái tim */}
               {hearts.map(heart => (
@@ -440,28 +455,25 @@ export default function PetProfile() {
             <span className="fw-black text-primary fs-5">{petData.total_exp}</span>
           </div>
           <div className="d-flex gap-3 justify-content-center flex-wrap">
-            <div className={`p-3 border rounded-3 d-flex flex-column justify-content-between ${petData.total_exp >= 150 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '130px', minHeight: '160px', opacity: petData.total_exp >= 150 ? 1 : 0.7 }}>
-              <div>
-                <div style={{ fontSize: '3rem' }}>🧢</div>
-                <div className="fw-bold mt-2 small">Mũ Snapback</div>
-              </div>
-              {petData.total_exp >= 150 ? (
-                <Button size="sm" variant="primary" className="mt-2 fw-bold w-100">Trang bị</Button>
-              ) : (
-                <Button size="sm" variant="outline-secondary" disabled className="mt-2 fw-bold w-100">🔒 150 EXP</Button>
-              )}
-            </div>
-            <div className={`p-3 border rounded-3 d-flex flex-column justify-content-between ${petData.total_exp >= 200 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '130px', minHeight: '160px', opacity: petData.total_exp >= 200 ? 1 : 0.7 }}>
-              <div>
-                <div style={{ fontSize: '3rem' }}>🕶️</div>
-                <div className="fw-bold mt-2 small">Kính râm</div>
-              </div>
-              {petData.total_exp >= 200 ? (
-                <Button size="sm" variant="primary" className="mt-2 fw-bold w-100">Trang bị</Button>
-              ) : (
-                <Button size="sm" variant="outline-secondary" disabled className="mt-2 fw-bold w-100">🔒 200 EXP</Button>
-              )}
-            </div>
+            {OUTFITS.map((item) => {
+              const unlocked = petData.total_exp >= item.minExp;
+              const isEquipped = (equippedOutfits || []).includes(item.id);
+              return (
+                <div key={item.id} className={`p-3 border rounded-3 d-flex flex-column justify-content-between ${unlocked ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '130px', minHeight: '160px', opacity: unlocked ? 1 : 0.7 }}>
+                  <div>
+                    <div style={{ fontSize: '3rem' }}>{item.icon}</div>
+                    <div className="fw-bold mt-2 small">{t(`pet_profile.${item.nameKey}`)}</div>
+                  </div>
+                  {unlocked ? (
+                    <Button size="sm" variant={isEquipped ? 'success' : 'primary'} className="mt-2 fw-bold w-100" onClick={() => toggleOutfit(item.id)}>
+                      {isEquipped ? `✓ ${t('pet_profile.equipped')}` : t('pet_profile.equip')}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline-secondary" disabled className="mt-2 fw-bold w-100">🔒 {item.minExp} EXP</Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </Modal.Body>
       </Modal>
