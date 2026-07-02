@@ -22,17 +22,17 @@ export default function Roadmap() {
     }
   }, [initialized, loadRoadmap]);
 
-  // Lời khuyên AI cache theo ngôn ngữ; thiếu bản ngôn ngữ hiện tại thì gọi Gemini lấy và cache lại
-  // (key 'ai-roadmap-advice' cũ không có hậu tố = bản tiếng Việt)
+  // Lời khuyên AI cache theo ngôn ngữ; thiếu bản ngôn ngữ hiện tại thì gọi Gemini lấy và cache lại.
+  // Hậu tố -v2: đổi kiểu lời khuyên (chỉ tóm tắt thể trạng + lợi ích lộ trình, không kê bài tập)
+  // → bỏ qua cache kiểu cũ ('ai-roadmap-advice' và '-{lang}' không version) để sinh lại một lần
   useEffect(() => {
     const langKey = isVi ? 'vi' : 'en';
-    const cached = localStorage.getItem(`ai-roadmap-advice-${langKey}`)
-      || (isVi ? localStorage.getItem('ai-roadmap-advice') : null);
+    const cached = localStorage.getItem(`ai-roadmap-advice-v2-${langKey}`);
     setAiAdvice(cached || '');
     if (cached) return;
     axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).then(res => {
       if (res?.advice) {
-        localStorage.setItem(`ai-roadmap-advice-${langKey}`, res.advice);
+        localStorage.setItem(`ai-roadmap-advice-v2-${langKey}`, res.advice);
         setAiAdvice(res.advice);
       }
     }).catch(() => {});

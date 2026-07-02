@@ -33,17 +33,27 @@ public class GeminiService {
         // gemini-2.0-* đã bị gỡ khỏi free tier (quota = 0) → dùng thế hệ 2.5
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
 
-        // Lời khuyên trả về theo ngôn ngữ UI của người dùng (hồ sơ user lưu giá trị tiếng Việt, Gemini tự hiểu)
+        // Lời khuyên trả về theo ngôn ngữ UI của người dùng (hồ sơ user lưu giá trị tiếng Việt, Gemini tự hiểu).
+        // Chỉ tóm tắt thể trạng + lợi ích của lộ trình — KHÔNG kê bài tập/loại hình tập
+        // (lộ trình 28 ngày mới là thứ quyết định tập gì; kê thêm sẽ mâu thuẫn với lộ trình)
         String prompt = "en".equalsIgnoreCase(lang)
             ? String.format(
-                "You are a personal trainer. Write short workout advice (3-4 sentences, in English) for this user: " +
+                "You are a personal trainer. Write 2-3 English sentences for this user: " +
                 "Gender: %s, BMI: %.1f, Goal: %s, Level: %s. " +
-                "Talk only about exercise, do not mention diet.",
+                "Content: (1) briefly assess their current condition based on BMI and level " +
+                "(e.g. underweight, balanced, overweight; has a foundation or just starting out); " +
+                "(2) what their personalized 28-day roadmap will help them achieve (e.g. lose fat, stimulate muscle growth, build endurance). " +
+                "STRICTLY do NOT name any exercises or training types (no cardio, squat, deadlift, strength sessions...), " +
+                "do NOT give advice about workout frequency or sessions, and do NOT mention diet.",
                 gender, bmi, goal, fitnessLevel)
             : String.format(
-                "Bạn là huấn luyện viên cá nhân. Viết lời khuyên tập luyện ngắn gọn (3-4 câu bằng tiếng Việt) cho người dùng: " +
+                "Bạn là huấn luyện viên cá nhân. Viết 2-3 câu tiếng Việt cho người dùng: " +
                 "Giới tính: %s, BMI: %.1f, Mục tiêu: %s, Trình độ: %s. " +
-                "Chỉ nói về bài tập, không đề cập chế độ ăn.",
+                "Nội dung: (1) nhận xét ngắn thể trạng hiện tại dựa trên BMI và trình độ " +
+                "(vd: đang gầy, cân đối, thừa cân; đã có nền tảng hay mới bắt đầu); " +
+                "(2) lộ trình 28 ngày được cá nhân hóa này sẽ giúp họ đạt được gì (vd: giảm mỡ, kích thích cơ phát triển, tăng sức bền). " +
+                "TUYỆT ĐỐI KHÔNG kể tên bài tập hay loại hình tập nào (không cardio, squat, deadlift, buổi tập sức mạnh...), " +
+                "KHÔNG khuyên về số buổi tập, KHÔNG đề cập chế độ ăn.",
                 gender, bmi, goal, fitnessLevel);
 
         Map<String, Object> requestBody = Map.of(
