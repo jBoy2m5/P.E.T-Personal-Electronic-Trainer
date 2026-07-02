@@ -43,13 +43,21 @@ public class WorkoutSessionController {
     }
 
     @GetMapping("/today")
-    public ResponseEntity<List<WorkoutSessionDTO>> getTodaySessions() {
+    public ResponseEntity<List<WorkoutSessionDTO>> getTodaySessions(
+            @RequestParam(value = "date", required = false) String date) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        // "Hôm nay" theo ngày client gửi lên (giờ địa phương của người dùng); server chạy UTC nên không tự lấy LocalDate.now()
+        LocalDate day;
+        try {
+            day = date != null ? LocalDate.parse(date) : LocalDate.now();
+        } catch (Exception e) {
+            day = LocalDate.now();
+        }
+        LocalDateTime startOfDay = day.atStartOfDay();
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         List<WorkoutSessionDTO> sessions = workoutSessionRepository
                 .findByUser_UserIdAndStartTimeBetween(user.getUserId(), startOfDay, endOfDay)

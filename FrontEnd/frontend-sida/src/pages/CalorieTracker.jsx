@@ -26,7 +26,10 @@ export default function CalorieTracker() {
     useEffect(() => {
         const loadCaloriesData = async () => {
             try {
-                const sessions = await axiosClient.get('/workout-sessions/today');
+                // Gửi ngày theo giờ địa phương vì server chạy UTC
+                const d = new Date();
+                const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const sessions = await axiosClient.get(`/workout-sessions/today?date=${localDate}`);
                 const todayBurn = (sessions || []).reduce((sum, s) => sum + (s.total_calories_burned || 0), 0);
                 setBurnedCalories(Math.round(todayBurn));
                 setTodaySessions(sessions || []);

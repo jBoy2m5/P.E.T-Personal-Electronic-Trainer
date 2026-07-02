@@ -319,7 +319,11 @@ export default function DailyWorkout() {
         setManualCountdown(null);
     };
 
-    const toLocalISOString = (date) => date.toISOString().slice(0, 19);
+    // Giờ địa phương thật của người dùng (toISOString trả về giờ UTC nên buổi tập 0h-7h sáng VN bị lệch sang ngày hôm trước)
+    const toLocalISOString = (date) => {
+        const p = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
+    };
 
     const handleFinishManual = () => {
         const updatedCompleted = [...completedExercises, currentExercise.name];
@@ -405,8 +409,8 @@ export default function DailyWorkout() {
                         
                         const sessionCalories = currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25;
                         const sessionData = {
-                            start_time: new Date(Date.now() - 60000).toISOString().slice(0, 19),
-                            end_time: new Date().toISOString().slice(0, 19),
+                            start_time: toLocalISOString(new Date(Date.now() - 60000)),
+                            end_time: toLocalISOString(new Date()),
                             total_calories_burned: sessionCalories,
                             total_valid_reps: targetReps * targetSets,
                             workout_details: currentExercise.exercise_id ? [{

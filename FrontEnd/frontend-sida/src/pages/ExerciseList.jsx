@@ -33,8 +33,11 @@ const markDayAsTrained = () => {
     window.dispatchEvent(new Event('storage'));
 };
 
-// Định dạng thời gian (bỏ 'Z') để backend parse LocalDateTime; khớp cách DailyWorkout & filter /today theo ngày UTC
-const toLocalISOString = (date) => date.toISOString().slice(0, 19);
+// Giờ địa phương thật của người dùng (toISOString trả về giờ UTC nên buổi tập 0h-7h sáng VN bị lệch sang ngày hôm trước)
+const toLocalISOString = (date) => {
+    const p = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
+};
 
 // Lưu buổi tập lên DB để trang Quản lý calo (đọc /workout-sessions/today) hiển thị được
 const saveSessionToBackend = async (exercise, totalReps, kcal) => {
