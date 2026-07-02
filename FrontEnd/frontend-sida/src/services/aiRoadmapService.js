@@ -5,8 +5,8 @@ import axiosClient from '../api/axiosClient';
 // `signal` (AbortSignal, tùy chọn): cho phép hủy giữa chừng khi người dùng chọn "dùng lộ trình mặc định".
 export const fetchAiRoadmap = async (exercises, signal) => {
     try {
-        // Gemini có thể mất 45-60s cho JSON 28 ngày → nới timeout riêng cho request này
-        const res = await axiosClient.post('/ai/generate-roadmap', {}, { timeout: 90000, signal });
+        // Gemini có thể mất 45-60s cho JSON 28 ngày, backend còn retry 1 lần khi 429/503 → nới timeout riêng
+        const res = await axiosClient.post('/ai/generate-roadmap', {}, { timeout: 120000, signal });
         const days = res?.roadmap;
         if (!Array.isArray(days) || days.length !== 28) return null;
 

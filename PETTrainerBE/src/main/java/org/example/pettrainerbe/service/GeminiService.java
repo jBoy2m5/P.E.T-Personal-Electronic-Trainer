@@ -7,6 +7,7 @@ import org.example.pettrainerbe.model.Exercise;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
@@ -45,33 +46,7 @@ public class GeminiService {
             ))
         );
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-goog-api-key", apiKey);
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            System.out.println("Gemini status: " + response.getStatusCode());
-            System.out.println("Gemini body: " + response.getBody());
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                List<?> candidates = (List<?>) response.getBody().get("candidates");
-                if (candidates != null && !candidates.isEmpty()) {
-                    Map<?, ?> candidate = (Map<?, ?>) candidates.get(0);
-                    Map<?, ?> content = (Map<?, ?>) candidate.get("content");
-                    List<?> parts = (List<?>) content.get("parts");
-                    if (parts != null && !parts.isEmpty()) {
-                        Map<?, ?> part = (Map<?, ?>) parts.get(0);
-                        return (String) part.get("text");
-                    }
-                }
-            }
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            System.err.println("Gemini HTTP error " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
-        } catch (Exception e) {
-            System.err.println("Gemini API error: " + e.getMessage());
-        }
-        return null;
+        return callGeminiForText(url, requestBody);
     }
 
     /**
@@ -126,30 +101,58 @@ public class GeminiService {
             "generationConfig", Map.of("response_mime_type", "application/json")
         );
 
+        String text = callGeminiForText(url, requestBody);
+        if (text == null || text.isBlank()) return null;
+
+        try {
+            List<Map<String, Object>> days = objectMapper.readValue(text, new TypeReference<>() {});
+            return validateRoadmap(days, validNames);
+        } catch (Exception e) {
+            System.err.println("Gemini roadmap parse error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Gọi Gemini generateContent và trả về phần text của candidate đầu tiên (null nếu lỗi).
+     * 429 (hết quota phút) và 503 (model quá tải) thường thoáng qua → tự retry 1 lần sau 2 giây.
+     */
+    private String callGeminiForText(String url, Map<String, Object> requestBody) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("x-goog-api-key", apiKey);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) return null;
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try {
+                ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+                if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) return null;
 
-            List<?> candidates = (List<?>) response.getBody().get("candidates");
-            if (candidates == null || candidates.isEmpty()) return null;
-            Map<?, ?> candidate = (Map<?, ?>) candidates.get(0);
-            Map<?, ?> content = (Map<?, ?>) candidate.get("content");
-            List<?> parts = (List<?>) content.get("parts");
-            if (parts == null || parts.isEmpty()) return null;
-            String text = (String) ((Map<?, ?>) parts.get(0)).get("text");
-            if (text == null || text.isBlank()) return null;
-
-            List<Map<String, Object>> days = objectMapper.readValue(text, new TypeReference<>() {});
-            return validateRoadmap(days, validNames);
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            System.err.println("Gemini roadmap HTTP error " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
-        } catch (Exception e) {
-            System.err.println("Gemini roadmap error: " + e.getMessage());
+                List<?> candidates = (List<?>) response.getBody().get("candidates");
+                if (candidates == null || candidates.isEmpty()) return null;
+                Map<?, ?> content = (Map<?, ?>) ((Map<?, ?>) candidates.get(0)).get("content");
+                if (content == null) return null;
+                List<?> parts = (List<?>) content.get("parts");
+                if (parts == null || parts.isEmpty()) return null;
+                return (String) ((Map<?, ?>) parts.get(0)).get("text");
+            } catch (HttpStatusCodeException e) {
+                int code = e.getStatusCode().value();
+                if ((code == 429 || code == 503) && attempt == 1) {
+                    System.err.println("Gemini " + code + " on " + url + " - retrying once after 2s");
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return null;
+                    }
+                    continue;
+                }
+                System.err.println("Gemini HTTP error " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+                return null;
+            } catch (Exception e) {
+                System.err.println("Gemini API error: " + e.getMessage());
+                return null;
+            }
         }
         return null;
     }
