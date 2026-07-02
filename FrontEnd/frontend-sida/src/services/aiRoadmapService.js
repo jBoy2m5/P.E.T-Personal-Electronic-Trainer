@@ -21,7 +21,9 @@ export const fetchAiRoadmap = async (exercises, signal) => {
             const week = Math.floor(i / 7) + 1;
             const dayOfWeek = (i % 7) + 1;
             const planTitle = d.plan_title || 'LỘ TRÌNH AI';
+            const planTitleEn = d.plan_title_en || 'AI ROADMAP';
             const chapter = `CHƯƠNG ${week}: ${planTitle}`;
+            const chapterEn = `CHAPTER ${week}: ${planTitleEn}`;
 
             if (d.is_rest_day) {
                 roadmap.push({
@@ -29,9 +31,13 @@ export const fetchAiRoadmap = async (exercises, signal) => {
                     isRestDay: true,
                     status: 'locked',
                     muscleGroup: 'NGHỈ NGƠI',
+                    muscleGroupEn: 'REST',
                     chapter,
+                    chapterEn,
                     quest: 'Phục hồi cơ bắp',
+                    questEn: 'Muscle Recovery',
                     storyDesc: d.story_desc || 'Nạp lại năng lượng cho chặng đường tiếp theo.',
+                    storyDescEn: d.story_desc_en || 'Recharge your energy for the next stage.',
                     duration: 0,
                     kcal: 0,
                     exercises: []
@@ -70,9 +76,13 @@ export const fetchAiRoadmap = async (exercises, signal) => {
                 isRestDay: false,
                 status: 'locked',
                 muscleGroup: d.quest || 'TẬP LUYỆN',
+                muscleGroupEn: d.quest_en || null,
                 chapter,
+                chapterEn,
                 quest: d.quest || 'Thử thách hôm nay',
+                questEn: d.quest_en || null,
                 storyDesc: d.story_desc || 'Hãy hoàn thành xuất sắc!',
+                storyDescEn: d.story_desc_en || null,
                 duration: parseInt(d.duration) || 45,
                 kcal: Math.round(totalKcal) + 100, // cộng thêm calo trao đổi chất cơ bản như generator local
                 exercises: mapped

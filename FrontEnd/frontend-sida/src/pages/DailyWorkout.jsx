@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import usePetStore from '../store/usePetStore';
 import useRoadmapStore from '../store/useRoadmapStore';
 import useExerciseStore from '../store/useExerciseStore';
+import { SPLIT_NAME_EN } from '../services/roadmapGenerator';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
 
@@ -64,7 +65,8 @@ const saveSessionToLocal = (kcal, reps, sets, startMs) => {
 export default function DailyWorkout() {
     const navigate = useNavigate();
     const { dayId } = useParams();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const isVi = (i18n.language || '').toLowerCase().startsWith('vi');
     const [completedExercises, setCompletedExercises] = useState(getCompletedToday());
     const [dailyData, setDailyData] = useState(null);
     const addExp = usePetStore(state => state.addExp);
@@ -174,8 +176,12 @@ export default function DailyWorkout() {
             'Cải thiện sức khỏe': 'goal_health'
         };
 
-        const mgKey = mgTranslations[dayInfo.muscleGroup] || 'mg_fullbody';
-        const translatedGroup = t(`roadmap_data.${mgKey}`, dayInfo.muscleGroup);
+        // Tên buổi tập theo ngôn ngữ: EN ưu tiên field muscleGroupEn (lộ trình mới) rồi từ điển
+        // generator local (cache cũ); tên lạ (Gemini đặt) giữ nguyên thay vì ép về "Toàn thân"
+        const mgKey = mgTranslations[dayInfo.muscleGroup];
+        const translatedGroup = !isVi && (dayInfo.muscleGroupEn || SPLIT_NAME_EN[dayInfo.muscleGroup])
+            ? (dayInfo.muscleGroupEn || SPLIT_NAME_EN[dayInfo.muscleGroup])
+            : (mgKey ? t(`roadmap_data.${mgKey}`, dayInfo.muscleGroup) : dayInfo.muscleGroup);
         const translatedGoal = t(`daily_workout.${goalTranslations[goal] || 'goal_muscle'}`, goal);
 
         const buildDailyData = (exList) => {
@@ -221,7 +227,9 @@ export default function DailyWorkout() {
                         exercise_id: ex.exercise_id || ex.id || server?.id,
                         img: server?.img || ex.img,
                         technical_description: ex.technical_description || ex.desc || server?.desc,
+                        technical_description_vi: ex.technical_description_vi || ex.descVi || server?.descVi,
                         safety_notes: ex.safety_notes || server?.safetyNotes,
+                        safety_notes_vi: ex.safety_notes_vi || ex.safetyNotesVi || server?.safetyNotesVi,
                         estimated_calories_per_rep: kcalPerRep,
                         aiMode: ex.aiMode || server?.aiMode,
                         kcal: ex.kcal ?? Math.round(kcalPerRep * parseInt(ex.reps || 12) * (ex.sets || 3))
@@ -243,7 +251,9 @@ export default function DailyWorkout() {
                         level: e.level,
                         img: e.img,
                         technical_description: e.desc,
+                        technical_description_vi: e.descVi,
                         safety_notes: e.safetyNotes,
+                        safety_notes_vi: e.safetyNotesVi,
                         estimated_calories_per_rep: e.kcalPerRep,
                         aiMode: e.aiMode
                     };
@@ -251,7 +261,7 @@ export default function DailyWorkout() {
                 buildDailyData(picked);
             });
         }
-    }, [dayId, t, roadmapData]);
+    }, [dayId, t, isVi, roadmapData]);
 
     const handleOpenDetail = (exercise) => {
         if (completedExercises.includes(exercise.name)) return;
@@ -601,7 +611,7 @@ export default function DailyWorkout() {
                                         <h5 className="fw-black text-primary-dynamic mb-0 fs-5">{t(`exercises.${ex.exercise_id}`, ex.name)}</h5>
                                         <Badge bg="dark" className="ms-2 opacity-75">{ex.level === 'Cơ bản' ? t('exercises.level_basic') : ex.level === 'Trung bình' ? t('exercises.level_intermediate') : t('exercises.level_advanced')}</Badge>
                                     </div>
-                                    <div className="text-secondary fw-bold small mb-2 text-truncate" style={{ maxWidth: '400px' }}>{t(`exercises.desc_${ex.exercise_id}`, ex.technical_description)}</div>
+                                    <div className="text-secondary fw-bold small mb-2 text-truncate" style={{ maxWidth: '400px' }}>{isVi && ex.technical_description_vi ? ex.technical_description_vi : ex.technical_description}</div>
                                     {/* Không hiện Sets x Reps mặc định — người dùng tự đặt khi bắt đầu tập */}
                                     <div className="d-flex align-items-center text-secondary fw-bold gap-3">
                                         <span style={{ color: 'var(--brand-neon)' }}>🔥 {ex.kcal} kcal</span>
@@ -641,13 +651,13 @@ export default function DailyWorkout() {
                                     <div className="mb-4">
                                         <h6 className="fw-black text-secondary text-uppercase mb-2" style={{ fontSize: '0.85rem' }}>{t('exercise_list.desc_benefits')}</h6>
                                         <p className="text-primary-dynamic mb-0" style={{ fontSize: '0.95rem', lineHeight: '1.6' }}>
-                                            {t(`exercises.desc_${selectedDetail.exercise_id}`, selectedDetail.technical_description)}
+                                            {isVi && selectedDetail.technical_description_vi ? selectedDetail.technical_description_vi : selectedDetail.technical_description}
                                         </p>
                                     </div>
                                     <div>
                                         <h6 className="fw-black text-secondary text-uppercase mb-2" style={{ fontSize: '0.85rem' }}>{t('exercise_list.safety_notes')}</h6>
                                         <p className="text-danger fw-bold mb-0" style={{ fontSize: '0.9rem' }}>
-                                            {t(`exercises.safety_${selectedDetail.exercise_id}`, selectedDetail.safety_notes) || t('exercise_list.safety_notes')}
+                                            {(isVi && selectedDetail.safety_notes_vi ? selectedDetail.safety_notes_vi : selectedDetail.safety_notes) || t('exercise_list.safety_notes')}
                                         </p>
                                     </div>
                                 </Col>

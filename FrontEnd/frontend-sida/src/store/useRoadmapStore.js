@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import i18n from 'i18next';
 import { generateDynamicRoadmap } from '../services/roadmapGenerator';
 import { fetchAiRoadmap } from '../services/aiRoadmapService';
 import useExerciseStore from './useExerciseStore';
@@ -115,8 +116,10 @@ const useRoadmapStore = create((set, get) => ({
       // Save to backend (fire-and-forget)
       if (userId) get()._saveToBackend(userId, roadmap, userData.goal);
 
-      axiosClient.get('/ai/roadmap-advice').then(res => {
-        if (res?.advice) localStorage.setItem('ai-roadmap-advice', res.advice);
+      // Lời khuyên AI theo ngôn ngữ hiện tại, cache theo key có hậu tố ngôn ngữ (Roadmap.jsx đọc/fetch bổ sung)
+      const langKey = (i18n.language || 'vi').toLowerCase().startsWith('vi') ? 'vi' : 'en';
+      axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).then(res => {
+        if (res?.advice) localStorage.setItem(`ai-roadmap-advice-${langKey}`, res.advice);
       }).catch(() => {});
     } finally {
       set({ generating: false });

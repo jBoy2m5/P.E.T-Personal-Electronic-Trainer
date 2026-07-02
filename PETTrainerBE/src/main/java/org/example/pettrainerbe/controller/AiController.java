@@ -27,7 +27,7 @@ public class AiController {
     private ExerciseRepository exerciseRepository;
 
     @GetMapping("/roadmap-advice")
-    public ResponseEntity<?> getRoadmapAdvice() {
+    public ResponseEntity<?> getRoadmapAdvice(@RequestParam(value = "lang", defaultValue = "vi") String lang) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email);
 
@@ -40,7 +40,8 @@ public class AiController {
             user.getGender() != null ? user.getGender() : "Nam",
             bmi,
             user.getFitnessGoal() != null ? user.getFitnessGoal() : "Tăng cơ nạc",
-            user.getFitnessLevel() != null ? user.getFitnessLevel() : "Mới bắt đầu"
+            user.getFitnessLevel() != null ? user.getFitnessLevel() : "Mới bắt đầu",
+            lang
         );
 
         return ResponseEntity.ok(Map.of("advice", advice != null ? advice : ""));

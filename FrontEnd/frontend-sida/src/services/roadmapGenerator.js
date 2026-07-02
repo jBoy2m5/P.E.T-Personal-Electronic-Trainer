@@ -1,3 +1,41 @@
+// Bản tiếng Anh cho bộ tên cố định của generator local — export để Roadmap/DailyWorkout
+// dịch được cả các lộ trình cũ đã cache trong localStorage (sinh trước khi có field *En)
+export const PLAN_TITLE_EN = {
+    'THỂ THAO ĐƯỜNG PHỐ': 'STREET WORKOUT',
+    'TÔN DÁNG CƠ BẢN': 'BASIC TONING',
+    'TÂN BINH KIẾN TẠO': 'ROOKIE FOUNDATION',
+    'ĐỐT MỠ AN TOÀN': 'SAFE FAT BURN',
+    'ĐỘ BODY NÂNG CAO': 'ADVANCED BODY SCULPT',
+    'CHIẾN BINH PHÌ ĐẠI': 'HYPERTROPHY WARRIOR'
+};
+
+export const SPLIT_NAME_EN = {
+    'Core & Thăng Bằng': 'Core & Balance',
+    'Kéo Xà & Tay': 'Pull-ups & Arms',
+    'Sức Mạnh Chân': 'Leg Strength',
+    'Thân Trên & Cardio': 'Upper Body & Cardio',
+    'Thân Dưới & Core': 'Lower Body & Core',
+    'Thân Trên B': 'Upper Body B',
+    'Thân Dưới B': 'Lower Body B',
+    'Toàn Thân Nữ': 'Full Body (Women)',
+    'Ngày Đùi & Mông': 'Legs & Glutes Day',
+    'Ngày Lưng & Bụng': 'Back & Abs Day',
+    'Ngày Mông Toàn Diện': 'Total Glutes Day',
+    'Ngày Ngực & Cardio': 'Chest & Cardio Day',
+    'Toàn Thân Nam': 'Full Body (Men)',
+    'Ngày Đẩy (Push)': 'Push Day',
+    'Ngày Kéo (Pull)': 'Pull Day',
+    'Ngày Chân (Legs)': 'Leg Day',
+    'Toàn Thân (Bơm Máu)': 'Full Body Pump',
+    'Phục hồi cơ bắp': 'Muscle Recovery',
+    'NGHỈ NGƠI': 'REST'
+};
+
+const TARGET_EN = {
+    'Ngực': 'Chest', 'Lưng': 'Back', 'Vai': 'Shoulders', 'Tay': 'Arms',
+    'Chân': 'Legs', 'Mông': 'Glutes', 'Core': 'Core', 'Cardio': 'Cardio'
+};
+
 export const generateDynamicRoadmap = (userData, exercises = []) => {
     const isBeginner = userData.fitnessLevel === 'Mới bắt đầu' || userData.fitnessLevel === 'Đã có nền tảng';
     const isFatLoss = userData.goal.toLowerCase().includes('giảm');
@@ -169,9 +207,13 @@ export const generateDynamicRoadmap = (userData, exercises = []) => {
                     isRestDay: false,
                     status: status,
                     muscleGroup: split.name,
+                    muscleGroupEn: SPLIT_NAME_EN[split.name] || split.name,
                     chapter: `CHƯƠNG ${w}: ${planTitle}`,
+                    chapterEn: `CHAPTER ${w}: ${PLAN_TITLE_EN[planTitle] || planTitle}`,
                     quest: split.name,
+                    questEn: SPLIT_NAME_EN[split.name] || split.name,
                     storyDesc: `Mục tiêu hôm nay: ${split.targets.join(', ')}. Hãy hoàn thành xuất sắc!`,
+                    storyDescEn: `Today's focus: ${split.targets.map(tg => TARGET_EN[tg] || tg).join(', ')}. Give it your best!`,
                     duration: isFatLoss ? 40 : 50,
                     kcal: Math.round(totalKcal) + 100, // add base metabolic rate during workout
                     exercises: exercises // Injecting dynamic exercises directly!
@@ -185,9 +227,13 @@ export const generateDynamicRoadmap = (userData, exercises = []) => {
                     isRestDay: true,
                     status: status,
                     muscleGroup: 'NGHỈ NGƠI',
+                    muscleGroupEn: 'REST',
                     chapter: `CHƯƠNG ${w}: ${planTitle}`,
+                    chapterEn: `CHAPTER ${w}: ${PLAN_TITLE_EN[planTitle] || planTitle}`,
                     quest: 'Phục hồi cơ bắp',
+                    questEn: 'Muscle Recovery',
                     storyDesc: 'Nạp lại năng lượng cho chặng đường tiếp theo.',
+                    storyDescEn: 'Recharge your energy for the next stage.',
                     duration: 0,
                     kcal: 0,
                     exercises: []

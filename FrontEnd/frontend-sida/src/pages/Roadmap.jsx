@@ -4,10 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useRoadmapStore from '../store/useRoadmapStore';
 import usePetStore from '../store/usePetStore';
+import { SPLIT_NAME_EN, PLAN_TITLE_EN } from '../services/roadmapGenerator';
+import axiosClient from '../api/axiosClient';
 
 export default function Roadmap() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isVi = (i18n.language || '').toLowerCase().startsWith('vi');
   const { roadmapData, initialized, generating, loadRoadmap, generateRoadmap, skipAiGeneration } = useRoadmapStore();
   const [selectedDay, setSelectedDay] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -17,9 +20,23 @@ export default function Roadmap() {
     if (!initialized) {
         loadRoadmap();
     }
-    const advice = localStorage.getItem('ai-roadmap-advice');
-    if (advice) setAiAdvice(advice);
   }, [initialized, loadRoadmap]);
+
+  // Lời khuyên AI cache theo ngôn ngữ; thiếu bản ngôn ngữ hiện tại thì gọi Gemini lấy và cache lại
+  // (key 'ai-roadmap-advice' cũ không có hậu tố = bản tiếng Việt)
+  useEffect(() => {
+    const langKey = isVi ? 'vi' : 'en';
+    const cached = localStorage.getItem(`ai-roadmap-advice-${langKey}`)
+      || (isVi ? localStorage.getItem('ai-roadmap-advice') : null);
+    setAiAdvice(cached || '');
+    if (cached) return;
+    axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).then(res => {
+      if (res?.advice) {
+        localStorage.setItem(`ai-roadmap-advice-${langKey}`, res.advice);
+        setAiAdvice(res.advice);
+      }
+    }).catch(() => {});
+  }, [isVi]);
 
   const handleNodeClick = (day) => {
     if (day.status === 'locked') return; // Don't open locked days
@@ -70,6 +87,29 @@ export default function Roadmap() {
       return t(`roadmap_data.${map[type][text]}`);
     }
     return text;
+  };
+
+  // Hiển thị theo ngôn ngữ: EN ưu tiên field *En (lộ trình mới), rồi từ điển tên generator local
+  // (lộ trình cũ đã cache), cuối cùng fallback map legacy/giữ nguyên tiếng Việt (cache Gemini cũ)
+  const displayQuest = (day) =>
+    !isVi && (day.questEn || SPLIT_NAME_EN[day.quest])
+      ? (day.questEn || SPLIT_NAME_EN[day.quest])
+      : getTranslatedText('quest', day.quest);
+
+  const displayMg = (day) =>
+    !isVi && (day.muscleGroupEn || SPLIT_NAME_EN[day.muscleGroup])
+      ? (day.muscleGroupEn || SPLIT_NAME_EN[day.muscleGroup])
+      : getTranslatedText('mg', day.muscleGroup);
+
+  const displayStoryDesc = (day) =>
+    !isVi && day.storyDescEn ? day.storyDescEn : getTranslatedText('desc', day.storyDesc);
+
+  const displayChapter = (day) => {
+    if (isVi) return getTranslatedText('chapter', day.chapter);
+    if (day.chapterEn) return day.chapterEn;
+    const m = /^CHƯƠNG (\d+): (.+)$/.exec(day.chapter || '');
+    if (m) return `CHAPTER ${m[1]}: ${PLAN_TITLE_EN[m[2]] || m[2]}`;
+    return getTranslatedText('chapter', day.chapter);
   };
 
   // Đang chờ AI sinh lộ trình / đang tải lần đầu → không hiển thị lộ trình cũ
@@ -244,8 +284,8 @@ export default function Roadmap() {
 
                   <div className="saga-label-container d-block pointer-events-none">
                      <div className="fw-black text-white" style={{ fontSize: '1rem', textShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>{t('roadmap.day')} {day.dayId}</div>
-                     <div className="text-neon fw-bold mb-1" style={{ fontSize: '0.7rem' }}>{getTranslatedText('quest', day.quest)}</div>
-                     <div className="text-muted fw-bold" style={{ fontSize: '0.75rem' }}>[{getTranslatedText('mg', day.muscleGroup)}]</div>
+                     <div className="text-neon fw-bold mb-1" style={{ fontSize: '0.7rem' }}>{displayQuest(day)}</div>
+                     <div className="text-muted fw-bold" style={{ fontSize: '0.75rem' }}>[{displayMg(day)}]</div>
                    </div>
                 </div>
               </div>
@@ -264,12 +304,12 @@ export default function Roadmap() {
                 <span className="fs-3 fw-bold text-dark">{selectedDay.dayId}</span>
               </div>
               
-              <h3 className="fw-black text-primary-dynamic mb-1" style={{ fontSize: '1.25rem' }}>{getTranslatedText('quest', selectedDay.quest)}</h3>
-              <p className="text-neon fw-bold small mb-2">{getTranslatedText('chapter', selectedDay.chapter)}</p>
-              <p className="text-muted small mb-3 fst-italic" style={{ minHeight: '40px' }}>"{getTranslatedText('desc', selectedDay.storyDesc)}"</p>
-              
+              <h3 className="fw-black text-primary-dynamic mb-1" style={{ fontSize: '1.25rem' }}>{displayQuest(selectedDay)}</h3>
+              <p className="text-neon fw-bold small mb-2">{displayChapter(selectedDay)}</p>
+              <p className="text-muted small mb-3 fst-italic" style={{ minHeight: '40px' }}>"{displayStoryDesc(selectedDay)}"</p>
+
               <div className="d-inline-block bg-dark px-3 py-1 rounded-pill border border-secondary">
-                <span className="text-light small fw-bold">🎯 {getTranslatedText('mg', selectedDay.muscleGroup)}</span>
+                <span className="text-light small fw-bold">🎯 {displayMg(selectedDay)}</span>
               </div>
             </div>
 

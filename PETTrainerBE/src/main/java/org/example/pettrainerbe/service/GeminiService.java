@@ -25,7 +25,7 @@ public class GeminiService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = JsonMapper.builder().build();
 
-    public String generateWorkoutAdvice(String gender, double bmi, String goal, String fitnessLevel) {
+    public String generateWorkoutAdvice(String gender, double bmi, String goal, String fitnessLevel, String lang) {
         if (apiKey == null || apiKey.isBlank() || apiKey.startsWith("AIzaSy_REPLACE")) {
             return null;
         }
@@ -33,12 +33,18 @@ public class GeminiService {
         // gemini-2.0-* đã bị gỡ khỏi free tier (quota = 0) → dùng thế hệ 2.5
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
 
-        String prompt = String.format(
-            "Bạn là huấn luyện viên cá nhân. Viết lời khuyên tập luyện ngắn gọn (3-4 câu bằng tiếng Việt) cho người dùng: " +
-            "Giới tính: %s, BMI: %.1f, Mục tiêu: %s, Trình độ: %s. " +
-            "Chỉ nói về bài tập, không đề cập chế độ ăn.",
-            gender, bmi, goal, fitnessLevel
-        );
+        // Lời khuyên trả về theo ngôn ngữ UI của người dùng (hồ sơ user lưu giá trị tiếng Việt, Gemini tự hiểu)
+        String prompt = "en".equalsIgnoreCase(lang)
+            ? String.format(
+                "You are a personal trainer. Write short workout advice (3-4 sentences, in English) for this user: " +
+                "Gender: %s, BMI: %.1f, Goal: %s, Level: %s. " +
+                "Talk only about exercise, do not mention diet.",
+                gender, bmi, goal, fitnessLevel)
+            : String.format(
+                "Bạn là huấn luyện viên cá nhân. Viết lời khuyên tập luyện ngắn gọn (3-4 câu bằng tiếng Việt) cho người dùng: " +
+                "Giới tính: %s, BMI: %.1f, Mục tiêu: %s, Trình độ: %s. " +
+                "Chỉ nói về bài tập, không đề cập chế độ ăn.",
+                gender, bmi, goal, fitnessLevel);
 
         Map<String, Object> requestBody = Map.of(
             "contents", List.of(Map.of(
@@ -85,12 +91,13 @@ public class GeminiService {
             "3. Ngày tập có 3-5 bài, chọn bài phù hợp trình độ và mục tiêu, chia nhóm cơ hợp lý theo tuần, độ khó tăng dần qua các tuần.\n" +
             "4. Nếu BMI > 25 thì KHÔNG chọn bài có bật nhảy.\n" +
             "5. \"reps\" là chuỗi: số lần (vd \"12\" hoặc \"12-15\") với bài sức mạnh, thời gian (vd \"30s\", \"45s\") với bài Cardio/Core.\n" +
-            "6. Mỗi phần tử theo đúng schema (snake_case):\n" +
-            "{\"day\": 1, \"is_rest_day\": false, \"plan_title\": \"TÊN LỘ TRÌNH VIẾT HOA\", " +
-            "\"quest\": \"Tên buổi tập ngắn gọn\", \"story_desc\": \"1 câu động viên tiếng Việt\", " +
+            "6. Mỗi phần tử theo đúng schema (snake_case), các field *_en là bản dịch tiếng Anh của field tiếng Việt tương ứng:\n" +
+            "{\"day\": 1, \"is_rest_day\": false, \"plan_title\": \"TÊN LỘ TRÌNH VIẾT HOA\", \"plan_title_en\": \"PLAN TITLE IN ENGLISH\", " +
+            "\"quest\": \"Tên buổi tập ngắn gọn tiếng Việt\", \"quest_en\": \"Short session name in English\", " +
+            "\"story_desc\": \"1 câu động viên tiếng Việt\", \"story_desc_en\": \"1 motivational sentence in English\", " +
             "\"duration\": 45, \"exercises\": [{\"name\": \"tên đúng trong danh sách\", \"sets\": 3, \"reps\": \"12\", \"rest\": \"60s\"}]}\n" +
-            "Ngày nghỉ: is_rest_day=true, exercises=[], duration=0.\n" +
-            "\"plan_title\" giống nhau cho cả 28 ngày. Chỉ trả về JSON, không giải thích gì thêm.",
+            "Ngày nghỉ: is_rest_day=true, exercises=[], duration=0 (vẫn có đủ quest/quest_en/story_desc/story_desc_en).\n" +
+            "\"plan_title\" và \"plan_title_en\" giống nhau cho cả 28 ngày. Chỉ trả về JSON, không giải thích gì thêm.",
             gender, bmi, goal, fitnessLevel, catalog
         );
 
