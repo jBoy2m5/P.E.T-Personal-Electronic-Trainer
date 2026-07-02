@@ -427,8 +427,8 @@ export default function ExerciseList() {
                                 </div>
 
                                 <Card.Body className="d-flex flex-column p-4">
-                                    <div className="d-flex justify-content-between align-items-center text-secondary small fw-bold mt-auto">
-                                        <span>🔄 {ex.sets} Sets x {ex.reps} Reps</span>
+                                    {/* Không hiện Sets x Reps mặc định — người dùng tự đặt khi bắt đầu tập */}
+                                    <div className="d-flex justify-content-end align-items-center text-secondary small fw-bold mt-auto">
                                         <span style={{ color: 'var(--brand-neon)' }}>🔥 {ex.kcalPerRep} {t('exercise_list.kcal_per_rep')}</span>
                                     </div>
                                 </Card.Body>

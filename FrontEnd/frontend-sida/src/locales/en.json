@@ -151,6 +151,11 @@
   },
   "daily_workout": {
     "back_roadmap": "BACK TO ROADMAP",
+    "locked_title": "This workout day is locked",
+    "locked_desc": "Fully complete the previous workout day, then come back tomorrow to continue your roadmap!",
+    "need_checkin_title": "Check in to start a new day",
+    "need_checkin_desc": "You need to check in today before today's roadmap workout is unlocked.",
+    "go_checkin": "GO CHECK IN",
     "quote_1": "Discipline is the bridge between goals and accomplishment.",
     "quote_2": "Today's sweat is tomorrow's muscle.",
     "quote_3": "You don't have to be perfect, just better than yesterday.",

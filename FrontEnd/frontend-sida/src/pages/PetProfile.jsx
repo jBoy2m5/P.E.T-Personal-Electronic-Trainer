@@ -321,18 +321,19 @@ export default function PetProfile() {
                             const done = day <= dayInCycle;
                             const isCurrent = day === dayInCycle + 1 && !checkinDone;
                             return (
-                              <div key={day} className="d-flex flex-column align-items-center z-1" style={{ width: '14%' }}>
+                              <div key={day} className="d-flex flex-column align-items-center z-1" style={{ width: '14%', minWidth: 0 }}>
+                                {/* Ô tròn co theo bề rộng cột để không tràn/đè các khối khác trên màn hình nhỏ */}
                                 <div className="d-flex align-items-center justify-content-center rounded-circle fw-bold mb-1" style={{
-                                  width: '44px', height: '44px',
+                                  width: 'min(100%, 44px)', aspectRatio: '1 / 1',
                                   background: done ? '#c8f000' : (isCurrent ? 'rgba(200,240,0,0.15)' : (isDark ? '#222' : '#f8f9fa')),
                                   border: done ? 'none' : `2px solid ${isCurrent ? '#c8f000' : (isDark ? '#444' : '#dee2e6')}`,
                                   color: done ? '#000' : (isDark ? '#fff' : '#333'),
-                                  fontSize: done ? '1.1rem' : '0.9rem'
+                                  fontSize: done ? 'clamp(0.75rem, 2vw, 1.1rem)' : 'clamp(0.65rem, 1.8vw, 0.9rem)'
                                 }}>
                                   {done ? '✓' : day}
                                 </div>
-                                <div style={{ fontSize: '0.65rem', color: '#adb5bd', textAlign: 'center' }}>NGÀY {day}</div>
-                                <div style={{ fontSize: '0.7rem', color: done ? '#c8f000' : '#adb5bd', fontWeight: 'bold' }}>+{exp} EXP</div>
+                                <div style={{ fontSize: 'clamp(0.5rem, 1.4vw, 0.65rem)', color: '#adb5bd', textAlign: 'center', whiteSpace: 'nowrap' }}>NGÀY {day}</div>
+                                <div style={{ fontSize: 'clamp(0.5rem, 1.4vw, 0.7rem)', color: done ? '#c8f000' : '#adb5bd', fontWeight: 'bold', whiteSpace: 'nowrap' }}>+{exp} EXP</div>
                               </div>
                             );
                           })}

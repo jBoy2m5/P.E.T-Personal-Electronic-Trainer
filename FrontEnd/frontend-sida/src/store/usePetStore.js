@@ -99,6 +99,8 @@ const usePetStore = create((set, get) => ({
       };
       localStorage.setItem(key, JSON.stringify(newState));
       set(newState);
+      // lastCheckinDate mới từ server có thể đổi trạng thái khóa/mở của lộ trình
+      import('./useRoadmapStore').then((m) => m.default.getState().refreshStatuses()).catch(() => {});
     } catch (err) {
       if (err?.response?.status === 404) {
         // New user: create pet with level 1, exp 0
@@ -165,6 +167,9 @@ const usePetStore = create((set, get) => ({
         localStorage.setItem(key, JSON.stringify(merged));
         return merged;
       });
+      // Điểm danh = bắt đầu ngày mới → tính lại trạng thái khóa/mở của lộ trình
+      // (dynamic import để tránh vòng lặp import giữa 2 store)
+      import('./useRoadmapStore').then((m) => m.default.getState().refreshStatuses()).catch(() => {});
       return expGained;
     } catch { return null; }
   },

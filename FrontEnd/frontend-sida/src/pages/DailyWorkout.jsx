@@ -73,6 +73,7 @@ export default function DailyWorkout() {
     const roadmapInitialized = useRoadmapStore(state => state.initialized);
     const loadRoadmap = useRoadmapStore(state => state.loadRoadmap);
     const totalPoints = usePetStore(state => state.totalPoints);
+    const lastCheckinDate = usePetStore(state => state.lastCheckinDate);
     const isSadFn = usePetStore(state => state.isSad);
     const petIsSad = isSadFn();
     const petIcon = petIsSad ? '😢' : (PET_ICONS_LIST[PET_THRESHOLDS_LIST.filter(th => totalPoints >= th).length - 1] || '🥚');
@@ -487,6 +488,32 @@ export default function DailyWorkout() {
 
     if (!dailyData) return null;
 
+    // Chặn ngày chưa mở khóa: phải điểm danh hôm nay + hoàn thành trọn ngày trước (và đã sang ngày mới)
+    if (dailyData.status === 'locked') {
+        const needCheckin = lastCheckinDate !== getTodayKey();
+        return (
+            <Container className="d-flex flex-column justify-content-center align-items-center text-center px-4" style={{ minHeight: '85vh' }}>
+                <div style={{ fontSize: '4.5rem' }} className="mb-3">{needCheckin ? '📅' : '🔒'}</div>
+                <h4 className="fw-black text-primary-dynamic mb-2">
+                    {needCheckin ? t('daily_workout.need_checkin_title') : t('daily_workout.locked_title')}
+                </h4>
+                <p className="text-secondary fw-bold mb-4" style={{ maxWidth: '420px' }}>
+                    {needCheckin ? t('daily_workout.need_checkin_desc') : t('daily_workout.locked_desc')}
+                </p>
+                <div className="d-flex gap-3">
+                    {needCheckin && (
+                        <Button className="fw-bold rounded-pill px-4 py-2 border-0" style={{ background: 'var(--brand-neon)', color: '#000' }} onClick={() => navigate('/daily')}>
+                            {t('daily_workout.go_checkin')}
+                        </Button>
+                    )}
+                    <Button variant="outline-secondary" className="fw-bold rounded-pill px-4 py-2" onClick={() => navigate('/roadmap')}>
+                        {t('daily_workout.back_roadmap')}
+                    </Button>
+                </div>
+            </Container>
+        );
+    }
+
     return (
         <Container className="py-5" style={{ minHeight: '100vh' }}>
             <Button variant="link" className="text-secondary text-decoration-none p-0 mb-4 d-flex align-items-center fw-bold" onClick={() => navigate(-1)}>
@@ -575,8 +602,8 @@ export default function DailyWorkout() {
                                         <Badge bg="dark" className="ms-2 opacity-75">{ex.level === 'Cơ bản' ? t('exercises.level_basic') : ex.level === 'Trung bình' ? t('exercises.level_intermediate') : t('exercises.level_advanced')}</Badge>
                                     </div>
                                     <div className="text-secondary fw-bold small mb-2 text-truncate" style={{ maxWidth: '400px' }}>{t(`exercises.desc_${ex.exercise_id}`, ex.technical_description)}</div>
+                                    {/* Không hiện Sets x Reps mặc định — người dùng tự đặt khi bắt đầu tập */}
                                     <div className="d-flex align-items-center text-secondary fw-bold gap-3">
-                                        <span>🔄 {ex.sets} Sets x {ex.reps} Reps</span>
                                         <span style={{ color: 'var(--brand-neon)' }}>🔥 {ex.kcal} kcal</span>
                                     </div>
                                 </div>

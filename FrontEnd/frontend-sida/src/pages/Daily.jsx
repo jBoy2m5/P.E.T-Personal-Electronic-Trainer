@@ -165,16 +165,16 @@ export default function Daily() {
                   const isCurrentDay = !hasCheckedInToday && idx === (checkinStreak % 7);
 
                   return (
-                    <div key={idx} className="text-center" style={{ position: 'relative', zIndex: 1, minWidth: '70px', flex: '1' }}>
+                    <div key={idx} className="text-center" style={{ position: 'relative', zIndex: 1, minWidth: 0, flex: '1' }}>
                       <div className={`gym-node mx-auto ${isClaimed ? 'claimed' : ''} ${isCurrentDay ? 'current' : ''}`}>
                         <div className="gym-node-content fw-black">
                           {isClaimed ? '✓' : (idx + 1)}
                         </div>
                       </div>
-                      <div className={`mt-3 fw-bold ${isCurrentDay ? 'text-primary-dynamic' : 'text-secondary'}`} style={{ fontSize: '0.85rem', textTransform: 'uppercase' }}>
+                      <div className={`mt-3 fw-bold ${isCurrentDay ? 'text-primary-dynamic' : 'text-secondary'}`} style={{ fontSize: 'clamp(0.55rem, 1.6vw, 0.85rem)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                          {t('daily.day')} {reward.day}
                       </div>
-                      <div className="fw-bold" style={{ color: isClaimed ? 'var(--brand-neon)' : 'var(--bs-secondary-color)', fontSize: '0.8rem' }}>
+                      <div className="fw-bold" style={{ color: isClaimed ? 'var(--brand-neon)' : 'var(--bs-secondary-color)', fontSize: 'clamp(0.55rem, 1.5vw, 0.8rem)', whiteSpace: 'nowrap' }}>
                         +{reward.points} EXP
                       </div>
                     </div>
@@ -296,7 +296,7 @@ export default function Daily() {
 
         .gym-track-line {
           position: absolute;
-          top: 30px; /* middle of 60px node */
+          top: calc(clamp(34px, 7vw, 60px) / 2); /* giữa ô tròn, ô co giãn theo màn hình */
           left: 5%;
           right: 5%;
           height: 6px;
@@ -306,8 +306,8 @@ export default function Daily() {
         }
 
         .gym-node {
-          width: 60px;
-          height: 60px;
+          width: clamp(34px, 7vw, 60px);
+          height: clamp(34px, 7vw, 60px);
           background: var(--bs-body-bg);
           border: 3px solid var(--bs-border-color, rgba(128,128,128,0.2));
           border-radius: 50%;
@@ -319,7 +319,7 @@ export default function Daily() {
         }
 
         .gym-node-content {
-          font-size: 1.5rem;
+          font-size: clamp(0.9rem, 2.2vw, 1.5rem);
           color: var(--bs-secondary-color);
         }
 

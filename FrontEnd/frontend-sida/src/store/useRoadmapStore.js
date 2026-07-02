@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { generateDynamicRoadmap } from '../services/roadmapGenerator';
 import useExerciseStore from './useExerciseStore';
+import usePetStore from './usePetStore';
 import axiosClient from '../api/axiosClient';
 
 const getUserId = () => {
@@ -15,17 +16,47 @@ const getRoadmapKey = (userId) => {
   return uid ? `roadmap-data-${uid}` : 'roadmap-data';
 };
 
+const getTodayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// Ràng buộc mở khóa lộ trình:
+// - Ngày kế tiếp chỉ 'active' khi: ngày trước đã hoàn thành TRƯỚC hôm nay (đã sang ngày lịch mới)
+//   VÀ hôm nay đã điểm danh (điểm danh = bắt đầu ngày mới). Chưa điểm danh → mọi ngày chưa xong đều khóa.
+// - Ngày nghỉ: điểm danh hôm đó là tính hoàn thành (tự đánh dấu khi đến lượt).
+// - Ngày completed cũ không có completedDate (dữ liệu trước bản này) coi như hoàn thành trong quá khứ.
 const deriveStatuses = (roadmap) => {
+  const todayKey = getTodayKey();
+  const lastCheckinDate = usePetStore.getState().lastCheckinDate;
+  const checkedInToday = lastCheckinDate === todayKey;
+
   const updated = roadmap.map(d => ({ ...d }));
-  const lastCompletedIdx = updated.map(d => d.status === 'completed').lastIndexOf(true);
-  if (lastCompletedIdx === -1) {
-    // Nothing completed — day 1 active
-    if (updated.length > 0) updated[0].status = 'active';
-    for (let i = 1; i < updated.length; i++) updated[i].status = 'locked';
-  } else {
-    for (let i = 0; i <= lastCompletedIdx; i++) updated[i].status = 'completed';
-    if (lastCompletedIdx + 1 < updated.length) updated[lastCompletedIdx + 1].status = 'active';
-    for (let i = lastCompletedIdx + 2; i < updated.length; i++) updated[i].status = 'locked';
+  let lastCompletedIdx = updated.map(d => d.status === 'completed').lastIndexOf(true);
+
+  const prevDoneBeforeToday = (idx) => {
+    if (idx < 0) return true; // ngày 1 không có ngày trước
+    const prev = updated[idx];
+    return !prev.completedDate || prev.completedDate < todayKey;
+  };
+
+  // Ngày nghỉ đến lượt + đã điểm danh hôm nay → tự hoàn thành (mỗi ngày lịch chỉ 1 ngày nghỉ)
+  const nextIdx = lastCompletedIdx + 1;
+  if (
+    nextIdx < updated.length && updated[nextIdx].isRestDay &&
+    checkedInToday && prevDoneBeforeToday(lastCompletedIdx)
+  ) {
+    updated[nextIdx].status = 'completed';
+    updated[nextIdx].completedDate = todayKey;
+    lastCompletedIdx = nextIdx;
+  }
+
+  for (let i = 0; i <= lastCompletedIdx; i++) updated[i].status = 'completed';
+  const activeIdx = lastCompletedIdx + 1;
+  if (activeIdx < updated.length) {
+    const unlocked = checkedInToday && prevDoneBeforeToday(lastCompletedIdx);
+    updated[activeIdx].status = unlocked ? 'active' : 'locked';
+    for (let i = activeIdx + 1; i < updated.length; i++) updated[i].status = 'locked';
   }
   return updated;
 };
@@ -40,7 +71,8 @@ const useRoadmapStore = create((set, get) => ({
     const saved = localStorage.getItem(key);
 
     if (saved) {
-      const parsed = JSON.parse(saved);
+      const parsed = deriveStatuses(JSON.parse(saved));
+      localStorage.setItem(key, JSON.stringify(parsed));
       set({ roadmapData: parsed, initialized: true });
       // Sync completion from backend in background
       if (userId) get()._syncCompletionFromBackend(userId, parsed);
@@ -64,7 +96,7 @@ const useRoadmapStore = create((set, get) => ({
       userData = { gender: p.gender || 'Nam', height: p.height || 170, weight: p.weight || 65, fitnessLevel: p.fitnessLevel || 'Mới bắt đầu', goal: p.goal || p.fitness_goal || 'Giữ dáng' };
     }
     const exercises = await useExerciseStore.getState().fetchExercises();
-    const roadmap = generateDynamicRoadmap(userData, exercises);
+    const roadmap = deriveStatuses(generateDynamicRoadmap(userData, exercises));
 
     localStorage.setItem(key, JSON.stringify(roadmap));
     set({ roadmapData: roadmap, initialized: true });
@@ -77,6 +109,15 @@ const useRoadmapStore = create((set, get) => ({
     }).catch(() => {});
   },
 
+  // Tính lại trạng thái khóa/mở theo ngày hôm nay + điểm danh (gọi sau khi check-in hoặc khi mở trang)
+  refreshStatuses: () => {
+    const { roadmapData } = get();
+    if (!roadmapData.length) return;
+    const withStatuses = deriveStatuses(roadmapData);
+    localStorage.setItem(getRoadmapKey(), JSON.stringify(withStatuses));
+    set({ roadmapData: withStatuses });
+  },
+
   markDayComplete: (localDayId) => {
     const { roadmapData } = get();
     const idx = roadmapData.findIndex(d => d.dayId.toString() === localDayId.toString());
@@ -84,11 +125,13 @@ const useRoadmapStore = create((set, get) => ({
 
     const updated = roadmapData.map(d => ({ ...d }));
     updated[idx].status = 'completed';
-    if (idx + 1 < updated.length) updated[idx + 1].status = 'active';
+    // Ghi ngày hoàn thành — ngày kế tiếp KHÔNG mở ngay mà chờ sang ngày lịch mới + điểm danh (deriveStatuses)
+    updated[idx].completedDate = getTodayKey();
+    const withStatuses = deriveStatuses(updated);
 
     const key = getRoadmapKey();
-    localStorage.setItem(key, JSON.stringify(updated));
-    set({ roadmapData: updated });
+    localStorage.setItem(key, JSON.stringify(withStatuses));
+    set({ roadmapData: withStatuses });
 
     // Sync to backend
     const backendDayId = updated[idx].backendDayId;
@@ -143,9 +186,10 @@ const useRoadmapStore = create((set, get) => ({
         set({ roadmapData: withStatuses, initialized: true });
       } else {
         const key = getRoadmapKey(userId);
-        localStorage.setItem(key, JSON.stringify(localRoadmap));
-        set({ roadmapData: localRoadmap, initialized: true });
-        get()._saveToBackend(userId, localRoadmap, userData.goal);
+        const withStatuses = deriveStatuses(localRoadmap);
+        localStorage.setItem(key, JSON.stringify(withStatuses));
+        set({ roadmapData: withStatuses, initialized: true });
+        get()._saveToBackend(userId, withStatuses, userData.goal);
       }
     } catch {
       await get().generateRoadmap();
