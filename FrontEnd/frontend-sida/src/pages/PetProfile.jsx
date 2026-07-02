@@ -39,7 +39,6 @@ export default function PetProfile() {
   const [editNameValue, setEditNameValue] = useState('');
   
   const [showOutfit, setShowOutfit] = useState(false);
-  const [showDonation, setShowDonation] = useState(false);
   
   const [showChat, setShowChat] = useState(false);
   const [chatMessages, setChatMessages] = useState([{ sender: 'ai', text: t('pet_profile.hello_ai') }]);
@@ -262,9 +261,6 @@ export default function PetProfile() {
                 <button onClick={() => setShowChat(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: isDark ? 'rgba(2,62,138,0.1)' : '#f8f9fa', color: isDark ? '#caf0f8' : '#023e8a', border: '1px solid rgba(2,62,138,0.2)' }}>
                   💬 {t('pet_profile.ai_chat')}
                 </button>
-                <button onClick={() => setShowDonation(true)} className="btn rounded-pill fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm flex-grow-1 justify-content-center" style={{ background: isDark ? 'rgba(230,57,70,0.1)' : '#f8f9fa', color: isDark ? '#ffb3c6' : '#e63946', border: '1px solid rgba(230,57,70,0.2)' }}>
-                  💖 {t('pet_profile.donation')}
-                </button>
               </div>
 
               {/* Check-in Card */}
@@ -444,7 +440,7 @@ export default function PetProfile() {
             <span className="fw-black text-primary fs-5">{petData.total_exp}</span>
           </div>
           <div className="d-flex gap-3 justify-content-center flex-wrap">
-            <div className={`p-3 border rounded-3 d-flex flex-column justify-content-between ${petData.total_exp >= 150 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '120px', height: '160px', opacity: petData.total_exp >= 150 ? 1 : 0.7 }}>
+            <div className={`p-3 border rounded-3 d-flex flex-column justify-content-between ${petData.total_exp >= 150 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '130px', minHeight: '160px', opacity: petData.total_exp >= 150 ? 1 : 0.7 }}>
               <div>
                 <div style={{ fontSize: '3rem' }}>🧢</div>
                 <div className="fw-bold mt-2 small">Mũ Snapback</div>
@@ -455,7 +451,7 @@ export default function PetProfile() {
                 <Button size="sm" variant="outline-secondary" disabled className="mt-2 fw-bold w-100">🔒 150 EXP</Button>
               )}
             </div>
-            <div className={`p-3 border rounded-3 d-flex flex-column justify-content-between ${petData.total_exp >= 200 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '120px', height: '160px', opacity: petData.total_exp >= 200 ? 1 : 0.7 }}>
+            <div className={`p-3 border rounded-3 d-flex flex-column justify-content-between ${petData.total_exp >= 200 ? 'bg-light border-primary' : 'bg-light text-muted'}`} style={{ width: '130px', minHeight: '160px', opacity: petData.total_exp >= 200 ? 1 : 0.7 }}>
               <div>
                 <div style={{ fontSize: '3rem' }}>🕶️</div>
                 <div className="fw-bold mt-2 small">Kính râm</div>
@@ -470,51 +466,7 @@ export default function PetProfile() {
         </Modal.Body>
       </Modal>
 
-      {/* 3. Donation Modal */}
-      <Modal show={showDonation} onHide={() => setShowDonation(false)} centered>
-        <Modal.Header closeButton className="border-0 pb-0">
-          <Modal.Title className="fw-black text-danger">💖 {t('pet_profile.charity_donation')}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="p-4 text-center">
-          <p className="text-muted fw-bold mb-4">{t('pet_profile.charity_desc')}</p>
-          <div className="d-flex flex-column gap-3">
-            <Card className={`border-0 bg-light ${petData.total_exp >= 500 ? '' : 'opacity-75'}`}>
-              <Card.Body className="d-flex align-items-center justify-content-between p-3">
-                <div className="d-flex align-items-center gap-3">
-                  <div className="fs-1">🌳</div>
-                  <div className="text-start">
-                    <div className="fw-bold">{t('pet_profile.donate_tree')}</div>
-                    <div className="text-muted small">{t('pet_profile.tree_project')}</div>
-                  </div>
-                </div>
-                {petData.total_exp >= 500 ? (
-                  <Button variant="danger" className="fw-bold rounded-pill px-3">❤️ Quyên góp</Button>
-                ) : (
-                  <Button variant="outline-secondary" disabled className="fw-bold rounded-pill px-3">🔒 Cần 500 EXP</Button>
-                )}
-              </Card.Body>
-            </Card>
-            <Card className={`border-0 bg-light ${petData.total_exp >= 1000 ? '' : 'opacity-75'}`}>
-              <Card.Body className="d-flex align-items-center justify-content-between p-3">
-                <div className="d-flex align-items-center gap-3">
-                  <div className="fs-1">🍱</div>
-                  <div className="text-start">
-                    <div className="fw-bold">{t('pet_profile.donate_meal')}</div>
-                    <div className="text-muted small">{t('pet_profile.meal_project')}</div>
-                  </div>
-                </div>
-                {petData.total_exp >= 1000 ? (
-                  <Button variant="danger" className="fw-bold rounded-pill px-3">❤️ Quyên góp</Button>
-                ) : (
-                  <Button variant="outline-secondary" disabled className="fw-bold rounded-pill px-3">🔒 Cần 1000 EXP</Button>
-                )}
-              </Card.Body>
-            </Card>
-          </div>
-        </Modal.Body>
-      </Modal>
-
-      {/* 4. AI Chat Modal */}
+      {/* 3. AI Chat Modal */}
       <Modal show={showChat} onHide={() => setShowChat(false)} fullscreen="sm-down" centered size="lg">
         <Modal.Header closeButton className="border-bottom">
           <Modal.Title className="fw-black text-primary d-flex align-items-center gap-2">
