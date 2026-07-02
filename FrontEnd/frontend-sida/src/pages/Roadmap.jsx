@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Modal, Button } from 'react-bootstrap';
+import { Container, Row, Col, Modal, Button, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useRoadmapStore from '../store/useRoadmapStore';
@@ -8,7 +8,7 @@ import usePetStore from '../store/usePetStore';
 export default function Roadmap() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { roadmapData, initialized, loadRoadmap, generateRoadmap } = useRoadmapStore();
+  const { roadmapData, initialized, generating, loadRoadmap, generateRoadmap } = useRoadmapStore();
   const [selectedDay, setSelectedDay] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [aiAdvice, setAiAdvice] = useState('');
@@ -71,6 +71,33 @@ export default function Roadmap() {
     }
     return text;
   };
+
+  // Đang chờ AI sinh lộ trình / đang tải lần đầu → không hiển thị lộ trình cũ
+  if (generating || !initialized) {
+    return (
+      <div className="min-vh-100 d-flex flex-column align-items-center justify-content-center text-center px-4 bg-roadmap-gradient">
+        <div className="position-relative mb-4" style={{ width: 90, height: 90 }}>
+          <Spinner
+            animation="border"
+            variant="success"
+            className="position-absolute top-0 start-0"
+            style={{ width: 90, height: 90, borderWidth: 4 }}
+          />
+          <span className="position-absolute top-50 start-50 translate-middle" style={{ fontSize: '2.2rem' }}>
+            {generating ? '🤖' : '🗺️'}
+          </span>
+        </div>
+        <h4 className="text-white fw-bold" style={{ letterSpacing: '1px' }}>
+          {generating ? t('roadmap.generating_title') : t('roadmap.loading')}
+        </h4>
+        {generating && (
+          <p className="mb-0" style={{ color: 'rgba(255,255,255,0.7)', maxWidth: 420 }}>
+            {t('roadmap.generating_desc')}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-vh-100 position-relative py-5 overflow-hidden bg-roadmap-gradient">

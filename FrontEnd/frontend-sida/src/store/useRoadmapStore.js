@@ -65,6 +65,7 @@ const deriveStatuses = (roadmap) => {
 const useRoadmapStore = create((set, get) => ({
   roadmapData: [],
   initialized: false,
+  generating: false, // đang chờ AI sinh lộ trình → UI hiển thị màn hình chờ thay vì lộ trình cũ/mặc định
 
   loadRoadmap: async () => {
     const userId = getUserId();
@@ -88,28 +89,33 @@ const useRoadmapStore = create((set, get) => ({
   },
 
   generateRoadmap: async () => {
-    const userId = getUserId();
-    const key = getRoadmapKey(userId);
-    const saved = localStorage.getItem('user-data');
-    let userData = { gender: 'Nam', height: 170, weight: 65, fitnessLevel: 'Mới bắt đầu', goal: 'Giữ dáng' };
-    if (saved) {
-      const p = JSON.parse(saved);
-      userData = { gender: p.gender || 'Nam', height: p.height || 170, weight: p.weight || 65, fitnessLevel: p.fitnessLevel || 'Mới bắt đầu', goal: p.goal || p.fitness_goal || 'Giữ dáng' };
+    set({ generating: true });
+    try {
+      const userId = getUserId();
+      const key = getRoadmapKey(userId);
+      const saved = localStorage.getItem('user-data');
+      let userData = { gender: 'Nam', height: 170, weight: 65, fitnessLevel: 'Mới bắt đầu', goal: 'Giữ dáng' };
+      if (saved) {
+        const p = JSON.parse(saved);
+        userData = { gender: p.gender || 'Nam', height: p.height || 170, weight: p.weight || 65, fitnessLevel: p.fitnessLevel || 'Mới bắt đầu', goal: p.goal || p.fitness_goal || 'Giữ dáng' };
+      }
+      const exercises = await useExerciseStore.getState().fetchExercises();
+      // Ưu tiên lộ trình do Gemini sinh; AI lỗi/timeout thì fallback thuật toán local
+      const aiRoadmap = await fetchAiRoadmap(exercises);
+      const roadmap = deriveStatuses(aiRoadmap || generateDynamicRoadmap(userData, exercises));
+
+      localStorage.setItem(key, JSON.stringify(roadmap));
+      set({ roadmapData: roadmap, initialized: true });
+
+      // Save to backend (fire-and-forget)
+      if (userId) get()._saveToBackend(userId, roadmap, userData.goal);
+
+      axiosClient.get('/ai/roadmap-advice').then(res => {
+        if (res?.advice) localStorage.setItem('ai-roadmap-advice', res.advice);
+      }).catch(() => {});
+    } finally {
+      set({ generating: false });
     }
-    const exercises = await useExerciseStore.getState().fetchExercises();
-    // Ưu tiên lộ trình do Gemini sinh; AI lỗi/timeout thì fallback thuật toán local
-    const aiRoadmap = await fetchAiRoadmap(exercises);
-    const roadmap = deriveStatuses(aiRoadmap || generateDynamicRoadmap(userData, exercises));
-
-    localStorage.setItem(key, JSON.stringify(roadmap));
-    set({ roadmapData: roadmap, initialized: true });
-
-    // Save to backend (fire-and-forget)
-    if (userId) get()._saveToBackend(userId, roadmap, userData.goal);
-
-    axiosClient.get('/ai/roadmap-advice').then(res => {
-      if (res?.advice) localStorage.setItem('ai-roadmap-advice', res.advice);
-    }).catch(() => {});
   },
 
   // Tính lại trạng thái khóa/mở theo ngày hôm nay + điểm danh (gọi sau khi check-in hoặc khi mở trang)
@@ -191,14 +197,20 @@ const useRoadmapStore = create((set, get) => ({
         set({ roadmapData: withStatuses, initialized: true });
       } else {
         // Lần đầu tạo lộ trình → ưu tiên Gemini, AI lỗi thì fallback thuật toán local
-        const localRoadmap = (await fetchAiRoadmap(exercises)) || generateDynamicRoadmap(userData, exercises);
-        const key = getRoadmapKey(userId);
-        const withStatuses = deriveStatuses(localRoadmap);
-        localStorage.setItem(key, JSON.stringify(withStatuses));
-        set({ roadmapData: withStatuses, initialized: true });
-        get()._saveToBackend(userId, withStatuses, userData.goal);
+        set({ generating: true });
+        try {
+          const localRoadmap = (await fetchAiRoadmap(exercises)) || generateDynamicRoadmap(userData, exercises);
+          const key = getRoadmapKey(userId);
+          const withStatuses = deriveStatuses(localRoadmap);
+          localStorage.setItem(key, JSON.stringify(withStatuses));
+          set({ roadmapData: withStatuses, initialized: true });
+          get()._saveToBackend(userId, withStatuses, userData.goal);
+        } finally {
+          set({ generating: false });
+        }
       }
     } catch {
+      set({ generating: false });
       await get().generateRoadmap();
     }
   },

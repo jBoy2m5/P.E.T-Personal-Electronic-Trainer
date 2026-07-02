@@ -51,7 +51,10 @@
     "congrats": "🎉 Bạn đã hoàn thành xuất sắc!",
     "review_workout": "XEM LẠI BUỔI TẬP",
     "start_workout": "BẮT ĐẦU TẬP NGAY",
-    "locked": "🔒 Hãy hoàn thành các ngày trước"
+    "locked": "🔒 Hãy hoàn thành các ngày trước",
+    "generating_title": "AI ĐANG TẠO LỘ TRÌNH CHO BẠN",
+    "generating_desc": "Huấn luyện viên AI đang thiết kế lộ trình 28 ngày theo thể trạng và mục tiêu của bạn. Quá trình này mất khoảng 1 phút, đừng rời trang nhé!",
+    "loading": "Đang tải lộ trình..."
   },
   "daily": {
     "subtitle": "TIÊU HAO CALO, TÍCH LŨY ĐIỂM SỐ",
