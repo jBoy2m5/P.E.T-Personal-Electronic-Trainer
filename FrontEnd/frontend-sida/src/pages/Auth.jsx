@@ -5,11 +5,26 @@ import { useTranslation } from 'react-i18next';
 import { useGoogleLogin } from '@react-oauth/google';
 import axiosClient from '../api/axiosClient';
 
+// Trình duyệt nhúng trong app (Zalo, Facebook, Messenger, Instagram, TikTok...) không hoàn tất được
+// OAuth Google (bị chặn 403 disallowed_useragent hoặc popup trắng trang vì webview không hỗ trợ
+// postMessage về trang app) → phải cảnh báo người dùng mở bằng Chrome/Safari
+const isInAppBrowser = () => {
+  const ua = navigator.userAgent || '';
+  // Các app phổ biến tự khai tên trong UA
+  if (/FBAN|FBAV|FB_IAB|FBIOS|Zalo|Instagram|Line\/|MicroMessenger|TikTok|Snapchat|Twitter/i.test(ua)) return true;
+  // Android WebView chuẩn luôn có "; wv)" trong UA (kể cả khi app không khai tên)
+  if (/;\s?wv\)/.test(ua)) return true;
+  // iOS webview: có nền WebKit nhưng thiếu token "Safari/" của trình duyệt thật
+  if (/iPhone|iPad|iPod/.test(ua) && /AppleWebKit/.test(ua) && !/Safari\//.test(ua)) return true;
+  return false;
+};
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const inAppBrowser = isInAppBrowser();
 
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -18,8 +33,12 @@ export default function Auth() {
         const res = await axiosClient.post('/auth/google-login', {
           credential: tokenResponse.access_token
         });
-        
-        // Save user data (since JWT is in HttpOnly cookie)
+
+        // Lưu JWT để gửi qua header Authorization: Bearer — không phụ thuộc cookie
+        // cross-site (Safari/mobile chặn third-party cookie giữa vercel.app và railway.app)
+        if (res.token) {
+          localStorage.setItem('jwt-token', res.token);
+        }
         localStorage.setItem('user-data', JSON.stringify(res.user));
 
         // Redirect based on onboarding status
@@ -30,14 +49,17 @@ export default function Auth() {
         }
       } catch (error) {
         console.error("Google Login Failed", error);
-        alert("Đăng nhập thất bại. Vui lòng thử lại.");
+        const detail = typeof error?.response?.data === 'string'
+          ? error.response.data
+          : (error?.response?.data?.error || error?.message || '');
+        alert(t('auth.login_failed') + (detail ? `\n(${detail})` : ''));
       } finally {
         setLoading(false);
       }
     },
-    onError: () => {
-      console.error('Login Failed');
-      alert("Đăng nhập Google bị hủy hoặc thất bại.");
+    onError: (err) => {
+      console.error('Login Failed', err);
+      alert(inAppBrowser ? t('auth.inapp_warning') : t('auth.google_cancelled'));
     }
   });
 
@@ -256,6 +278,16 @@ export default function Auth() {
                     ? t('auth.login_welcome')
                     : t('auth.register_welcome')}
                 </p>
+
+                {/* Cảnh báo trình duyệt nhúng (Zalo/Facebook/...) — Google chặn OAuth trong webview */}
+                {inAppBrowser && (
+                  <div
+                    className="mb-3 p-3 rounded-3 small"
+                    style={{ background: 'rgba(255, 193, 7, 0.12)', border: '1px solid rgba(255, 193, 7, 0.5)', color: '#ffc107' }}
+                  >
+                    ⚠️ {t('auth.inapp_warning')}
+                  </div>
+                )}
 
                 {/* Google Sign In Button */}
                 <div className="d-flex justify-content-center mb-4">

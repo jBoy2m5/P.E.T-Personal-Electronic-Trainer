@@ -224,7 +224,8 @@ export default function TopNav() {
                         className="d-flex align-items-center py-2 text-danger"
                         onClick={() => {
                           localStorage.removeItem('user-data');
-                          window.location.href = '/login'; 
+                          localStorage.removeItem('jwt-token');
+                          window.location.href = '/login';
                         }}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="me-2" viewBox="0 0 16 16">

@@ -9,9 +9,15 @@ const axiosClient = axios.create({
     withCredentials: true, // Quan trọng: Cho phép gửi kèm HttpOnly Cookie
 });
 
-// Interceptor cho Request: Có thể dùng để đính kèm logic khác nếu cần
+// Interceptor cho Request: đính kèm JWT qua header Authorization.
+// Cookie HttpOnly vẫn được gửi kèm (withCredentials), nhưng Safari/mobile chặn cookie
+// cross-site (vercel.app ↔ railway.app) nên header Bearer là đường auth chính.
 axiosClient.interceptors.request.use(
     (config) => {
+        const token = localStorage.getItem('jwt-token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
         return config;
     },
     (error) => {
@@ -29,6 +35,7 @@ axiosClient.interceptors.response.use(
         if (error.response && error.response.status === 401) {
             console.error('Unauthorized! Token missing or invalid.');
             localStorage.removeItem('user-data');
+            localStorage.removeItem('jwt-token');
             window.location.href = '/login';
         }
         return Promise.reject(error);

@@ -64,6 +64,7 @@ export default function UserProfile() {
 
   const handleLogout = () => {
     localStorage.removeItem('user-data');
+    localStorage.removeItem('jwt-token');
     navigate('/login');
   };
 

@@ -116,6 +116,9 @@ public class AuthController {
                 responseBody.put("status", "success");
                 responseBody.put("message", "Đăng nhập Google thành công");
                 responseBody.put("needsOnboarding", needsOnboarding);
+                // Trả JWT trong body để frontend gửi qua header Authorization: Bearer —
+                // cookie cross-site (vercel.app ↔ railway.app) bị Safari/mobile chặn third-party cookie
+                responseBody.put("token", jwt);
                 
                 // Don't send back password hash or circular references, create a safe user DTO or map
                 Map<String, Object> userMap = new HashMap<>();
