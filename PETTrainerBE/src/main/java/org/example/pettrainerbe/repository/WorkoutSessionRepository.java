@@ -1,6 +1,7 @@
 package org.example.pettrainerbe.repository;
 
 import org.example.pettrainerbe.model.WorkoutSession;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -9,6 +10,9 @@ import java.util.List;
 
 @Repository
 public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, Integer> {
+    @EntityGraph(attributePaths = {"workoutDetails", "workoutDetails.exercise"})
     List<WorkoutSession> findByUser_UserIdAndStartTimeBetween(Integer userId, LocalDateTime start, LocalDateTime end);
+
+    @EntityGraph(attributePaths = {"workoutDetails", "workoutDetails.exercise"})
     List<WorkoutSession> findByUser_UserId(Integer userId);
 }

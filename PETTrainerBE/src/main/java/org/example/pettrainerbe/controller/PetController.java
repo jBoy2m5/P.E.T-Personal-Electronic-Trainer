@@ -38,9 +38,7 @@ public class PetController {
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<PetDTO> getPetByUserId(@PathVariable Integer userId) {
-        return petRepository.findAll().stream()
-                .filter(p -> p.getUser() != null && p.getUser().getUserId().equals(userId))
-                .findFirst()
+        return petRepository.findByUser_UserId(userId)
                 .map(pet -> ResponseEntity.ok(convertToDTO(pet)))
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -51,9 +49,7 @@ public class PetController {
         if (userId == null) return ResponseEntity.badRequest().build();
 
         // Return existing pet if already created
-        java.util.Optional<Pet> existing = petRepository.findAll().stream()
-                .filter(p -> p.getUser() != null && p.getUser().getUserId().equals(userId))
-                .findFirst();
+        java.util.Optional<Pet> existing = petRepository.findByUser_UserId(userId);
         if (existing.isPresent()) return ResponseEntity.ok(convertToDTO(existing.get()));
 
         return userRepository.findById(userId).map(user -> {

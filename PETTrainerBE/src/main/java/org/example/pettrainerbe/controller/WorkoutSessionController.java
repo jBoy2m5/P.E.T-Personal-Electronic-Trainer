@@ -1,6 +1,5 @@
 package org.example.pettrainerbe.controller;
 
-import org.example.pettrainerbe.dto.ErrorLogDTO;
 import org.example.pettrainerbe.dto.ExerciseDTO;
 import org.example.pettrainerbe.dto.WorkoutDetailDTO;
 import org.example.pettrainerbe.dto.WorkoutSessionDTO;
@@ -158,28 +157,12 @@ public class WorkoutSessionController {
                 detailDto.setSessionId(session.getSessionId());
 
                 if (detail.getExercise() != null) {
+                    // Chỉ trả các field frontend dùng (name, media_url) — mô tả/góc chuẩn rất nặng và không cần trong lịch sử buổi tập
                     ExerciseDTO exDto = new ExerciseDTO();
                     exDto.setExerciseId(detail.getExercise().getExerciseId());
                     exDto.setName(detail.getExercise().getName());
-                    exDto.setTechnicalDescription(detail.getExercise().getTechnicalDescription());
-                    exDto.setSafetyNotes(detail.getExercise().getSafetyNotes());
                     exDto.setMediaUrl(detail.getExercise().getMediaUrl());
-                    exDto.setStandardAngles(detail.getExercise().getStandardAngles());
-                    exDto.setEstimatedCaloriesPerRep(detail.getExercise().getEstimatedCaloriesPerRep());
                     detailDto.setExercise(exDto);
-                }
-
-                if (detail.getErrorLogs() != null) {
-                    List<ErrorLogDTO> logDTOs = detail.getErrorLogs().stream().map(log -> {
-                        ErrorLogDTO logDto = new ErrorLogDTO();
-                        logDto.setLogId(log.getLogId());
-                        logDto.setErrorDescription(log.getErrorDescription());
-                        logDto.setKeypointsData(log.getKeypointsData());
-                        logDto.setCreatedAt(log.getCreatedAt());
-                        logDto.setDetailId(detail.getDetailId());
-                        return logDto;
-                    }).collect(Collectors.toList());
-                    detailDto.setErrorLogs(logDTOs);
                 }
                 return detailDto;
             }).collect(Collectors.toList());
