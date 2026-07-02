@@ -204,6 +204,7 @@
     "login_failed": "Login failed. Please try again.",
     "google_cancelled": "Google sign-in was cancelled or failed. Please try again.",
     "inapp_warning": "You are viewing this page inside an app (Zalo/Facebook/Messenger...). Google blocks sign-in in embedded browsers — tap ⋯ and choose \"Open in browser\" (Chrome/Safari), then sign in again.",
+    "popup_blocked": "Your browser blocked the Google sign-in popup. Use the Google button below, or allow pop-ups for this site and try again.",
     "badge_future": "FUTURE FITNESS TREND",
     "discover": "Discover the ",
     "best_version": "best version of yourself",

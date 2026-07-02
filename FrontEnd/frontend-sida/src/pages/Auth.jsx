@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useGoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin, GoogleLogin } from '@react-oauth/google';
 import axiosClient from '../api/axiosClient';
 
 // Trình duyệt nhúng trong app (Zalo, Facebook, Messenger, Instagram, TikTok...) không hoàn tất được
@@ -22,44 +22,56 @@ const isInAppBrowser = () => {
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  // Popup Google bị trình duyệt chặn (adblock/chặn popup) → hiện nút Google chính thức
+  // (render trong iframe của Google nên không bị chặn popup) làm đường dự phòng
+  const [popupBlocked, setPopupBlocked] = useState(false);
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const inAppBrowser = isInAppBrowser();
 
-  const loginWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setLoading(true);
-      try {
-        const res = await axiosClient.post('/auth/google-login', {
-          credential: tokenResponse.access_token
-        });
+  // Backend nhận cả access_token (ya29., từ useGoogleLogin) lẫn ID token (từ nút GoogleLogin)
+  // qua cùng một field `credential`
+  const completeLogin = async (credential) => {
+    setLoading(true);
+    try {
+      const res = await axiosClient.post('/auth/google-login', { credential });
 
-        // Lưu JWT để gửi qua header Authorization: Bearer — không phụ thuộc cookie
-        // cross-site (Safari/mobile chặn third-party cookie giữa vercel.app và railway.app)
-        if (res.token) {
-          localStorage.setItem('jwt-token', res.token);
-        }
-        localStorage.setItem('user-data', JSON.stringify(res.user));
-
-        // Redirect based on onboarding status
-        if (res.needsOnboarding) {
-          navigate('/onboarding');
-        } else {
-          navigate('/');
-        }
-      } catch (error) {
-        console.error("Google Login Failed", error);
-        const detail = typeof error?.response?.data === 'string'
-          ? error.response.data
-          : (error?.response?.data?.error || error?.message || '');
-        alert(t('auth.login_failed') + (detail ? `\n(${detail})` : ''));
-      } finally {
-        setLoading(false);
+      // Lưu JWT để gửi qua header Authorization: Bearer — không phụ thuộc cookie
+      // cross-site (Safari/mobile chặn third-party cookie giữa vercel.app và railway.app)
+      if (res.token) {
+        localStorage.setItem('jwt-token', res.token);
       }
-    },
+      localStorage.setItem('user-data', JSON.stringify(res.user));
+
+      // Redirect based on onboarding status
+      if (res.needsOnboarding) {
+        navigate('/onboarding');
+      } else {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error("Google Login Failed", error);
+      const detail = typeof error?.response?.data === 'string'
+        ? error.response.data
+        : (error?.response?.data?.error || error?.message || '');
+      alert(t('auth.login_failed') + (detail ? `\n(${detail})` : ''));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: (tokenResponse) => completeLogin(tokenResponse.access_token),
     onError: (err) => {
       console.error('Login Failed', err);
       alert(inAppBrowser ? t('auth.inapp_warning') : t('auth.google_cancelled'));
+    },
+    // Lỗi trước khi vào OAuth: popup không mở được (bị trình duyệt chặn) hoặc bị đóng giữa chừng
+    onNonOAuthError: (err) => {
+      console.error('Google popup error', err);
+      if (err?.type === 'popup_failed_to_open') {
+        setPopupBlocked(true);
+      }
     }
   });
 
@@ -306,6 +318,30 @@ export default function Auth() {
                     {isLogin ? "Đăng nhập bằng Google" : "Đăng ký bằng Google"}
                   </button>
                 </div>
+
+                {/* Fallback khi popup bị chặn: nút Google chính thức render trong iframe của
+                    Google — popup mở từ origin của Google nên không dính popup blocker */}
+                {popupBlocked && (
+                  <div className="mb-4">
+                    <div
+                      className="mb-3 p-3 rounded-3 small"
+                      style={{ background: 'rgba(255, 193, 7, 0.12)', border: '1px solid rgba(255, 193, 7, 0.5)', color: '#ffc107' }}
+                    >
+                      ⚠️ {t('auth.popup_blocked')}
+                    </div>
+                    <div className="d-flex justify-content-center">
+                      <GoogleLogin
+                        onSuccess={(credentialResponse) => completeLogin(credentialResponse.credential)}
+                        onError={() => alert(t('auth.google_cancelled'))}
+                        theme="filled_black"
+                        shape="pill"
+                        size="large"
+                        locale={i18n.language === 'vi' ? 'vi' : 'en'}
+                        text={isLogin ? 'signin_with' : 'signup_with'}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="text-center mt-3">
                   <span className="text-muted small">

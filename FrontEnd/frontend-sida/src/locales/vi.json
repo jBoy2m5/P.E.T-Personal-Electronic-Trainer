@@ -204,6 +204,7 @@
     "login_failed": "Đăng nhập thất bại. Vui lòng thử lại.",
     "google_cancelled": "Đăng nhập Google bị hủy hoặc thất bại. Vui lòng thử lại.",
     "inapp_warning": "Bạn đang mở trang trong ứng dụng (Zalo/Facebook/Messenger...). Google chặn đăng nhập ở trình duyệt này — hãy bấm nút ⋯ và chọn \"Mở bằng trình duyệt\" (Chrome/Safari) rồi đăng nhập lại.",
+    "popup_blocked": "Trình duyệt đã chặn cửa sổ đăng nhập Google. Hãy dùng nút Google bên dưới, hoặc cho phép cửa sổ bật lên (pop-up) cho trang này rồi thử lại.",
     "badge_future": "XU HƯỚNG TẬP LUYỆN TƯƠNG LAI",
     "discover": "Khám phá phiên bản ",
     "best_version": "tốt nhất của bạn",
