@@ -1,11 +1,12 @@
 import axiosClient from '../api/axiosClient';
 
 // Gọi backend (Gemini) sinh lộ trình 28 ngày rồi chuyển về đúng schema roadmap local.
-// Trả về mảng 28 ngày hoặc null nếu AI lỗi/kết quả không hợp lệ (caller fallback về generateDynamicRoadmap).
-export const fetchAiRoadmap = async (exercises) => {
+// Trả về mảng 28 ngày hoặc null nếu AI lỗi/bị hủy/kết quả không hợp lệ (caller fallback về generateDynamicRoadmap).
+// `signal` (AbortSignal, tùy chọn): cho phép hủy giữa chừng khi người dùng chọn "dùng lộ trình mặc định".
+export const fetchAiRoadmap = async (exercises, signal) => {
     try {
-        // Gemini có thể mất 10-30s cho JSON 28 ngày → nới timeout riêng cho request này
-        const res = await axiosClient.post('/ai/generate-roadmap', {}, { timeout: 90000 });
+        // Gemini có thể mất 45-60s cho JSON 28 ngày → nới timeout riêng cho request này
+        const res = await axiosClient.post('/ai/generate-roadmap', {}, { timeout: 90000, signal });
         const days = res?.roadmap;
         if (!Array.isArray(days) || days.length !== 28) return null;
 

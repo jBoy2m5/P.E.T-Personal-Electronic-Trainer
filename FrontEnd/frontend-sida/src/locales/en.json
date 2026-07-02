@@ -54,7 +54,9 @@
     "locked": "🔒 Please complete previous days",
     "generating_title": "AI IS BUILDING YOUR ROADMAP",
     "generating_desc": "Your AI coach is designing a personal 28-day roadmap based on your body stats and goal. This takes about a minute, please stay on this page!",
-    "loading": "Loading roadmap..."
+    "loading": "Loading roadmap...",
+    "use_default": "SKIP WAITING — USE DEFAULT ROADMAP",
+    "use_default_hint": "AI generation will stop and you will get the standard roadmap for your profile right away."
   },
   "daily": {
     "subtitle": "BURN CALORIES, EARN POINTS",

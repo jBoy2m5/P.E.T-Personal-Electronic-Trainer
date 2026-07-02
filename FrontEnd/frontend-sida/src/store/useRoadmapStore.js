@@ -22,6 +22,9 @@ const getTodayKey = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+// AbortController của request AI đang chạy — để nút "dùng lộ trình mặc định" hủy được giữa chừng
+let aiAbortController = null;
+
 // Ràng buộc mở khóa lộ trình:
 // - Ngày kế tiếp chỉ 'active' khi: ngày trước đã hoàn thành TRƯỚC hôm nay (đã sang ngày lịch mới)
 //   VÀ hôm nay đã điểm danh (điểm danh = bắt đầu ngày mới). Chưa điểm danh → mọi ngày chưa xong đều khóa.
@@ -100,8 +103,10 @@ const useRoadmapStore = create((set, get) => ({
         userData = { gender: p.gender || 'Nam', height: p.height || 170, weight: p.weight || 65, fitnessLevel: p.fitnessLevel || 'Mới bắt đầu', goal: p.goal || p.fitness_goal || 'Giữ dáng' };
       }
       const exercises = await useExerciseStore.getState().fetchExercises();
-      // Ưu tiên lộ trình do Gemini sinh; AI lỗi/timeout thì fallback thuật toán local
-      const aiRoadmap = await fetchAiRoadmap(exercises);
+      // Ưu tiên lộ trình do Gemini sinh; AI lỗi/timeout/bị người dùng hủy thì fallback thuật toán local
+      aiAbortController = new AbortController();
+      const aiRoadmap = await fetchAiRoadmap(exercises, aiAbortController.signal);
+      aiAbortController = null;
       const roadmap = deriveStatuses(aiRoadmap || generateDynamicRoadmap(userData, exercises));
 
       localStorage.setItem(key, JSON.stringify(roadmap));
@@ -115,6 +120,15 @@ const useRoadmapStore = create((set, get) => ({
       }).catch(() => {});
     } finally {
       set({ generating: false });
+    }
+  },
+
+  // Người dùng chọn "dùng lộ trình mặc định" trong lúc chờ AI → hủy request Gemini;
+  // fetchAiRoadmap trả null và flow đang chạy tự fallback sang generateDynamicRoadmap ngay
+  skipAiGeneration: () => {
+    if (aiAbortController) {
+      aiAbortController.abort();
+      aiAbortController = null;
     }
   },
 
@@ -199,7 +213,10 @@ const useRoadmapStore = create((set, get) => ({
         // Lần đầu tạo lộ trình → ưu tiên Gemini, AI lỗi thì fallback thuật toán local
         set({ generating: true });
         try {
-          const localRoadmap = (await fetchAiRoadmap(exercises)) || generateDynamicRoadmap(userData, exercises);
+          aiAbortController = new AbortController();
+          const aiRoadmap = await fetchAiRoadmap(exercises, aiAbortController.signal);
+          aiAbortController = null;
+          const localRoadmap = aiRoadmap || generateDynamicRoadmap(userData, exercises);
           const key = getRoadmapKey(userId);
           const withStatuses = deriveStatuses(localRoadmap);
           localStorage.setItem(key, JSON.stringify(withStatuses));

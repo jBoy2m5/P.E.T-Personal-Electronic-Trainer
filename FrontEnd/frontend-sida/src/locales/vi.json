@@ -54,7 +54,9 @@
     "locked": "🔒 Hãy hoàn thành các ngày trước",
     "generating_title": "AI ĐANG TẠO LỘ TRÌNH CHO BẠN",
     "generating_desc": "Huấn luyện viên AI đang thiết kế lộ trình 28 ngày theo thể trạng và mục tiêu của bạn. Quá trình này mất khoảng 1 phút, đừng rời trang nhé!",
-    "loading": "Đang tải lộ trình..."
+    "loading": "Đang tải lộ trình...",
+    "use_default": "KHÔNG CHỜ NỮA — DÙNG LỘ TRÌNH MẶC ĐỊNH",
+    "use_default_hint": "AI sẽ ngừng tạo và bạn nhận ngay lộ trình chuẩn theo hồ sơ của mình."
   },
   "daily": {
     "subtitle": "TIÊU HAO CALO, TÍCH LŨY ĐIỂM SỐ",

@@ -8,7 +8,7 @@ import usePetStore from '../store/usePetStore';
 export default function Roadmap() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { roadmapData, initialized, generating, loadRoadmap, generateRoadmap } = useRoadmapStore();
+  const { roadmapData, initialized, generating, loadRoadmap, generateRoadmap, skipAiGeneration } = useRoadmapStore();
   const [selectedDay, setSelectedDay] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [aiAdvice, setAiAdvice] = useState('');
@@ -91,9 +91,22 @@ export default function Roadmap() {
           {generating ? t('roadmap.generating_title') : t('roadmap.loading')}
         </h4>
         {generating && (
-          <p className="mb-0" style={{ color: 'rgba(255,255,255,0.7)', maxWidth: 420 }}>
-            {t('roadmap.generating_desc')}
-          </p>
+          <>
+            <p className="mb-0" style={{ color: 'rgba(255,255,255,0.7)', maxWidth: 420 }}>
+              {t('roadmap.generating_desc')}
+            </p>
+            <Button
+              variant="outline-light"
+              size="sm"
+              className="rounded-pill px-4 mt-4 fw-bold"
+              onClick={skipAiGeneration}
+            >
+              {t('roadmap.use_default')}
+            </Button>
+            <p className="mt-2 mb-0 small" style={{ color: 'rgba(255,255,255,0.45)', maxWidth: 420 }}>
+              {t('roadmap.use_default_hint')}
+            </p>
+          </>
         )}
       </div>
     );
