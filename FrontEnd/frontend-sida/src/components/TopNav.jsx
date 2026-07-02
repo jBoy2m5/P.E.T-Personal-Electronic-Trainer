@@ -122,7 +122,7 @@ export default function TopNav() {
                 <Nav.Link as={Link} to="/schedule" className={`px-4 nav-link-custom ${location.pathname.startsWith('/schedule') ? 'nav-link-active' : ''} ${isDark ? 'text-white' : 'text-dark'}`}>{t('nav.schedule')}</Nav.Link>
                 <Nav.Link as={Link} to="/daily" className={`px-4 nav-link-custom position-relative ${location.pathname.startsWith('/daily') ? 'nav-link-active' : ''} ${isDark ? 'text-white' : 'text-dark'}`}>
                   {t('nav.missions')}
-                  {unclaimedTasks > 0 && (
+                  {isAuthenticated && unclaimedTasks > 0 && (
                     <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: '0.55rem', marginLeft: '-15px', marginTop: '10px' }}>
                       {unclaimedTasks}
                     </span>

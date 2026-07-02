@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import usePetStore from '../store/usePetStore';
 import useRoadmapStore from '../store/useRoadmapStore';
+import useExerciseStore from '../store/useExerciseStore';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
 
@@ -173,76 +174,65 @@ export default function DailyWorkout() {
         const translatedGroup = t(`roadmap_data.${mgKey}`, dayInfo.muscleGroup);
         const translatedGoal = t(`daily_workout.${goalTranslations[goal] || 'goal_muscle'}`, goal);
 
-        const fallbackExercises = [
-            { 
-                exercise_id: 101, 
-                name: 'Hít đất cơ bản (Standard Push-up)', reps: '15', sets: '3', kcal: 45, level: 'Cơ bản', 
-                img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', 
-                technical_description: 'Bài tập phát triển toàn diện cơ ngực, vai và bắp tay sau. Khi hạ người, ngực được dãn tối đa, sau đó dùng sức mạnh bộc phát đẩy người lên. Giúp tăng cường sức bền và sức mạnh thân trên.', 
-                safety_notes: '⚠️ LƯU Ý: Cánh tay tạo với thân người một góc khoảng 45 độ (tuyệt đối không giang rộng 90 độ sẽ gây rách chóp xoay vai). Siết chặt cơ bụng và mông để giữ lưng thẳng như một tấm ván, không để võng lưng dưới.', 
-                estimated_calories_per_rep: 1.0 
-            },
-            { 
-                exercise_id: 501, 
-                name: 'Gập bụng (Crunches)', reps: '20', sets: '3', kcal: 50, level: 'Cơ bản', 
-                img: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=600', 
-                technical_description: 'Bài tập cô lập cơ bụng thẳng (six-pack). Thay vì ngồi hẳn lên như sit-up, bạn chỉ cần cuộn phần vai và lưng trên lên khỏi mặt sàn, ép chặt cơ bụng lại ở điểm cao nhất.', 
-                safety_notes: '⚠️ LƯU Ý: Bàn tay chỉ đặt hờ sau gáy, KHÔNG dùng tay kéo gập cổ về phía trước (dễ chấn thương đốt sống cổ). Giữ khoảng cách giữa cằm và ngực bằng một quả táo. Lưng dưới luôn dán chặt xuống sàn.', 
-                estimated_calories_per_rep: 0.8 
-            },
-            { 
-                exercise_id: 601, 
-                name: 'Squat cơ bản', reps: '15', sets: '4', kcal: 70, level: 'Cơ bản', 
-                img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600', 
-                technical_description: 'Bài tập "vua" cho phần thân dưới, giúp xây dựng cơ đùi trước, đùi sau và mông. Động tác mô phỏng việc ngồi xuống một chiếc ghế vô hình phía sau và đứng lên bằng lực đẩy của gót chân.', 
-                safety_notes: '⚠️ LƯU Ý: Lưng luôn giữ thẳng tự nhiên, ngực ưỡn. Khi hạ người, đầu gối phải mở ra theo hướng mũi chân, KHÔNG chụm hai gối vào nhau để bảo vệ dây chằng. Trọng lượng dồn vào gót chân.', 
-                estimated_calories_per_rep: 1.2 
-            },
-            { 
-                exercise_id: 201, 
-                name: 'Hít xà đơn (Pull-up)', reps: '8', sets: '3', kcal: 60, level: 'Trung bình', 
-                img: 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600', 
-                technical_description: 'Bài tập kinh điển nhất để xây dựng cơ xô (lưng chữ V), cơ lưng giữa và kích thích bắp tay trước. Kéo toàn bộ trọng lượng cơ thể lên bằng lực kéo của lưng cho đến khi cằm vượt qua xà.', 
-                safety_notes: '⚠️ LƯU Ý: Khi thả người xuống, không thả lỏng khớp vai hoàn toàn (dead hang quá lỏng) mà vẫn giữ một chút lực căng bả vai để bảo vệ khớp. Gồng chặt cơ bụng để người không đu đưa.', 
-                estimated_calories_per_rep: 2.0 
-            },
-        ];
+        const buildDailyData = (exList) => {
+            // Tính toán thời lượng động nếu backend trả về 0
+            let calculatedDuration = 0;
+            if (exList && exList.length > 0) {
+                exList.forEach(ex => {
+                    const reps = parseInt(ex.reps) || 12;
+                    const sets = parseInt(ex.sets) || 3;
+                    // Nếu reps > 30 thường là bài tập tính bằng giây (vd: Plank 60s), nếu không thì tính 4s/rep
+                    const timePerSet = reps > 30 ? reps : reps * 4;
+                    const restTimePerSet = 45; // 45s nghỉ giữa các set
+                    calculatedDuration += (timePerSet * sets) + ((sets - 1) * restTimePerSet);
+                });
+                // 60s nghỉ giữa các bài tập khác nhau
+                calculatedDuration += (exList.length - 1) * 60;
+            }
+            const totalMinutes = Math.ceil(calculatedDuration / 60) || 0;
+            const finalDuration = dayInfo.duration && dayInfo.duration > 0 ? dayInfo.duration : totalMinutes;
 
-        const roadmapExercises = dayInfo.exercises && dayInfo.exercises.length > 0
-            ? dayInfo.exercises.map(ex => ({
+            setDailyData({
+                ...dayInfo,
+                duration: finalDuration,
+                goal: goal,
+                translatedGoal: translatedGoal,
+                translatedGroup: translatedGroup,
+                benefits: t('daily_workout.benefits_default', { group: translatedGroup.toLowerCase() }),
+                exercises: exList,
+                difficulty: dayInfo.muscleGroup === 'Full Body' ? 4 : 3
+            });
+        };
+
+        if (dayInfo.exercises && dayInfo.exercises.length > 0) {
+            buildDailyData(dayInfo.exercises.map(ex => ({
                 ...ex,
                 exercise_id: ex.exercise_id || ex.id,
                 kcal: ex.kcal ?? Math.round((ex.estimated_calories_per_rep || ex.kcalPerRep || 1) * parseInt(ex.reps || 12) * (ex.sets || 3))
-            }))
-            : fallbackExercises;
-
-        // Tính toán thời lượng động nếu backend trả về 0
-        let calculatedDuration = 0;
-        if (roadmapExercises && roadmapExercises.length > 0) {
-            roadmapExercises.forEach(ex => {
-                const reps = parseInt(ex.reps) || 12;
-                const sets = parseInt(ex.sets) || 3;
-                // Nếu reps > 30 thường là bài tập tính bằng giây (vd: Plank 60s), nếu không thì tính 4s/rep
-                const timePerSet = reps > 30 ? reps : reps * 4; 
-                const restTimePerSet = 45; // 45s nghỉ giữa các set
-                calculatedDuration += (timePerSet * sets) + ((sets - 1) * restTimePerSet);
+            })));
+        } else {
+            // Không có bài trong lộ trình cho ngày này → lấy bài tập từ server (DB) thay vì data tự tạo
+            useExerciseStore.getState().fetchExercises().then(all => {
+                const basics = all.filter(e => e.level === 'Cơ bản');
+                const picked = (basics.length >= 4 ? basics : all).slice(0, 4).map(e => {
+                    const reps = 12, sets = 3;
+                    return {
+                        exercise_id: e.id,
+                        name: e.name,
+                        reps: String(reps),
+                        sets: String(sets),
+                        kcal: Math.round((e.kcalPerRep || 1) * reps * sets),
+                        level: e.level,
+                        img: e.img,
+                        technical_description: e.desc,
+                        safety_notes: e.safetyNotes,
+                        estimated_calories_per_rep: e.kcalPerRep,
+                        aiMode: e.aiMode
+                    };
+                });
+                buildDailyData(picked);
             });
-            // 60s nghỉ giữa các bài tập khác nhau
-            calculatedDuration += (roadmapExercises.length - 1) * 60; 
         }
-        const totalMinutes = Math.ceil(calculatedDuration / 60) || 0;
-        const finalDuration = dayInfo.duration && dayInfo.duration > 0 ? dayInfo.duration : totalMinutes;
-
-        setDailyData({
-            ...dayInfo,
-            duration: finalDuration,
-            goal: goal,
-            translatedGoal: translatedGoal,
-            translatedGroup: translatedGroup,
-            benefits: t('daily_workout.benefits_default', { group: translatedGroup.toLowerCase() }),
-            exercises: roadmapExercises,
-            difficulty: dayInfo.muscleGroup === 'Full Body' ? 4 : 3
-        });
     }, [dayId, t]);
 
     const handleOpenDetail = (exercise) => {

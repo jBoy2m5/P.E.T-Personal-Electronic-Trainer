@@ -7,7 +7,8 @@ import { getUnclaimedCount } from '../services/rewards';
 export default function BottomNav() {
   const { t } = useTranslation();
   const location = useLocation();
-  const unclaimedTasks = getUnclaimedCount();
+  // Chỉ hiện số nhiệm vụ chưa nhận khi đã đăng nhập
+  const unclaimedTasks = localStorage.getItem('user-data') ? getUnclaimedCount() : 0;
 
   // Không hiện BottomNav ở trang đăng nhập hoặc onboarding
   if (location.pathname === '/login' || location.pathname === '/onboarding') {

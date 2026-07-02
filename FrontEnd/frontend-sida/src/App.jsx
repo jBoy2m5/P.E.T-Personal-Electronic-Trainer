@@ -108,8 +108,8 @@ function Layout() {
         </ErrorBoundary>
       </div>
 
-      {/* Ẩn cục Pet nhỏ lơ lửng nếu đang ở trong chính trang Pet */}
-      {!isPetPage && <FloatingPet />}
+      {/* Ẩn cục Pet nhỏ lơ lửng nếu đang ở trong chính trang Pet hoặc chưa đăng nhập */}
+      {!isPetPage && isAuthenticated && <FloatingPet />}
 
       {/* Thanh điều hướng dưới đáy màn hình cho Mobile */}
       {!isPetPage && <BottomNav />}
