@@ -69,6 +69,9 @@ export default function DailyWorkout() {
     const [dailyData, setDailyData] = useState(null);
     const addExp = usePetStore(state => state.addExp);
     const markDayComplete = useRoadmapStore(state => state.markDayComplete);
+    const roadmapData = useRoadmapStore(state => state.roadmapData);
+    const roadmapInitialized = useRoadmapStore(state => state.initialized);
+    const loadRoadmap = useRoadmapStore(state => state.loadRoadmap);
     const totalPoints = usePetStore(state => state.totalPoints);
     const isSadFn = usePetStore(state => state.isSad);
     const petIsSad = isSadFn();
@@ -129,9 +132,12 @@ export default function DailyWorkout() {
         }, 250);
     };
 
+    // Lộ trình lấy qua useRoadmapStore (key roadmap-data-{userId}), không đọc thẳng localStorage key cũ
     useEffect(() => {
-        // Load roadmap data to get current day's info
-        const savedRoadmap = localStorage.getItem('roadmap-data');
+        if (!roadmapInitialized) loadRoadmap();
+    }, [roadmapInitialized, loadRoadmap]);
+
+    useEffect(() => {
         let dayInfo = {
             dayId: dayId,
             muscleGroup: 'Full Body',
@@ -139,11 +145,8 @@ export default function DailyWorkout() {
             kcal: 350
         };
 
-        if (savedRoadmap) {
-            const parsed = JSON.parse(savedRoadmap);
-            const found = parsed.find(d => d.dayId.toString() === dayId);
-            if (found) dayInfo = found;
-        }
+        const found = (roadmapData || []).find(d => d.dayId.toString() === dayId);
+        if (found) dayInfo = found;
 
         const savedUser = localStorage.getItem('user-data');
         const parsedUser = savedUser ? JSON.parse(savedUser) : {};
@@ -205,11 +208,25 @@ export default function DailyWorkout() {
         };
 
         if (dayInfo.exercises && dayInfo.exercises.length > 0) {
-            buildDailyData(dayInfo.exercises.map(ex => ({
-                ...ex,
-                exercise_id: ex.exercise_id || ex.id,
-                kcal: ex.kcal ?? Math.round((ex.estimated_calories_per_rep || ex.kcalPerRep || 1) * parseInt(ex.reps || 12) * (ex.sets || 3))
-            })));
+            // Ghép ảnh/mô tả mới nhất từ server theo tên bài — roadmap cache trong localStorage
+            // có thể được sinh trước khi DB có media_url nên thiếu ảnh
+            useExerciseStore.getState().fetchExercises().then(all => {
+                const byName = new Map(all.map(e => [(e.name || '').toLowerCase(), e]));
+                buildDailyData(dayInfo.exercises.map(ex => {
+                    const server = byName.get((ex.name || '').toLowerCase());
+                    const kcalPerRep = ex.estimated_calories_per_rep || ex.kcalPerRep || server?.kcalPerRep || 1;
+                    return {
+                        ...ex,
+                        exercise_id: ex.exercise_id || ex.id || server?.id,
+                        img: server?.img || ex.img,
+                        technical_description: ex.technical_description || ex.desc || server?.desc,
+                        safety_notes: ex.safety_notes || server?.safetyNotes,
+                        estimated_calories_per_rep: kcalPerRep,
+                        aiMode: ex.aiMode || server?.aiMode,
+                        kcal: ex.kcal ?? Math.round(kcalPerRep * parseInt(ex.reps || 12) * (ex.sets || 3))
+                    };
+                }));
+            });
         } else {
             // Không có bài trong lộ trình cho ngày này → lấy bài tập từ server (DB) thay vì data tự tạo
             useExerciseStore.getState().fetchExercises().then(all => {
@@ -233,7 +250,7 @@ export default function DailyWorkout() {
                 buildDailyData(picked);
             });
         }
-    }, [dayId, t]);
+    }, [dayId, t, roadmapData]);
 
     const handleOpenDetail = (exercise) => {
         if (completedExercises.includes(exercise.name)) return;
