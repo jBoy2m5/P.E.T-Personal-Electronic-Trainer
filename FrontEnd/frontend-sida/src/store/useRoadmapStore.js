@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { generateDynamicRoadmap } from '../services/roadmapGenerator';
+import { fetchAiRoadmap } from '../services/aiRoadmapService';
 import useExerciseStore from './useExerciseStore';
 import usePetStore from './usePetStore';
 import axiosClient from '../api/axiosClient';
@@ -96,7 +97,9 @@ const useRoadmapStore = create((set, get) => ({
       userData = { gender: p.gender || 'Nam', height: p.height || 170, weight: p.weight || 65, fitnessLevel: p.fitnessLevel || 'Mới bắt đầu', goal: p.goal || p.fitness_goal || 'Giữ dáng' };
     }
     const exercises = await useExerciseStore.getState().fetchExercises();
-    const roadmap = deriveStatuses(generateDynamicRoadmap(userData, exercises));
+    // Ưu tiên lộ trình do Gemini sinh; AI lỗi/timeout thì fallback thuật toán local
+    const aiRoadmap = await fetchAiRoadmap(exercises);
+    const roadmap = deriveStatuses(aiRoadmap || generateDynamicRoadmap(userData, exercises));
 
     localStorage.setItem(key, JSON.stringify(roadmap));
     set({ roadmapData: roadmap, initialized: true });
@@ -172,9 +175,11 @@ const useRoadmapStore = create((set, get) => ({
       const p = saved ? JSON.parse(saved) : {};
       const userData = { gender: p.gender || 'Nam', height: p.height || 170, weight: p.weight || 65, fitnessLevel: p.fitnessLevel || 'Mới bắt đầu', goal: p.goal || p.fitness_goal || 'Giữ dáng' };
       const exercises = await useExerciseStore.getState().fetchExercises();
-      const localRoadmap = generateDynamicRoadmap(userData, exercises);
 
       if (userRoadmaps?.length) {
+        // Đã có lộ trình trên server → dựng lại bằng thuật toán local (nhanh, ổn định)
+        // rồi merge trạng thái hoàn thành; không gọi AI lại để tránh lệch lộ trình gốc
+        const localRoadmap = generateDynamicRoadmap(userData, exercises);
         const days = userRoadmaps[0].days || [];
         const merged = localRoadmap.map(localDay => {
           const bd = days.find(d => d.day_number === localDay.dayId);
@@ -185,6 +190,8 @@ const useRoadmapStore = create((set, get) => ({
         localStorage.setItem(key, JSON.stringify(withStatuses));
         set({ roadmapData: withStatuses, initialized: true });
       } else {
+        // Lần đầu tạo lộ trình → ưu tiên Gemini, AI lỗi thì fallback thuật toán local
+        const localRoadmap = (await fetchAiRoadmap(exercises)) || generateDynamicRoadmap(userData, exercises);
         const key = getRoadmapKey(userId);
         const withStatuses = deriveStatuses(localRoadmap);
         localStorage.setItem(key, JSON.stringify(withStatuses));
