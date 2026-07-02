@@ -259,17 +259,56 @@ public class SeedController {
         vi.put("Handstand", new String[]{"Giữ thăng bằng lộn ngược trên hai tay trong khi giữ cơ thể thẳng hàng.", "Tập dựa tường trước khi thử trồng chuối tự do."});
         vi.put("Human Flag", new String[]{"Giữ cơ thể song song với mặt đất trong khi bám vào cột dọc.", "Cần sức mạnh vai, core và lực nắm ở trình độ cao."});
 
+        // Ảnh minh họa từng bài tập (áp theo tên bài)
+        Map<String, String> media = new HashMap<>();
+        media.put("Knee Push Up", "https://cdn.nhathuoclongchau.com.vn/unsafe/800x0/knee_push_ups_loi_ich_ky_thuat_thuc_hien_va_cach_dam_bao_an_toan_3_80432a2dd8.jpeg");
+        media.put("Push Up", "https://experiencelife.lifetime.life/wp-content/uploads/2007/04/apr07-pushup-1024x577.jpg");
+        media.put("Diamond Push Up", "https://www.womenfitness.net/wp/wp-content/uploads/2018/03/brooke-stacey-arm-workout-triangle-push-up-1.jpg");
+        media.put("Decline Push Up", "https://cdn.nhathuoclongchau.com.vn/unsafe/800x0/bai_tap_decline_push_up_phat_trien_nguc_tren_hieu_qua_3_7cdd671fc7.jpg");
+        media.put("Superman", "https://bellabeat.com/wp-content/uploads/elementor/thumbs/Superman-exercise-Bellabeat-Coach-q5xmr2cn00tt0g2d5hj4ljinp8y1zzwjc36v02kyps.jpg");
+        media.put("Australian Pull Up", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQyu3iBZN9_8jbB6qzMBoEXmTCNBu2ryg5oVQ&s");
+        media.put("Pull Up", "https://blogscdn.thehut.net/app/uploads/sites/478/2024/04/Untitled-design-20_1740137087-scaled.jpg");
+        media.put("Commando Pull Up", "https://media.istockphoto.com/id/1203852043/vi/anh/v%E1%BA%ADn-%C4%91%E1%BB%99ng-vi%C3%AAn-th%E1%BB%B1c-hi%E1%BB%87n-m%E1%BB%99t-pull-up-commando.jpg?s=170667a&w=0&k=20&c=mRugRzm9tBOLgyQTOFbQxSl7wPyynroqvPwLBMwrUWc=");
+        media.put("Pike Push Up", "https://i.ytimg.com/vi/x7_I5SUAd00/maxresdefault.jpg");
+        media.put("Wall Handstand Hold", "https://b1494239.smushcdn.com/1494239/wp-content/uploads/2014/08/handstand-hold-against-wall-e1458363458858.jpg?lossy=0&strip=1&webp=1");
+        media.put("Elevated Pike Push Up", "https://i.ytimg.com/vi/Pzth0n3oWBQ/maxresdefault.jpg");
+        media.put("Planche Lean", "https://andrystrong.com/wp-content/uploads/2023/10/bas-1024x576.webp");
+        media.put("Close Grip Push Up", "https://cdn.shopify.com/s/files/1/0272/2408/0419/files/Close-Grip_Push-Ups.webp?v=1719858923");
+        media.put("Bench Dips", "https://hips.hearstapps.com/hmg-prod/images/img-2220-jpg-1571859261.jpg");
+        media.put("Chin Up", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS75kTEc1if5DRh0vbXKXC4EhV8GycpvAA5Hg&s");
+        media.put("Bodyweight Triceps Extension", "https://i.ytimg.com/vi/MYw-v1WQgEk/hq720.jpg?sqp=-oaymwE7CK4FEIIDSFryq4qpAy0IARUAAAAAGAElAADIQj0AgKJD8AEB-AH-CYAC0AWKAgwIABABGF0gXShdMA8=&rs=AOn4CLAHGBaeoeyWY4LrXBzKmlz8S_Vc-w");
+        media.put("Plank", "https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/plank_la_gi_2_2c615b3c8c.png");
+        media.put("Leg Raise", "https://hips.hearstapps.com/hmg-prod/images/lying-leg-raises-1546550690.jpg?crop=0.750xw:1.00xh;0.0829xw,0&resize=640:*");
+        media.put("Hollow Body Hold", "https://igapilates.vn/cms/uploads/hollow_body_hold_2_0e386f7fc5.webp");
+        media.put("Dragon Flag", "https://i0.wp.com/www.muscleandfitness.com/wp-content/uploads/2026/05/Muscular-fit-and-athletic-man-with-a-solid-six-pack-performing-Bruce-Lees-dragon-flag-exercise-.jpg?w=1109&quality=86&strip=all");
+        media.put("Bodyweight Squat", "https://cdn2.stylecraze.com/wp-content/uploads/2017/11/Squats-101-How-To-Do-A-Squat-Properly.jpg.webp");
+        media.put("Walking Lunges", "https://i.ytimg.com/vi/L8fvypPrzzs/maxresdefault.jpg");
+        media.put("Bulgarian Split Squat", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCSp_xz1Yj7dLhMPNdh3877JTGA_nad3jOqw&s");
+        media.put("Pistol Squat", "https://hips.hearstapps.com/hmg-prod/images/pistol-squat-0076-665a17efc895d.jpg?crop=0.901xw:0.569xh;0,0.222xh&resize=980:*");
+        media.put("Glute Bridge", "https://fitnfemale.com/wp-content/uploads/glute-bridge.jpg.webp");
+        media.put("Hip Thrust", "https://ca.repfitness.com/cdn/shop/articles/Smith-Machine-Hip-Thrust.jpg?v=1760570121");
+        media.put("Single Leg Glute Bridge", "https://images.ctfassets.net/hjcv6wdwxsdz/4iQuJ3qRQV5nyupE1KeoGe/b6915c592809195d06fcd7215f5b397e/woman-doing-single-leg-bridge-on-yoga-mat.png");
+        media.put("Single Leg Hip Thrust", "https://www.puregym.com/media/0d3jgor4/single-leg-hip-thrust.jpg?quality=80");
+        media.put("Bear Crawl", "https://experiencelife.lifetime.life/wp-content/uploads/2022/01/mar22-bid-bear-crawl.jpg");
+        media.put("L-Sit", "https://experiencelife.lifetime.life/wp-content/uploads/2025/07/so25-bid-l-sit-1024x577.jpg");
+        media.put("Handstand", "https://cdn.shopify.com/s/files/1/0568/6280/2107/files/handstand_0457e95e-8fca-41ee-b172-15eeb5cc23f0.jpg");
+        media.put("Human Flag", "https://www.onnit.com/cdn/shop/articles/HumanFlag2_0d72b3c4-e1b7-4b11-ac75-b98c8be9b136.jpg?v=1772221742&width=1260");
+
         for (Exercise e : all) {
             String[] content = vi.get(e.getName());
             if (content != null) {
                 e.setTechnicalDescriptionVi(content[0]);
                 e.setSafetyNotesVi(content[1]);
             }
+            String img = media.get(e.getName());
+            if (img != null) {
+                e.setMediaUrl(img);
+            }
         }
 
         exerciseRepository.saveAll(all);
 
-        return String.format("✅ Seed thành công! 8 nhóm cơ, %d bài tập đã được thêm vào database. [v2-avatar-petname]", all.size());
+        return String.format("✅ Seed thành công! 8 nhóm cơ, %d bài tập đã được thêm vào database. [v3-media-urls]", all.size());
     }
 
     private MuscleGroup saveGroup(String name, String description) {
