@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Modal, Button, Form } from 'react-bootstrap'
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import usePetStore from '../store/usePetStore';
+import { getDailyMissions } from '../services/rewards';
 import petChatbot from '../assets/pet_chatbot.png';
 import petBgImage from '../assets/pet_bg.webp'; // File background ảnh thật
 
@@ -38,6 +39,23 @@ export default function PetProfile() {
 
   const [tasks, setTasks] = useState([]);
   const [checkinDone, setCheckinDone] = useState(false);
+
+  // Thử thách tập luyện hôm nay — cùng nguồn dữ liệu với trang Nhiệm vụ (Daily) nên tự đồng bộ:
+  // danh sách từ getDailyMissions (cố định theo ngày), hoàn thành từ pet-schedule, đã nhận từ claimedMissions (server)
+  const todayMissions = getDailyMissions(todayKey);
+  const [actualCompletedToday, setActualCompletedToday] = useState([]);
+  useEffect(() => {
+    const syncSchedule = () => {
+      const saved = localStorage.getItem('pet-schedule');
+      if (saved) {
+        const schedule = JSON.parse(saved);
+        setActualCompletedToday(schedule[todayKey]?.completedExercises || []);
+      }
+    };
+    syncSchedule();
+    window.addEventListener('storage', syncSchedule);
+    return () => window.removeEventListener('storage', syncSchedule);
+  }, [todayKey]);
   const [checkinExpGained, setCheckinExpGained] = useState(0);
 
   // Modal States
@@ -379,6 +397,44 @@ export default function PetProfile() {
                 </Card.Body>
               </Card>
 
+              {/* Thử thách tập luyện — đồng bộ với trang Nhiệm vụ (cùng missions/claims/completion) */}
+              <Card className={`border shadow-sm rounded-4 mb-4 ${isDark ? 'bg-dark text-white border-secondary' : 'bg-white text-dark'}`}>
+                <Card.Body className="p-4">
+                  <h5 className="fw-black mb-4">{t('pet_profile.workout_challenges')}</h5>
+                  <div className="d-flex flex-column gap-3">
+                    {todayMissions.map((mission) => {
+                      const isExercised = actualCompletedToday.includes(mission.title);
+                      const isClaimed = (claimedMissions?.[todayKey] || []).includes(mission.id);
+                      return (
+                        <div key={mission.id} className="d-flex align-items-center gap-3 justify-content-between">
+                          <div className="d-flex align-items-center gap-3">
+                            <div className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '40px', height: '40px', background: isClaimed ? '#e8f5e9' : isExercised ? '#fff8e1' : (isDark ? 'rgba(255,255,255,0.05)' : '#f8f9fa'), color: isClaimed ? '#2e7d32' : isExercised ? '#f9a825' : '#adb5bd', border: isClaimed ? 'none' : isExercised ? '1px solid #f9a825' : '1px solid #dee2e6' }}>
+                              {isClaimed ? '✓' : isExercised ? '!' : '•'}
+                            </div>
+                            <div>
+                              <div className="fw-bold" style={{ color: isExercised || isClaimed ? (isDark ? '#e0e0e0' : '#212529') : (isDark ? '#9e9e9e' : '#495057') }}>{t(`exercises.${mission.id}`, mission.title)}</div>
+                              <div style={{ color: '#00b4d8', fontSize: '0.85rem', fontWeight: 'bold' }}>+{mission.points} EXP</div>
+                            </div>
+                          </div>
+                          {!isExercised && !isClaimed && (
+                            <button className="btn btn-sm fw-bold rounded-pill flex-shrink-0" style={{ background: 'transparent', color: isDark ? '#e0e0e0' : '#495057', border: `1px solid ${isDark ? '#555' : '#ced4da'}`, padding: '4px 14px' }} onClick={() => navigate(`/exercises/${mission.group}`)}>
+                              {t('daily.workout_now')}
+                            </button>
+                          )}
+                          {isExercised && !isClaimed && (
+                            <button className="btn btn-sm fw-bold rounded-pill flex-shrink-0" style={{ background: '#00b4d8', color: '#fff', border: 'none', padding: '4px 14px' }} onClick={() => claimMission(mission.id, mission.points)}>
+                              {t('daily.claim_reward')}
+                            </button>
+                          )}
+                          {isClaimed && (
+                            <span style={{ color: '#2e7d32', fontSize: '0.8rem', fontWeight: 'bold', flexShrink: 0 }}>{t('daily.claimed')}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card.Body>
+              </Card>
 
             </div>
           </Col>
