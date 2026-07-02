@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { useTranslation } from 'react-i18next';
 
-import { ALL_MISSIONS, getTodayKey, getDailyMissions } from '../services/rewards';
+import { getTodayKey, getDailyMissions } from '../services/rewards';
 import usePetStore from '../store/usePetStore';
+import useRoadmapStore from '../store/useRoadmapStore';
+import useExerciseStore from '../store/useExerciseStore';
 
 const CHECKIN_REWARDS = [
   { day: 1, points: 10 },
@@ -26,8 +28,6 @@ export default function Daily() {
   const [showCheckinModal, setShowCheckinModal] = useState(false);
   const [checkinReward, setCheckinReward] = useState(0);
 
-  const [actualCompletedToday, setActualCompletedToday] = useState([]);
-
   // Điểm danh + nhiệm vụ đã nhận lấy từ DB server qua usePetStore (đồng bộ giữa các trình duyệt)
   const checkinStreak = usePetStore((s) => s.checkinStreak);
   const lastCheckinDate = usePetStore((s) => s.lastCheckinDate);
@@ -35,26 +35,26 @@ export default function Daily() {
   const performCheckin = usePetStore((s) => s.performCheckin);
   const claimedMissions = usePetStore((s) => s.claimedMissions);
   const claimMission = usePetStore((s) => s.claimMission);
+  // Bài đã tập hôm nay từ DB server (exercises_trained) — tập ở trang nào cũng được tính
+  const exercisesTrained = usePetStore((s) => s.exercisesTrained);
+  const actualCompletedToday = exercisesTrained || [];
+
+  // Thử thách hôm nay = bài tập của ngày lộ trình hôm nay (xem getDailyMissions)
+  const roadmapData = useRoadmapStore((s) => s.roadmapData);
+  const roadmapInitialized = useRoadmapStore((s) => s.initialized);
+  const loadRoadmap = useRoadmapStore((s) => s.loadRoadmap);
+  const exercises = useExerciseStore((s) => s.exercises);
 
   const todayKey = getTodayKey();
-  const todayMissions = getDailyMissions(todayKey);
+  const todayMissions = getDailyMissions(todayKey, roadmapData, exercises);
   const claimedToday = claimedMissions?.[todayKey] || [];
   // Đã điểm danh hôm nay hay chưa được xác định bằng dữ liệu trên DB server
   const hasCheckedInToday = lastCheckinDate === todayKey;
 
   useEffect(() => {
-    // Bài đã tập hôm nay đọc từ pet-schedule (khớp tên nhiệm vụ theo lộ trình)
-    const syncSchedule = () => {
-      const scheduleSaved = localStorage.getItem('pet-schedule');
-      if (scheduleSaved) {
-        const schedule = JSON.parse(scheduleSaved);
-        setActualCompletedToday(schedule[todayKey]?.completedExercises || []);
-      }
-    };
-    syncSchedule();
-    window.addEventListener('storage', syncSchedule);
-    return () => window.removeEventListener('storage', syncSchedule);
-  }, [todayKey]);
+    if (!roadmapInitialized) loadRoadmap();
+    useExerciseStore.getState().fetchExercises();
+  }, [roadmapInitialized, loadRoadmap]);
 
   useEffect(() => { setAnimateIn(true); }, []);
 
@@ -214,16 +214,16 @@ export default function Daily() {
                       </div>
 
                       <div>
-                        <div className="fw-bold text-primary-dynamic mb-1" style={{ fontSize: '1.1rem' }}>{t(`exercises.${mission.id}`, mission.title)}</div>
+                        <div className="fw-bold text-primary-dynamic mb-1" style={{ fontSize: '1.1rem' }}>{mission.title}</div>
                         <div className="fw-bold" style={{ color: 'var(--brand-neon)', fontSize: '0.9rem' }}>{t('daily.reward')}: {mission.points} EXP</div>
                       </div>
                     </div>
 
                     <div className="gym-quest-action">
                       {!isExercised ? (
-                        <button 
+                        <button
                           className="gym-action-btn"
-                          onClick={() => navigate(`/exercises/${mission.group}`)}
+                          onClick={() => navigate(mission.dayId ? `/daily-workout/${mission.dayId}` : (mission.group ? `/exercises/${mission.group}` : '/roadmap'))}
                         >
                           {t('daily.workout_now')}
                         </button>

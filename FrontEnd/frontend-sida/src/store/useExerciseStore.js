@@ -20,7 +20,10 @@ const useExerciseStore = create((set, get) => ({
         level: levelMap[ex.level] || ex.level || 'Cơ bản',
         img: ex.media_url || DEFAULT_IMG,
         desc: ex.technical_description || '',
+        descVi: ex.technical_description_vi || '',
         safetyNotes: ex.safety_notes || '',
+        safetyNotesVi: ex.safety_notes_vi || '',
+        groupId: ex.muscle_group_id || null,
         kcalPerRep: ex.estimated_calories_per_rep || 1.0,
         aiMode: ex.ai_mode || null
       }));

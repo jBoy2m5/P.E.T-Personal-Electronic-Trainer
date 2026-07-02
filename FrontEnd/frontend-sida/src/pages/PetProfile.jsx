@@ -3,6 +3,8 @@ import { Container, Row, Col, Card, Modal, Button, Form } from 'react-bootstrap'
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import usePetStore from '../store/usePetStore';
+import useRoadmapStore from '../store/useRoadmapStore';
+import useExerciseStore from '../store/useExerciseStore';
 import { getDailyMissions } from '../services/rewards';
 import petChatbot from '../assets/pet_chatbot.png';
 import petBgImage from '../assets/pet_bg.webp'; // File background ảnh thật
@@ -41,21 +43,18 @@ export default function PetProfile() {
   const [checkinDone, setCheckinDone] = useState(false);
 
   // Thử thách tập luyện hôm nay — cùng nguồn dữ liệu với trang Nhiệm vụ (Daily) nên tự đồng bộ:
-  // danh sách từ getDailyMissions (cố định theo ngày), hoàn thành từ pet-schedule, đã nhận từ claimedMissions (server)
-  const todayMissions = getDailyMissions(todayKey);
-  const [actualCompletedToday, setActualCompletedToday] = useState([]);
+  // danh sách từ getDailyMissions (bài của ngày lộ trình hôm nay), hoàn thành từ exercises_trained (server),
+  // đã nhận từ claimedMissions (server)
+  const roadmapData = useRoadmapStore((s) => s.roadmapData);
+  const roadmapInitialized = useRoadmapStore((s) => s.initialized);
+  const loadRoadmap = useRoadmapStore((s) => s.loadRoadmap);
+  const allExercises = useExerciseStore((s) => s.exercises);
   useEffect(() => {
-    const syncSchedule = () => {
-      const saved = localStorage.getItem('pet-schedule');
-      if (saved) {
-        const schedule = JSON.parse(saved);
-        setActualCompletedToday(schedule[todayKey]?.completedExercises || []);
-      }
-    };
-    syncSchedule();
-    window.addEventListener('storage', syncSchedule);
-    return () => window.removeEventListener('storage', syncSchedule);
-  }, [todayKey]);
+    if (!roadmapInitialized) loadRoadmap();
+    useExerciseStore.getState().fetchExercises();
+  }, [roadmapInitialized, loadRoadmap]);
+  const todayMissions = getDailyMissions(todayKey, roadmapData, allExercises);
+  const actualCompletedToday = exercisesTrained || [];
   const [checkinExpGained, setCheckinExpGained] = useState(0);
 
   // Modal States
@@ -193,45 +192,8 @@ export default function PetProfile() {
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{petData.pet_name}</span> ✏️
               </div>
 
-              <div className="position-relative">
-                <button 
-                  className="btn p-0 d-flex align-items-center justify-content-center rounded-circle border-0" 
-                  style={{ width: '40px', height: '40px', background: isDark ? 'rgba(255,255,255,0.1)' : '#f8f9fa' }}
-                  onClick={(e) => {
-                    const menu = e.currentTarget.nextElementSibling;
-                    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-                  }}
-                >
-                  <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>...</span>
-                </button>
-                <div className="pet-dropdown-menu" style={{
-                  display: 'none',
-                  position: 'absolute',
-                  right: 0,
-                  top: '48px',
-                  background: isDark ? '#2b2b40' : '#fff',
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
-                  minWidth: '200px',
-                  zIndex: 999,
-                  overflow: 'hidden'
-                }}>
-                  <button 
-                    className="btn w-100 text-start px-4 py-3 d-flex align-items-center gap-2 border-0"
-                    style={{ fontSize: '0.95rem', color: isDark ? '#fff' : '#333' }}
-                    onMouseOver={e => e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.1)' : '#f8f9fa'}
-                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                    onClick={() => { 
-                      setEditNameValue(petData.pet_name); 
-                      setShowEditName(true);
-                      document.querySelectorAll('.pet-dropdown-menu').forEach(el => el.style.display = 'none');
-                    }}
-                  >
-                    ✏️ {t('pet_profile.rename_pet') || 'Đặt lại tên thú cưng'}
-                  </button>
-                </div>
-              </div>
+              {/* Ô trống cân đối với nút ✕ bên trái để tên pet luôn ở giữa (đổi tên bằng nút ✏️ giữa) */}
+              <div style={{ width: '40px' }}></div>
             </div>
 
             {/* Content Left */}
@@ -413,12 +375,12 @@ export default function PetProfile() {
                               {isClaimed ? '✓' : isExercised ? '!' : '•'}
                             </div>
                             <div>
-                              <div className="fw-bold" style={{ color: isExercised || isClaimed ? (isDark ? '#e0e0e0' : '#212529') : (isDark ? '#9e9e9e' : '#495057') }}>{t(`exercises.${mission.id}`, mission.title)}</div>
+                              <div className="fw-bold" style={{ color: isExercised || isClaimed ? (isDark ? '#e0e0e0' : '#212529') : (isDark ? '#9e9e9e' : '#495057') }}>{mission.title}</div>
                               <div style={{ color: '#00b4d8', fontSize: '0.85rem', fontWeight: 'bold' }}>+{mission.points} EXP</div>
                             </div>
                           </div>
                           {!isExercised && !isClaimed && (
-                            <button className="btn btn-sm fw-bold rounded-pill flex-shrink-0" style={{ background: 'transparent', color: isDark ? '#e0e0e0' : '#495057', border: `1px solid ${isDark ? '#555' : '#ced4da'}`, padding: '4px 14px' }} onClick={() => navigate(`/exercises/${mission.group}`)}>
+                            <button className="btn btn-sm fw-bold rounded-pill flex-shrink-0" style={{ background: 'transparent', color: isDark ? '#e0e0e0' : '#495057', border: `1px solid ${isDark ? '#555' : '#ced4da'}`, padding: '4px 14px' }} onClick={() => navigate(mission.dayId ? `/daily-workout/${mission.dayId}` : (mission.group ? `/exercises/${mission.group}` : '/roadmap'))}>
                               {t('daily.workout_now')}
                             </button>
                           )}
