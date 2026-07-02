@@ -71,6 +71,8 @@
     "completed_checkin": "CHECK-IN COMPLETED FOR TODAY",
     "click_checkin": "CLICK TO CHECK IN & CLAIM REWARD",
     "challenges": "TODAY'S WORKOUT CHALLENGES",
+    "rest_day_title": "Today is a rest day",
+    "rest_day_desc": "Your roadmap gives you a break today — let your muscles recover and come back tomorrow!",
     "reward": "Reward",
     "workout_now": "WORKOUT NOW",
     "claim_reward": "CLAIM REWARD",

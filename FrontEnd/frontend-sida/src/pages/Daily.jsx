@@ -198,6 +198,13 @@ export default function Daily() {
           <h4 className="fw-bold text-primary-dynamic mb-4 text-uppercase" style={{ letterSpacing: '1px' }}>{t('daily.challenges')}</h4>
           
           <div className="d-flex flex-column gap-3">
+            {/* Ngày nghỉ trong lộ trình → không giao thử thách */}
+            {todayMissions.length === 0 && (
+              <div className="gym-quest-card bg-surface-card border-surface text-center">
+                <div className="fw-bold text-primary-dynamic mb-1" style={{ fontSize: '1.1rem' }}>{t('daily.rest_day_title')}</div>
+                <div className="text-secondary fw-bold" style={{ fontSize: '0.9rem' }}>{t('daily.rest_day_desc')}</div>
+              </div>
+            )}
             {todayMissions.map((mission, idx) => {
               const isExercised = actualCompletedToday.includes(mission.title);
               const isClaimed = claimedToday.includes(mission.id);

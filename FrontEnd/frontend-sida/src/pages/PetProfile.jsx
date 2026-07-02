@@ -365,6 +365,12 @@ export default function PetProfile() {
                 <Card.Body className="p-4">
                   <h5 className="fw-black mb-4">{t('pet_profile.workout_challenges')}</h5>
                   <div className="d-flex flex-column gap-3">
+                    {/* Ngày nghỉ trong lộ trình → không giao thử thách */}
+                    {todayMissions.length === 0 && (
+                      <div className="text-center py-2" style={{ color: '#adb5bd', fontWeight: 'bold', fontSize: '0.95rem' }}>
+                        {t('daily.rest_day_desc')}
+                      </div>
+                    )}
                     {todayMissions.map((mission) => {
                       const isExercised = actualCompletedToday.includes(mission.title);
                       const isClaimed = (claimedMissions?.[todayKey] || []).includes(mission.id);

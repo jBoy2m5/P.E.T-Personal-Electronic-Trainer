@@ -30,15 +30,18 @@ const hashDate = (dateKey) => {
 // Thử thách tập luyện hôm nay — đồng bộ với lộ trình 28 ngày:
 // - Ngày lộ trình của hôm nay (ngày đã hoàn thành trong hôm nay, nếu chưa thì ngày chưa xong đầu tiên)
 //   là ngày TẬP → nhiệm vụ = toàn bộ bài tập của ngày đó (dayId để dẫn vào /daily-workout/{dayId}).
-// - Hết 28 ngày / hôm nay là ngày nghỉ / chưa có lộ trình → random cố định theo ngày 3 bài
-//   từ các nhóm cơ khác nhau trong DB (group để dẫn vào /exercises/{group}).
+// - Ngày NGHỈ → không giao thử thách (trả mảng rỗng, UI hiện thông báo nghỉ ngơi).
+// - Hết 28 ngày / chưa có lộ trình → random cố định theo ngày 3 bài từ các nhóm cơ khác nhau
+//   trong DB (group để dẫn vào /exercises/{group}).
 // Trang Nhiệm vụ (Daily) và card thử thách trên trang Pet phải cùng gọi hàm này với cùng dữ liệu.
 export const getDailyMissions = (dateKey, roadmapData = [], allExercises = []) => {
   const todayDay =
     roadmapData.find(d => d.completedDate === dateKey) ||
     roadmapData.find(d => d.status !== 'completed');
 
-  if (todayDay && !todayDay.isRestDay && (todayDay.exercises || []).length > 0) {
+  if (todayDay && todayDay.isRestDay) return [];
+
+  if (todayDay && (todayDay.exercises || []).length > 0) {
     const missions = todayDay.exercises.map(ex => ({
       id: `ex_${ex.exercise_id || ex.id}`,
       title: ex.name,
