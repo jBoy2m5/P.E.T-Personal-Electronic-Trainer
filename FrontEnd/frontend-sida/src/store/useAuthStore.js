@@ -25,8 +25,9 @@ const useAuthStore = create((set) => ({
           goal: me.fitness_goal || null,
           fitnessLevel: me.fitness_level || null,
           sessionsPerWeek: me.sessions_per_week ?? null,
-          // Chưa có số đo cơ thể trên server = chưa onboarding (App.jsx ép về /onboarding)
-          needsOnboarding: !(me.height != null && me.weight != null),
+          // Có hồ sơ (goal + gender) = đã onboarding — khớp tiêu chí backend.
+          // KHÔNG dùng height/weight: user legacy có thể NULL số đo (trước chỉ lưu localStorage).
+          needsOnboarding: !(me.fitness_goal && me.gender),
         },
         status: 'authenticated',
       });

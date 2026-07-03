@@ -96,7 +96,14 @@ public class AuthController {
                     userRepository.save(user);
                     needsOnboarding = true;
                 } else {
-                    if (user.getHeight() == null || user.getWeight() == null || user.getFitnessGoal() == null) {
+                    // Backfill name/picture từ Google token cho row legacy (DB vốn NULL),
+                    // đồng thời giữ tên/avatar luôn tươi mỗi lần đăng nhập.
+                    if (name != null) user.setName(name);
+                    if (pictureUrl != null) user.setPictureUrl(pictureUrl);
+                    userRepository.save(user);
+                    // User đã có hồ sơ (goal + gender) coi như đã onboarding — không ép lại.
+                    // height/weight có thể NULL với user legacy (trước chỉ lưu localStorage).
+                    if (user.getFitnessGoal() == null || user.getGender() == null) {
                         needsOnboarding = true;
                     }
                 }
