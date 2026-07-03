@@ -186,43 +186,74 @@ public class GeminiService {
      * 429 (hết quota phút) và 503 (model quá tải) thường thoáng qua → tự retry 1 lần sau 2 giây.
      */
     private String callGeminiForText(String url, Map<String, Object> requestBody) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-goog-api-key", apiKey);
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        List<String> keys = apiKeys();
+        if (keys.isEmpty()) {
+            System.err.println("Gemini skipped: no usable API key configured");
+            return null;
+        }
 
-        for (int attempt = 1; attempt <= 2; attempt++) {
-            try {
-                ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
-                if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) return null;
+        // Thử lần lượt từng key (mỗi key nên thuộc 1 project riêng để cộng dồn quota free tier).
+        // Key hết quota/quá tải (429/503) → retry 1 lần, vẫn lỗi thì chuyển sang key kế tiếp.
+        for (int k = 0; k < keys.size(); k++) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-goog-api-key", keys.get(k));
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-                List<?> candidates = (List<?>) response.getBody().get("candidates");
-                if (candidates == null || candidates.isEmpty()) return null;
-                Map<?, ?> content = (Map<?, ?>) ((Map<?, ?>) candidates.get(0)).get("content");
-                if (content == null) return null;
-                List<?> parts = (List<?>) content.get("parts");
-                if (parts == null || parts.isEmpty()) return null;
-                return (String) ((Map<?, ?>) parts.get(0)).get("text");
-            } catch (HttpStatusCodeException e) {
-                int code = e.getStatusCode().value();
-                if ((code == 429 || code == 503) && attempt == 1) {
-                    System.err.println("Gemini " + code + " on " + url + " - retrying once after 2s");
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        return null;
+            for (int attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+                    if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) return null;
+
+                    List<?> candidates = (List<?>) response.getBody().get("candidates");
+                    if (candidates == null || candidates.isEmpty()) return null;
+                    Map<?, ?> content = (Map<?, ?>) ((Map<?, ?>) candidates.get(0)).get("content");
+                    if (content == null) return null;
+                    List<?> parts = (List<?>) content.get("parts");
+                    if (parts == null || parts.isEmpty()) return null;
+                    return (String) ((Map<?, ?>) parts.get(0)).get("text");
+                } catch (HttpStatusCodeException e) {
+                    int code = e.getStatusCode().value();
+                    if ((code == 429 || code == 503) && attempt == 1) {
+                        System.err.println("Gemini " + code + " on key #" + (k + 1) + " - retrying once after 2s");
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            return null;
+                        }
+                        continue; // thử lại chính key này 1 lần
                     }
-                    continue;
+                    if (code == 429 || code == 503) {
+                        System.err.println("Gemini " + code + " on key #" + (k + 1) + " - switching to next key");
+                        break; // key này hết → sang key project kế tiếp
+                    }
+                    // Lỗi khác (400/403...) không phải quota → dừng hẳn, đổi key cũng vô ích
+                    System.err.println("Gemini HTTP error " + e.getStatusCode() + " on key #" + (k + 1) + ": " + e.getResponseBodyAsString());
+                    return null;
+                } catch (Exception e) {
+                    System.err.println("Gemini API error on key #" + (k + 1) + ": " + e.getMessage());
+                    return null;
                 }
-                System.err.println("Gemini HTTP error " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
-                return null;
-            } catch (Exception e) {
-                System.err.println("Gemini API error: " + e.getMessage());
-                return null;
             }
         }
+        System.err.println("Gemini: all " + keys.size() + " key(s) exhausted (429/503)");
         return null;
+    }
+
+    /**
+     * Danh sách key đọc từ biến GEMINI_API_KEY: cho phép NHIỀU key ngăn cách bằng dấu phẩy,
+     * mỗi key nên thuộc một Google Cloud project riêng để cộng dồn quota free tier (20/ngày/model
+     * mỗi project). Bỏ khoảng trắng, phần rỗng và placeholder chưa thay.
+     */
+    private List<String> apiKeys() {
+        if (apiKey == null || apiKey.isBlank()) return List.of();
+        List<String> keys = new ArrayList<>();
+        for (String k : apiKey.split(",")) {
+            String t = k.trim();
+            if (!t.isEmpty() && !t.startsWith("AIzaSy_REPLACE")) keys.add(t);
+        }
+        return keys;
     }
 
     /**
