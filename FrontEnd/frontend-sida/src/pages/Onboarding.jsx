@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button, ProgressBar, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
+import { saveUserData } from '../utils/userStorage';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -42,8 +43,8 @@ export default function Onboarding() {
       const res = await axiosClient.put('/users/onboarding', formData);
       
       if (res.status === 'success') {
-        // Cập nhật lại thông tin user trong localStorage
-        localStorage.setItem('user-data', JSON.stringify(res.user));
+        // Cập nhật lại thông tin user trong localStorage (loại bmi — BMI chỉ ở server)
+        saveUserData(res.user);
         navigate('/');
       } else {
         alert("Có lỗi xảy ra: " + (res.message || 'Không xác định'));

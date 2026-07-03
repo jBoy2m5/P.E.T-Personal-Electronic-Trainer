@@ -5,11 +5,13 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
 import usePetStore from '../store/usePetStore';
+import { saveUserData } from '../utils/userStorage';
 
 export default function UserProfile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
+  const [bmi, setBmi] = useState(null); // BMI lấy từ server (/users/me), không lưu/không tính ở client
   const [stats, setStats] = useState({ totalWorkouts: 0, totalCalories: 0, streak: 0 });
   const fileInputRef = useRef(null);
   const checkinStreak = usePetStore((s) => s.checkinStreak);
@@ -22,7 +24,7 @@ export default function UserProfile() {
         const base64String = reader.result;
         const updatedData = { ...userData, pictureUrl: base64String };
         setUserData(updatedData);
-        localStorage.setItem('user-data', JSON.stringify(updatedData));
+        saveUserData(updatedData);
         window.dispatchEvent(new Event('storage'));
         // Lưu avatar lên server để không mất khi đăng xuất/đăng nhập lại
         try {
@@ -60,6 +62,17 @@ export default function UserProfile() {
       }
     };
     loadStats();
+
+    // 3. BMI lấy thẳng từ server (nguồn duy nhất) — không tính/không cache ở client
+    const loadBmi = async () => {
+      try {
+        const me = await axiosClient.get('/users/me');
+        setBmi(me?.bmi != null ? Number(me.bmi).toFixed(1) : null);
+      } catch (err) {
+        console.error('Không thể tải BMI từ server:', err);
+      }
+    };
+    loadBmi();
   }, [navigate, checkinStreak]);
 
   const handleLogout = () => {
@@ -70,23 +83,17 @@ export default function UserProfile() {
     window.location.href = '/login';
   };
 
-  const calculateBMI = (weight, height) => {
-    if (!weight || !height) return 0;
-    const h = height / 100;
-    return (weight / (h * h)).toFixed(1);
-  };
-
-  const getBMIStatus = (bmi) => {
-    if (bmi < 18.5) return { label: t('profile.underweight', 'Thiếu cân'), color: 'text-warning' };
-    if (bmi >= 18.5 && bmi < 25) return { label: t('profile.normal', 'Bình thường'), color: 'text-success' };
-    if (bmi >= 25 && bmi < 30) return { label: t('profile.overweight', 'Thừa cân'), color: 'text-warning' };
+  const getBMIStatus = (v) => {
+    if (v == null) return { label: '--', color: 'text-secondary' };
+    if (v < 18.5) return { label: t('profile.underweight', 'Thiếu cân'), color: 'text-warning' };
+    if (v >= 18.5 && v < 25) return { label: t('profile.normal', 'Bình thường'), color: 'text-success' };
+    if (v >= 25 && v < 30) return { label: t('profile.overweight', 'Thừa cân'), color: 'text-warning' };
     return { label: t('profile.obese', 'Béo phì'), color: 'text-danger' };
   };
 
   if (!userData) return null;
 
-  const bmi = calculateBMI(userData.weight, userData.height);
-  const bmiStatus = getBMIStatus(bmi);
+  const bmiStatus = getBMIStatus(bmi != null ? Number(bmi) : null);
 
   return (
     <Container fluid className="py-5 bg-surface-main min-vh-100 position-relative overflow-hidden">

@@ -28,6 +28,34 @@ export const getAdviceKey = (langKey) => scopedKey(`ai-roadmap-advice-v2-${langK
 // Khóa dùng chung cho cả thiết bị (không gắn userId), luôn được giữ lại khi dọn dữ liệu.
 const DEVICE_KEYS = ['theme', 'user-data', 'jwt-token'];
 
+// BMI là chỉ số sức khỏe, nguồn dữ liệu DUY NHẤT là server DB (tính từ height/weight khi
+// onboarding). KHÔNG được cache ở client vì bản sao localStorage dễ lỗi thời (đổi cân nặng
+// mà không cập nhật) và từng gây rò rỉ giữa các tài khoản. Server trả `bmi` trong nhiều
+// response (login, /users/me...) nhưng khi lưu hồ sơ vào localStorage phải loại bmi ra;
+// cần BMI thì gọi GET /users/me.
+export const saveUserData = (user) => {
+  if (user && typeof user === 'object') {
+    const rest = { ...user };
+    delete rest.bmi;
+    localStorage.setItem('user-data', JSON.stringify(rest));
+  } else {
+    localStorage.setItem('user-data', JSON.stringify(user));
+  }
+};
+
+// Dọn bmi khỏi user-data đã lỡ lưu ở phiên bản cũ (chạy 1 lần lúc app khởi động).
+export const sanitizeStoredUserData = () => {
+  try {
+    const saved = localStorage.getItem('user-data');
+    if (!saved) return;
+    const parsed = JSON.parse(saved);
+    if (parsed && typeof parsed === 'object' && 'bmi' in parsed) {
+      delete parsed.bmi;
+      localStorage.setItem('user-data', JSON.stringify(parsed));
+    }
+  } catch { /* ignore */ }
+};
+
 // Lớp bảo vệ cứng chống rò rỉ dữ liệu giữa các tài khoản: gọi NGAY SAU khi đăng nhập
 // (user-data đã là tài khoản mới). Xóa mọi khóa localStorage KHÔNG thuộc tài khoản hiện tại —
 // gồm khóa của tài khoản khác (hậu tố -{userId khác}), khóa global cũ còn sót, và cả những

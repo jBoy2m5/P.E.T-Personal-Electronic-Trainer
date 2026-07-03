@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGoogleLogin, GoogleLogin } from '@react-oauth/google';
 import axiosClient from '../api/axiosClient';
-import { purgeStaleUserData } from '../utils/userStorage';
+import { purgeStaleUserData, saveUserData } from '../utils/userStorage';
 
 // Trình duyệt nhúng trong app (Zalo, Facebook, Messenger, Instagram, TikTok...) không hoàn tất được
 // OAuth Google (bị chặn 403 disallowed_useragent hoặc popup trắng trang vì webview không hỗ trợ
@@ -42,7 +42,7 @@ export default function Auth() {
       if (res.token) {
         localStorage.setItem('jwt-token', res.token);
       }
-      localStorage.setItem('user-data', JSON.stringify(res.user));
+      saveUserData(res.user); // loại bmi trước khi lưu — BMI chỉ ở server
 
       // Chống rò rỉ giữa các tài khoản: xóa mọi dữ liệu localStorage của tài khoản trước,
       // rồi reload cả trang (window.location, KHÔNG dùng navigate) để các store Zustand
