@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import axiosClient from '../api/axiosClient';
-import { getScheduleKey, getUserId } from '../utils/userStorage';
+import useScheduleStore from './useScheduleStore';
+import { getUserId } from '../utils/userStorage';
+
+// PET STORE SERVER-ONLY: state sống in-memory và sync 2 chiều với server
+// (GET /pets/user/{id} lúc boot qua syncFromBackend, PUT /pets/{id} khi thay đổi).
+// KHÔNG còn snapshot localStorage 'pet-daily' — F5 là đọc lại từ server.
 
 const PET_LEVELS = [
   { level: 1, name: 'Trứng', minPoints: 0, icon: '🥚' },
@@ -12,11 +17,6 @@ const PET_LEVELS = [
   { level: 7, name: 'Pet huyền thoại', minPoints: 1200, icon: '🦄' },
   { level: 8, name: 'Pet thần thoại', minPoints: 2500, icon: '⭐' },
 ];
-
-const getPetKey = (userId) => {
-  const uid = userId || getUserId();
-  return uid ? `pet-daily-${uid}` : 'pet-daily';
-};
 
 const getTodayKey = () => {
   const d = new Date();
@@ -38,7 +38,7 @@ const parseJsonArray = (s) => {
   } catch { return []; }
 };
 
-// Ảnh chụp trạng thái nhiệm vụ hằng ngày để gửi lên server (nguồn dữ liệu chính)
+// Ảnh chụp trạng thái nhiệm vụ hằng ngày để gửi lên server (nguồn dữ liệu duy nhất)
 const dailyPayload = (state, todayStr) => ({
   pet_daily_date: todayStr,
   points_earned_today: state.pointsEarnedToday || 0,
@@ -46,40 +46,32 @@ const dailyPayload = (state, todayStr) => ({
   claimed_missions: JSON.stringify(state.claimedMissions?.[todayStr] || []),
 });
 
-const getInitialState = () => {
-  const userId = getUserId();
-  const key = getPetKey(userId);
-  const todayStr = getTodayKey();
-  let data = { totalPoints: 0, exercisesTrained: [], pointsEarnedToday: 0, date: todayStr, petId: null, petName: null, claimedMissions: {}, checkinStreak: 0, lastCheckinDate: null, equippedOutfits: [] };
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      data = { ...data, ...parsed };
-      if (data.date !== todayStr) {
-        data.date = todayStr;
-        data.pointsEarnedToday = 0;
-        data.exercisesTrained = [];
-      }
-    }
-  } catch { /* ignore */ }
-  return data;
+const initialState = {
+  totalPoints: 0,
+  exercisesTrained: [],
+  pointsEarnedToday: 0,
+  date: getTodayKey(),
+  petId: null,
+  petName: null,
+  claimedMissions: {},
+  checkinStreak: 0,
+  lastCheckinDate: null,
+  equippedOutfits: [],
 };
 
 const usePetStore = create((set, get) => ({
-  ...getInitialState(),
+  ...initialState,
 
   syncFromBackend: async () => {
     const userId = getUserId();
     if (!userId) return;
-    const key = getPetKey(userId);
     const todayStr = getTodayKey();
     try {
       const pet = await axiosClient.get(`/pets/user/${userId}`);
       const totalPoints = pet.total_exp || 0;
-      // Nguồn chính là server. Trạng thái nhiệm vụ chỉ áp dụng nếu là của hôm nay
+      // Trạng thái nhiệm vụ trên server chỉ áp dụng nếu là của hôm nay
       const sameDay = pet.pet_daily_date === todayStr;
-      const newState = {
+      set({
         totalPoints,
         petId: pet.pet_id,
         petName: pet.pet_name || null,
@@ -89,10 +81,8 @@ const usePetStore = create((set, get) => ({
         checkinStreak: pet.checkin_streak || 0,
         lastCheckinDate: pet.last_checkin_date || null,
         equippedOutfits: parseJsonArray(pet.appearance_type),
-        date: todayStr
-      };
-      localStorage.setItem(key, JSON.stringify(newState));
-      set(newState);
+        date: todayStr,
+      });
       // lastCheckinDate mới từ server có thể đổi trạng thái khóa/mở của lộ trình
       import('./useRoadmapStore').then((m) => m.default.getState().refreshStatuses()).catch(() => {});
     } catch (err) {
@@ -100,12 +90,10 @@ const usePetStore = create((set, get) => ({
         // New user: create pet with level 1, exp 0
         try {
           const newPet = await axiosClient.post('/pets', { user_id: userId, level: 1, total_exp: 0 });
-          const freshState = { totalPoints: 0, petId: newPet.pet_id, pointsEarnedToday: 0, exercisesTrained: [], date: todayStr };
-          localStorage.setItem(key, JSON.stringify(freshState));
-          set(freshState);
+          set({ ...initialState, petId: newPet.pet_id, date: todayStr });
         } catch { /* ignore */ }
       }
-      // Other errors: backend unavailable, keep local state
+      // Other errors: backend unavailable, keep in-memory state
     }
   },
 
@@ -118,10 +106,15 @@ const usePetStore = create((set, get) => ({
     return current;
   },
 
+  // Pet buồn khi 3 ngày liền (hôm nay + 2 hôm trước) không có buổi tập nào.
+  // Nguồn: useScheduleStore (dựng từ workout-sessions trên SERVER, không localStorage).
   isSad: () => {
-    const schedule = localStorage.getItem(getScheduleKey());
-    if (!schedule) return false;
-    const data = JSON.parse(schedule);
+    const sched = useScheduleStore.getState();
+    if (!sched.loaded) {
+      sched.loadSchedule().catch(() => {});
+      return false; // chưa có dữ liệu → không kết luận pet buồn
+    }
+    const data = sched.scheduleData;
     const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const today = new Date();
     for (let i = 1; i <= 2; i++) {
@@ -132,8 +125,6 @@ const usePetStore = create((set, get) => ({
   },
 
   performCheckin: async () => {
-    const userId = getUserId();
-    const key = getPetKey(userId);
     const todayStr = getTodayKey();
     const { petId, checkinStreak, lastCheckinDate, totalPoints } = get();
     if (!petId) return null;
@@ -156,11 +147,7 @@ const usePetStore = create((set, get) => ({
         checkin_streak: newStreak,
         last_checkin_date: todayStr,
       });
-      set((state) => {
-        const merged = { ...state, totalPoints: newTotalExp, checkinStreak: newStreak, lastCheckinDate: todayStr };
-        localStorage.setItem(key, JSON.stringify(merged));
-        return merged;
-      });
+      set({ totalPoints: newTotalExp, checkinStreak: newStreak, lastCheckinDate: todayStr });
       // Điểm danh = bắt đầu ngày mới → tính lại trạng thái khóa/mở của lộ trình
       // (dynamic import để tránh vòng lặp import giữa 2 store)
       import('./useRoadmapStore').then((m) => m.default.getState().refreshStatuses()).catch(() => {});
@@ -169,18 +156,12 @@ const usePetStore = create((set, get) => ({
   },
 
   updatePetName: async (name) => {
-    const userId = getUserId();
-    const key = getPetKey(userId);
     const { petId } = get();
     const trimmed = (name || '').trim().slice(0, 20);
     if (!trimmed || !petId) return false;
     try {
       await axiosClient.put(`/pets/${petId}`, { pet_name: trimmed });
-      set((state) => {
-        const merged = { ...state, petName: trimmed };
-        localStorage.setItem(key, JSON.stringify(merged));
-        return merged;
-      });
+      set({ petName: trimmed });
       return true;
     } catch { return false; }
   },
@@ -188,27 +169,21 @@ const usePetStore = create((set, get) => ({
   // Mặc/cởi trang phục cho pet — trạng thái lưu trong cột appearance_type (JSON array) trên server.
   // Không trừ EXP: chỉ cần tổng EXP đạt ngưỡng của món đồ (kiểm tra ở UI) là trang bị được.
   toggleOutfit: (outfitId) => {
-    const userId = getUserId();
-    const key = getPetKey(userId);
     set((state) => {
       const current = state.equippedOutfits || [];
       const next = current.includes(outfitId)
         ? current.filter((o) => o !== outfitId)
         : [...current, outfitId];
-      const newState = { ...state, equippedOutfits: next };
-      localStorage.setItem(key, JSON.stringify(newState));
       if (state.petId) {
         axiosClient.put(`/pets/${state.petId}`, { appearance_type: JSON.stringify(next) }).catch(() => {});
       }
-      return newState;
+      return { equippedOutfits: next };
     });
   },
 
   claimMission: (missionId, expReward) => {
     const MAX_DAILY_EXP = 300;
     const todayStr = getTodayKey();
-    const userId = getUserId();
-    const key = getPetKey(userId);
 
     set((state) => {
       const todayClaimed = state.claimedMissions?.[todayStr] || [];
@@ -229,7 +204,6 @@ const usePetStore = create((set, get) => ({
         claimedMissions: newClaimed,
         date: todayStr,
       };
-      localStorage.setItem(key, JSON.stringify(newState));
 
       if (state.petId) {
         axiosClient.put(`/pets/${state.petId}`, {
@@ -246,8 +220,6 @@ const usePetStore = create((set, get) => ({
   addExp: (kcal, exerciseName) => {
     const MAX_DAILY_EXP = 300;
     const todayStr = getTodayKey();
-    const userId = getUserId();
-    const key = getPetKey(userId);
 
     set((state) => {
       let currentPointsToday = state.date === todayStr ? state.pointsEarnedToday : 0;
@@ -266,7 +238,7 @@ const usePetStore = create((set, get) => ({
       }
 
       const newTotalPoints = state.totalPoints + expGained;
-      // Giữ nguyên toàn bộ state (claimedMissions, checkinStreak, lastCheckinDate...) để không bị mất sau refresh
+      // Giữ nguyên toàn bộ state (claimedMissions, checkinStreak, lastCheckinDate...)
       const newState = {
         ...state,
         totalPoints: newTotalPoints,
@@ -276,9 +248,7 @@ const usePetStore = create((set, get) => ({
         petId: state.petId
       };
 
-      localStorage.setItem(key, JSON.stringify(newState));
-
-      // Sync to backend (nguồn dữ liệu chính)
+      // Sync to backend (nguồn dữ liệu duy nhất — F5 sẽ đọc lại từ đây)
       if (state.petId) {
         axiosClient.put(`/pets/${state.petId}`, {
           total_exp: newTotalPoints,

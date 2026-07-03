@@ -33,11 +33,8 @@ export default function TopNav() {
   }, [isDark]);
 
   useEffect(() => {
+    // Thông báo chỉ là state in-memory (chưa có nguồn thật) — không đọc/ghi localStorage
     const loadNotifs = () => {
-      const saved = localStorage.getItem('pet-notifications');
-      if (saved) {
-        setNotifications(JSON.parse(saved));
-      }
       setUnclaimedTasks(getUnclaimedCount());
     };
     loadNotifs();
@@ -57,9 +54,7 @@ export default function TopNav() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAllAsRead = () => {
-    const updated = notifications.map(n => ({ ...n, read: true }));
-    setNotifications(updated);
-    localStorage.setItem('pet-notifications', JSON.stringify(updated));
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
   };
 
   if (location.pathname.startsWith('/roadmap')) {

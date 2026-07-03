@@ -1,34 +1,27 @@
 import useAuthStore from '../store/useAuthStore';
 
-// userId lấy từ authStore (bootstrap từ GET /users/me) — KHÔNG còn đọc localStorage 'user-data'.
-// Trả null khi chưa bootstrap xong/chưa đăng nhập.
+// DỮ LIỆU CÁ NHÂN HÓA SỐNG TRÊN SERVER DB, KHÔNG Ở LOCALSTORAGE.
+// localStorage chỉ được phép chứa DEVICE_KEYS: jwt-token (credential Bearer, client bắt buộc
+// phải giữ) và các cài đặt thiết bị — theme (cần TRƯỚC khi React render) + i18nextLng
+// (LanguageDetector của i18next tự cache ngôn ngữ đã chọn).
+
+// userId lấy từ authStore (bootstrap từ GET /users/me) — trả null khi chưa đăng nhập.
 export const getUserId = () => useAuthStore.getState().user?.userId ?? null;
 
-// Thêm hậu tố userId; chưa đăng nhập (không có userId) thì giữ khóa gốc.
-const scopedKey = (base) => {
-  const uid = getUserId();
-  return uid ? `${base}-${uid}` : base;
-};
+const DEVICE_KEYS = ['theme', 'jwt-token', 'i18nextLng'];
 
-// Lịch tập theo ngày (trained + completedExercises) — nguồn của dấu tick bài tập trong lộ trình.
-export const getScheduleKey = () => scopedKey('pet-schedule');
+// Khóa localStorage phiên bản cũ mà migration một lần (useRoadmapStore.loadRoadmap) còn cần đọc
+// để đẩy lộ trình + tick cũ lên server — chỉ giữ bản của CHÍNH user hiện tại, migration xong sẽ xóa.
+const MIGRATION_KEYS = (uid) => [`roadmap-data-${uid}`, `pet-schedule-${uid}`];
 
-// Cache buổi tập cục bộ (calo/rep) — dữ liệu hiển thị chính lấy từ server, đây chỉ là cache.
-export const getSessionsKey = () => scopedKey('workout-sessions');
-
-// Khóa duy nhất được phép tồn tại trong localStorage: credential + cài đặt thiết bị
-// (theme cần TRƯỚC khi React render). Mọi dữ liệu cá nhân hóa khác sống trên server DB.
-const DEVICE_KEYS = ['theme', 'jwt-token'];
-
-// Lớp bảo vệ cứng chống rò rỉ dữ liệu giữa các tài khoản: gọi lúc app khởi động và ngay sau
-// khi đăng nhập. Xóa mọi khóa localStorage không thuộc DEVICE_KEYS — gồm khóa legacy
-// (user-data, pet-daily-*, roadmap-data-*...) và khóa của tài khoản khác.
-// `currentUid` (tùy chọn): userId vừa đăng nhập — tạm giữ khóa -{uid} của chính tài khoản đó
-// để bước migration (đẩy roadmap/tick cũ lên server) còn đọc được trước khi xóa hẳn.
+// Lớp bảo vệ cứng: xóa mọi khóa localStorage không thuộc DEVICE_KEYS — gồm toàn bộ khóa legacy
+// (user-data, pet-daily-*, workout-sessions-*, ai-roadmap-advice-*, pet-notifications...) và
+// khóa của tài khoản khác. Gọi lúc app khởi động (App.jsx) và ngay sau khi đăng nhập (Auth.jsx).
 export const purgeStaleUserData = (currentUid) => {
+  const keep = currentUid ? MIGRATION_KEYS(currentUid) : [];
   Object.keys(localStorage).forEach((k) => {
     if (DEVICE_KEYS.includes(k)) return;
-    if (currentUid && k.endsWith(`-${currentUid}`)) return;
+    if (keep.includes(k)) return;
     localStorage.removeItem(k);
   });
 };
