@@ -65,7 +65,9 @@ export default function UserProfile() {
   const handleLogout = () => {
     localStorage.removeItem('user-data');
     localStorage.removeItem('jwt-token');
-    navigate('/login');
+    // Reload cả trang (như TopNav) để xóa state Zustand của tài khoản cũ khỏi bộ nhớ,
+    // tránh dữ liệu còn sót khi đăng nhập tài khoản khác ngay sau đó.
+    window.location.href = '/login';
   };
 
   const calculateBMI = (weight, height) => {

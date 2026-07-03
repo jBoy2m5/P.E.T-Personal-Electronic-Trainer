@@ -24,3 +24,19 @@ export const getSessionsKey = () => scopedKey('workout-sessions');
 
 // Lời khuyên AI cho lộ trình (tóm tắt thể trạng + mục tiêu của user) — cache theo ngôn ngữ + user.
 export const getAdviceKey = (langKey) => scopedKey(`ai-roadmap-advice-v2-${langKey}`);
+
+// Khóa dùng chung cho cả thiết bị (không gắn userId), luôn được giữ lại khi dọn dữ liệu.
+const DEVICE_KEYS = ['theme', 'user-data', 'jwt-token'];
+
+// Lớp bảo vệ cứng chống rò rỉ dữ liệu giữa các tài khoản: gọi NGAY SAU khi đăng nhập
+// (user-data đã là tài khoản mới). Xóa mọi khóa localStorage KHÔNG thuộc tài khoản hiện tại —
+// gồm khóa của tài khoản khác (hậu tố -{userId khác}), khóa global cũ còn sót, và cả những
+// khóa per-user tương lai lỡ quên gắn userId. Chỉ giữ DEVICE_KEYS và khóa có hậu tố -{userId hiện tại}.
+export const purgeStaleUserData = () => {
+  const uid = getUserId();
+  Object.keys(localStorage).forEach((k) => {
+    if (DEVICE_KEYS.includes(k)) return;
+    if (uid && k.endsWith(`-${uid}`)) return;
+    localStorage.removeItem(k);
+  });
+};
