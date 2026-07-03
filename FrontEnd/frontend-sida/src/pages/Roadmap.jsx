@@ -6,7 +6,7 @@ import useRoadmapStore from '../store/useRoadmapStore';
 import usePetStore from '../store/usePetStore';
 import { SPLIT_NAME_EN, PLAN_TITLE_EN } from '../services/roadmapGenerator';
 import axiosClient from '../api/axiosClient';
-import { getAdviceKey } from '../utils/userStorage';
+import { getUserId } from '../utils/userStorage';
 
 export default function Roadmap() {
   const navigate = useNavigate();
@@ -23,19 +23,13 @@ export default function Roadmap() {
     }
   }, [initialized, loadRoadmap]);
 
-  // Lời khuyên AI cache theo ngôn ngữ; thiếu bản ngôn ngữ hiện tại thì gọi Gemini lấy và cache lại.
-  // Hậu tố -v2: đổi kiểu lời khuyên (chỉ tóm tắt thể trạng + lợi ích lộ trình, không kê bài tập)
-  // → bỏ qua cache kiểu cũ ('ai-roadmap-advice' và '-{lang}' không version) để sinh lại một lần
+  // Lời khuyên AI cache trên SERVER theo ngôn ngữ (cột advice_vi/advice_en của roadmap) —
+  // endpoint trả bản cache nếu có, chỉ gọi Gemini khi chưa có. Không còn cache localStorage.
   useEffect(() => {
     const langKey = isVi ? 'vi' : 'en';
-    const cached = localStorage.getItem(getAdviceKey(langKey));
-    setAiAdvice(cached || '');
-    if (cached) return;
+    setAiAdvice('');
     axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).then(res => {
-      if (res?.advice) {
-        localStorage.setItem(getAdviceKey(langKey), res.advice);
-        setAiAdvice(res.advice);
-      }
+      if (res?.advice) setAiAdvice(res.advice);
     }).catch(() => {});
   }, [isVi]);
 
@@ -188,8 +182,7 @@ export default function Roadmap() {
           style={{ fontSize: '0.75rem' }}
           onClick={() => {
             if (window.confirm('Reset lộ trình về ngày 1?')) {
-              const saved = localStorage.getItem('user-data');
-              const userId = saved ? JSON.parse(saved)?.userId : null;
+              const userId = getUserId();
               const key = userId ? `roadmap-data-${userId}` : 'roadmap-data';
               localStorage.removeItem(key);
               generateRoadmap();

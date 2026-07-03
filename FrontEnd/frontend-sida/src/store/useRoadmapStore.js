@@ -5,7 +5,7 @@ import { fetchAiRoadmap } from '../services/aiRoadmapService';
 import useExerciseStore from './useExerciseStore';
 import usePetStore from './usePetStore';
 import axiosClient from '../api/axiosClient';
-import { getAdviceKey } from '../utils/userStorage';
+import { getUserId } from '../utils/userStorage';
 import { fetchProfile } from '../api/profileApi';
 
 // Hồ sơ dùng cho thuật toán lộ trình dự phòng (local) — LẤY TỪ SERVER, không đọc localStorage
@@ -19,13 +19,6 @@ const buildGeneratorUserData = async () => {
     fitnessLevel: p.fitnessLevel || 'Mới bắt đầu',
     goal: p.goal || 'Giữ dáng',
   };
-};
-
-const getUserId = () => {
-  try {
-    const saved = localStorage.getItem('user-data');
-    return saved ? JSON.parse(saved)?.userId : null;
-  } catch { return null; }
 };
 
 const getRoadmapKey = (userId) => {
@@ -126,11 +119,10 @@ const useRoadmapStore = create((set, get) => ({
       // Save to backend (fire-and-forget)
       if (userId) get()._saveToBackend(userId, roadmap, userData.goal);
 
-      // Lời khuyên AI theo ngôn ngữ hiện tại, cache theo key có hậu tố ngôn ngữ (Roadmap.jsx đọc/fetch bổ sung)
+      // Prefetch lời khuyên AI theo ngôn ngữ hiện tại — server tự cache vào cột
+      // advice_vi/advice_en của roadmap, Roadmap.jsx chỉ việc GET lại là có ngay
       const langKey = (i18n.language || 'vi').toLowerCase().startsWith('vi') ? 'vi' : 'en';
-      axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).then(res => {
-        if (res?.advice) localStorage.setItem(getAdviceKey(langKey), res.advice);
-      }).catch(() => {});
+      axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).catch(() => {});
     } finally {
       set({ generating: false });
     }

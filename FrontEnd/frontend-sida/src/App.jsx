@@ -1,6 +1,8 @@
 import React, { Suspense, lazy, Component, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import usePetStore from './store/usePetStore';
+import useAuthStore from './store/useAuthStore';
+import { purgeStaleUserData } from './utils/userStorage';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -47,30 +49,36 @@ const UserProfile = lazy(() => import('./pages/UserProfile'));
 function Layout() {
   const location = useLocation();
   const syncPet = usePetStore(state => state.syncFromBackend);
-  const userDataString = localStorage.getItem('user-data');
-  const userData = userDataString ? JSON.parse(userDataString) : null;
-  const isAuthenticated = !!userData;
+  // Auth server-only: hồ sơ user bootstrap từ GET /users/me (in-memory), không còn localStorage 'user-data'
+  const { user, status, bootstrap } = useAuthStore();
+  const isAuthenticated = status === 'authenticated';
 
   useEffect(() => {
-    if (isAuthenticated) syncPet();
-  }, [userData?.userId]);
+    bootstrap();
+  }, [bootstrap]);
 
-  // Check if user still needs onboarding — dùng cờ needsOnboarding lưu trong user-data
-  // (suy ra từ height/weight lúc lưu). Số đo KHÔNG còn nằm trong localStorage nữa (chỉ ở server).
-  const needsOnboarding = isAuthenticated && userData.needsOnboarding === true;
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Dọn khóa localStorage legacy/của tài khoản khác (giữ jwt-token, theme và khóa
+      // -{userId hiện tại} để migration một lần còn đọc được dữ liệu cũ)
+      purgeStaleUserData(user?.userId);
+      syncPet();
+    }
+  }, [isAuthenticated, user?.userId]);
 
-  // Điều hướng nếu chưa đăng nhập
-  if (!isAuthenticated && location.pathname !== '/login' && location.pathname !== '/') {
-    // Note: Cho phép truy cập '/' nếu muốn trang chủ là public, hoặc chặn hết. 
-    // Theo yêu cầu trước: chưa đăng nhập thì chỉ được vào trang chủ. 
-    // Nhưng yêu cầu mới nhất: "Kiểm tra cờ needsOnboarding: Nếu true, ép chuyển hướng sang trang /onboarding và chặn không cho vào trang chủ. Nếu false, đẩy thẳng vào trang chủ."
-    // Vậy trang chủ YÊU CẦU đăng nhập hay KHÔNG?
-    // User nói: "Nếu false, đẩy thẳng vào trang chủ." ngụ ý trang chủ là trang sau khi login. 
-    // Tôi sẽ bắt buộc đăng nhập để vào các trang tính năng.
-    // Dựa theo code cũ: `location.pathname !== '/'` -> trang chủ là public.
-    // Tôi sẽ giữ nguyên logic: trang chủ là public, các trang khác cần login.
+  // Chặn render tới khi biết trạng thái đăng nhập — tránh chớp nội dung sai / redirect nhầm
+  if (status === 'loading') {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100 bg-body">
+        <div className="spinner-border text-neon" role="status"></div>
+      </div>
+    );
   }
 
+  // needsOnboarding suy từ height/weight trên server (null = chưa onboarding)
+  const needsOnboarding = isAuthenticated && user.needsOnboarding === true;
+
+  // Trang chủ là public, các trang tính năng yêu cầu đăng nhập
   if (!isAuthenticated && location.pathname !== '/' && location.pathname !== '/login') {
     return <Navigate to="/login" replace />;
   }

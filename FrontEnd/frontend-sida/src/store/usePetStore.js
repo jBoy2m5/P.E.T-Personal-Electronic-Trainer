@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import axiosClient from '../api/axiosClient';
-import { getScheduleKey } from '../utils/userStorage';
+import { getScheduleKey, getUserId } from '../utils/userStorage';
 
 const PET_LEVELS = [
   { level: 1, name: 'Trứng', minPoints: 0, icon: '🥚' },
@@ -12,13 +12,6 @@ const PET_LEVELS = [
   { level: 7, name: 'Pet huyền thoại', minPoints: 1200, icon: '🦄' },
   { level: 8, name: 'Pet thần thoại', minPoints: 2500, icon: '⭐' },
 ];
-
-const getUserId = () => {
-  try {
-    const saved = localStorage.getItem('user-data');
-    return saved ? JSON.parse(saved)?.userId : null;
-  } catch { return null; }
-};
 
 const getPetKey = (userId) => {
   const uid = userId || getUserId();

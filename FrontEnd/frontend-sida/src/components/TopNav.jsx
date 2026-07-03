@@ -4,6 +4,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import logo from '../assets/logo-black.png';
 import { getUnclaimedCount } from '../services/rewards';
+import useAuthStore from '../store/useAuthStore';
+import { logout } from '../utils/userStorage';
 
 export default function TopNav() {
   const { t, i18n } = useTranslation();
@@ -21,25 +23,9 @@ export default function TopNav() {
   const [notifications, setNotifications] = useState([]);
   const [showNotif, setShowNotif] = useState(false);
   const [unclaimedTasks, setUnclaimedTasks] = useState(0);
-  const [userData, setUserData] = useState(() => {
-    const data = localStorage.getItem('user-data');
-    return data ? JSON.parse(data) : null;
-  });
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('user-data'));
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const data = localStorage.getItem('user-data');
-      setUserData(data ? JSON.parse(data) : null);
-      setIsAuthenticated(!!data);
-    };
-    window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(handleStorageChange, 1000); // Check every second to respond inside the same tab
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, []);
+  // Hồ sơ user từ authStore (server-only, reactive) — hết cảnh poll localStorage mỗi giây
+  const userData = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
@@ -222,11 +208,7 @@ export default function TopNav() {
                       <Dropdown.Divider className={isDark ? 'border-secondary' : ''} />
                       <Dropdown.Item 
                         className="d-flex align-items-center py-2 text-danger"
-                        onClick={() => {
-                          localStorage.removeItem('user-data');
-                          localStorage.removeItem('jwt-token');
-                          window.location.href = '/login';
-                        }}
+                        onClick={logout}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="me-2" viewBox="0 0 16 16">
                           <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>

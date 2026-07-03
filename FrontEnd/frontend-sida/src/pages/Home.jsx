@@ -5,13 +5,14 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Tilt from 'react-parallax-tilt';
 import axiosClient from '../api/axiosClient';
+import useAuthStore from '../store/useAuthStore';
 import heroBanner from '../assets/hero_banner.webp';
 import petChatbot from '../assets/pet_chatbot.png';
 
 export default function Home() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [userData, setUserData] = useState(null);
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
@@ -32,16 +33,10 @@ export default function Home() {
   const [sessionCount, setSessionCount] = useState(0);
 
   useEffect(() => {
-    // 1. Load User Data
-    const saved = localStorage.getItem('user-data');
-    if (saved) {
-      setUserData(JSON.parse(saved));
-    }
-
-    // 3. Load Calories từ DB server (đồng bộ với trang Quản lý calo)
+    // Load Calories từ DB server (đồng bộ với trang Quản lý calo)
     // Chỉ gọi API khi đã đăng nhập; Home là route công khai, tránh bị 401 đá về /login
     const loadCalories = async () => {
-      if (!localStorage.getItem('user-data')) return;
+      if (!isAuthenticated) return;
       try {
         // Gửi ngày theo giờ địa phương vì server chạy UTC
         const d = new Date();
@@ -67,7 +62,7 @@ export default function Home() {
     loadCalories();
     window.addEventListener('storage', loadCalories);
     return () => window.removeEventListener('storage', loadCalories);
-  }, []);
+  }, [isAuthenticated]);
 
   // Animated counter for calories
   useEffect(() => {

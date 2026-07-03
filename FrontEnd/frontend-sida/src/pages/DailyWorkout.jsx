@@ -8,6 +8,7 @@ import useExerciseStore from '../store/useExerciseStore';
 import { SPLIT_NAME_EN } from '../services/roadmapGenerator';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
+import useAuthStore from '../store/useAuthStore';
 import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
 
 const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
@@ -152,9 +153,8 @@ export default function DailyWorkout() {
         const found = (roadmapData || []).find(d => d.dayId.toString() === dayId);
         if (found) dayInfo = found;
 
-        const savedUser = localStorage.getItem('user-data');
-        const parsedUser = savedUser ? JSON.parse(savedUser) : {};
-        const goal = parsedUser.goal || parsedUser.fitness_goal || 'Tăng cơ nạc';
+        // Mục tiêu tập lấy từ authStore (bootstrap từ server) — không còn localStorage 'user-data'
+        const goal = useAuthStore.getState().user?.goal || 'Tăng cơ nạc';
 
         const mgTranslations = {
             'NGỰC (CHEST)': 'mg_chest',

@@ -34,7 +34,6 @@ axiosClient.interceptors.response.use(
         // Nếu server trả về 401 Unauthorized (Chưa đăng nhập hoặc Token hết hạn)
         if (error.response && error.response.status === 401) {
             console.error('Unauthorized! Token missing or invalid.');
-            localStorage.removeItem('user-data');
             localStorage.removeItem('jwt-token');
             window.location.href = '/login';
         }

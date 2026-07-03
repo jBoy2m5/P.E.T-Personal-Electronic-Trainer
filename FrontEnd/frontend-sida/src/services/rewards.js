@@ -1,3 +1,5 @@
+import usePetStore from '../store/usePetStore';
+
 export const ALL_MISSIONS = [
   { id: '101', title: 'Hít đất cơ bản (Standard Push-up)', points: 30, group: 1 },
   { id: '102', title: 'Hít đất hẹp tay (Diamond Push-up)', points: 40, group: 1 },
@@ -93,13 +95,10 @@ export const getUnclaimedCount = () => {
   const todayKey = getTodayKey();
 
   try {
-    const userData = localStorage.getItem('user-data');
-    const userId = userData ? JSON.parse(userData)?.userId : null;
-    const key = userId ? `pet-daily-${userId}` : 'pet-daily';
-    const saved = localStorage.getItem(key);
-    const data = saved ? JSON.parse(saved) : {};
+    // Đọc thẳng state của pet store (đã sync từ server) — không đọc localStorage
+    const data = usePetStore.getState();
     const claimedToday = data.claimedMissions?.[todayKey] || [];
-    const trainedToday = data.exercisesTrained || [];
+    const trainedToday = (data.date === todayKey && data.exercisesTrained) || [];
 
     if (!claimedToday.includes('login')) count += 1;
     if (trainedToday.length > 0 && !claimedToday.includes('exercise_1')) count += 1;

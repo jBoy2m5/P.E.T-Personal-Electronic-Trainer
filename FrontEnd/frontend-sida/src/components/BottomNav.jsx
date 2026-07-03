@@ -3,12 +3,14 @@ import { Nav } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getUnclaimedCount } from '../services/rewards';
+import useAuthStore from '../store/useAuthStore';
 
 export default function BottomNav() {
   const { t } = useTranslation();
   const location = useLocation();
-  // Chỉ hiện số nhiệm vụ chưa nhận khi đã đăng nhập
-  const unclaimedTasks = localStorage.getItem('user-data') ? getUnclaimedCount() : 0;
+  // Chỉ hiện số nhiệm vụ chưa nhận khi đã đăng nhập (trạng thái lấy từ authStore, không localStorage)
+  const isAuthenticated = useAuthStore((s) => s.status === 'authenticated');
+  const unclaimedTasks = isAuthenticated ? getUnclaimedCount() : 0;
 
   // Không hiện BottomNav ở trang đăng nhập hoặc onboarding
   if (location.pathname === '/login' || location.pathname === '/onboarding') {
