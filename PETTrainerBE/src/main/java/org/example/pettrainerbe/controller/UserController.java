@@ -25,7 +25,25 @@ public class UserController {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email);
         if (user == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        return ResponseEntity.ok(user);
+
+        // Trả DTO gọn (chỉ field hồ sơ) thay vì cả entity: serialize nguyên object graph
+        // (pet, workoutSessions → details → exercise...) tạo response ~MB và có thể bị cắt giữa
+        // chừng khi Jackson lỗi sâu trong graph → JSON không hợp lệ. Axios giữ chuỗi méo đó dưới
+        // dạng string (không throw) → mọi field FE đọc thành undefined ("Người dùng" + ép onboarding).
+        // Key để snake_case cứng cho khớp useAuthStore + profileApi.
+        Map<String, Object> me = new HashMap<>();
+        me.put("user_id", user.getUserId());
+        me.put("name", user.getName());
+        me.put("email", user.getEmail());
+        me.put("picture_url", user.getPictureUrl());
+        me.put("height", user.getHeight());
+        me.put("weight", user.getWeight());
+        me.put("bmi", user.getBmi());
+        me.put("gender", user.getGender());
+        me.put("fitness_goal", user.getFitnessGoal());
+        me.put("fitness_level", user.getFitnessLevel());
+        me.put("sessions_per_week", user.getSessionsPerWeek());
+        return ResponseEntity.ok(me);
     }
 
     @PutMapping("/avatar")
