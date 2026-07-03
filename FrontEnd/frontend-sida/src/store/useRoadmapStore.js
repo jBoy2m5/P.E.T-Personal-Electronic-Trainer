@@ -85,7 +85,10 @@ const deriveStatuses = (roadmap) => {
   for (let i = 0; i <= lastCompletedIdx; i++) updated[i].status = 'completed';
   const activeIdx = lastCompletedIdx + 1;
   if (activeIdx < updated.length) {
-    const unlocked = checkedInToday && prevDoneBeforeToday(lastCompletedIdx);
+    // Ngày đầu tiên của lộ trình LUÔN mở — cần mở để bắt đầu/điểm danh (không thể yêu cầu điểm danh
+    // trước khi có ngày nào mở). Từ ngày 2 trở đi mới gate theo điểm danh + sang ngày lịch mới.
+    const isFirstDay = lastCompletedIdx < 0;
+    const unlocked = isFirstDay || (checkedInToday && prevDoneBeforeToday(lastCompletedIdx));
     updated[activeIdx].status = unlocked ? 'active' : 'locked';
     for (let i = activeIdx + 1; i < updated.length; i++) updated[i].status = 'locked';
   }
