@@ -47,6 +47,11 @@ let aiSkipped = false;
 // không phải gọi lại /users/me (ở bản này /me nặng nên await sẽ treo màn chờ).
 let lastGenUserData = null;
 
+// Chọn roadmap row HIỆN TẠI = id lớn nhất (row vừa tạo). Backend d740ad1 tích lũy nhiều row mỗi
+// lần generate/reset; userRoadmaps[0] là row CŨ NHẤT (completion lệch) nên phải lấy row mới nhất —
+// markDayComplete cũng ghi vào row mới nhất, đọc row này thì completion khớp và đồng bộ được server.
+const pickCurrentRoadmap = (list) => (list && list.length ? list.reduce((a, b) => (b.id > a.id ? b : a)) : null);
+
 // Ràng buộc mở khóa lộ trình:
 // - Ngày kế tiếp chỉ 'active' khi: ngày trước đã hoàn thành TRƯỚC hôm nay (đã sang ngày lịch mới)
 //   VÀ hôm nay đã điểm danh (điểm danh = bắt đầu ngày mới). Chưa điểm danh → mọi ngày chưa xong đều khóa.
@@ -101,9 +106,9 @@ const useRoadmapStore = create((set, get) => ({
       const parsed = deriveStatuses(JSON.parse(saved));
       localStorage.setItem(key, JSON.stringify(parsed));
       set({ roadmapData: parsed, initialized: true });
-      // KHÔNG sync completion từ backend: backend d740ad1 tích lũy nhiều roadmap row và
-      // hàm sync đọc userRoadmaps[0] (row cũ nhất, còn is_completed từ lần trước) → merge
-      // nhầm khiến lộ trình mới hiện completed sai. localStorage là nguồn completion duy nhất.
+      // Sync completion từ ROW MỚI NHẤT trên server (nền) → giữ đồng bộ qua máy/xóa cache,
+      // không còn đọc nhầm row cũ.
+      if (userId) get()._syncCompletionFromBackend(userId, parsed);
       return;
     }
 
@@ -217,9 +222,10 @@ const useRoadmapStore = create((set, get) => ({
   _syncCompletionFromBackend: async (userId, localRoadmap) => {
     try {
       const userRoadmaps = await axiosClient.get(`/roadmaps/user/${userId}`);
-      if (!userRoadmaps?.length) return;
+      const current = pickCurrentRoadmap(userRoadmaps);
+      if (!current) return;
 
-      const days = userRoadmaps[0].days || [];
+      const days = current.days || [];
       if (!days.length) return;
 
       const merged = localRoadmap.map(localDay => {
@@ -249,13 +255,24 @@ const useRoadmapStore = create((set, get) => ({
       lastGenUserData = userData; // để skip dùng lại, không phải fetch /me
       const exercises = await useExerciseStore.getState().fetchExercises();
 
-      if (userRoadmaps?.length) {
-        // Server đã có lộ trình → dựng lại bằng thuật toán local (nhanh, không gọi AI lại).
-        // KHÔNG merge is_completed từ backend: backend tích lũy nhiều row, userRoadmaps[0] là
-        // row CŨ NHẤT nên completion của nó bị lệch → lộ trình mới hiện completed sai.
-        // Completion sống ở localStorage; localStorage trống (vd sau purge) thì bắt đầu sạch.
+      const current = pickCurrentRoadmap(userRoadmaps);
+      if (current) {
+        // Server đã có lộ trình → dựng lại bằng thuật toán local rồi merge completion từ ROW MỚI NHẤT
+        // (không gọi AI lại). Đọc đúng row hiện tại nên completed hiển thị chuẩn + đồng bộ được server.
         const localRoadmap = generateDynamicRoadmap(userData, exercises);
-        const withStatuses = deriveStatuses(localRoadmap);
+        const days = current.days || [];
+        const merged = localRoadmap.map(localDay => {
+          const bd = days.find(d => d.day_number === localDay.dayId);
+          if (!bd) return localDay;
+          return {
+            ...localDay,
+            backendDayId: bd.id,
+            status: bd.is_completed ? 'completed' : localDay.status,
+            // Backend không lưu ngày hoàn thành → thiếu thì coi như hôm nay, tránh deriveStatuses tự nhảy ngày
+            completedDate: bd.is_completed ? (localDay.completedDate || getTodayKey()) : localDay.completedDate
+          };
+        });
+        const withStatuses = deriveStatuses(merged);
         const key = getRoadmapKey(userId);
         localStorage.setItem(key, JSON.stringify(withStatuses));
         set({ roadmapData: withStatuses, initialized: true });
