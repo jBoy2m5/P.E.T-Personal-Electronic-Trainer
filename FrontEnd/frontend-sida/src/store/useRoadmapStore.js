@@ -40,6 +40,9 @@ const getTodayKey = () => {
 
 // AbortController của request AI đang chạy — để nút "dùng lộ trình mặc định" hủy được giữa chừng
 let aiAbortController = null;
+// Cờ báo người dùng đã bấm "dùng lộ trình mặc định": skip tự dựng lộ trình local ngay,
+// và flow AI đang chạy khi thấy cờ này thì bỏ kết quả AI (không đè lên lộ trình đã chọn).
+let aiSkipped = false;
 
 // Ràng buộc mở khóa lộ trình:
 // - Ngày kế tiếp chỉ 'active' khi: ngày trước đã hoàn thành TRƯỚC hôm nay (đã sang ngày lịch mới)
@@ -108,6 +111,7 @@ const useRoadmapStore = create((set, get) => ({
   },
 
   generateRoadmap: async () => {
+    aiSkipped = false;
     set({ generating: true });
     try {
       const userId = getUserId();
@@ -118,6 +122,7 @@ const useRoadmapStore = create((set, get) => ({
       aiAbortController = new AbortController();
       const aiRoadmap = await fetchAiRoadmap(exercises, aiAbortController.signal);
       aiAbortController = null;
+      if (aiSkipped) return; // đã bấm "dùng lộ trình mặc định" trong lúc chờ → bỏ kết quả AI
       const roadmap = deriveStatuses(aiRoadmap || generateDynamicRoadmap(userData, exercises));
 
       localStorage.setItem(key, JSON.stringify(roadmap));
@@ -136,12 +141,26 @@ const useRoadmapStore = create((set, get) => ({
     }
   },
 
-  // Người dùng chọn "dùng lộ trình mặc định" trong lúc chờ AI → hủy request Gemini;
-  // fetchAiRoadmap trả null và flow đang chạy tự fallback sang generateDynamicRoadmap ngay
-  skipAiGeneration: () => {
+  // Người dùng chọn "dùng lộ trình mặc định" trong lúc chờ AI: đặt cờ + hủy request Gemini,
+  // rồi DỰNG NGAY lộ trình local và tắt màn chờ — không chờ abort lan tới request (không đáng tin
+  // khi backend đang giữ ~45s). Flow AI khi quay lại thấy aiSkipped=true sẽ bỏ kết quả của nó.
+  skipAiGeneration: async () => {
+    if (!get().generating) return;
+    aiSkipped = true;
     if (aiAbortController) {
       aiAbortController.abort();
       aiAbortController = null;
+    }
+    try {
+      const userId = getUserId();
+      const userData = await buildGeneratorUserData();
+      const exercises = await useExerciseStore.getState().fetchExercises();
+      const roadmap = deriveStatuses(generateDynamicRoadmap(userData, exercises));
+      localStorage.setItem(getRoadmapKey(userId), JSON.stringify(roadmap));
+      set({ roadmapData: roadmap, initialized: true, generating: false });
+      if (userId) get()._saveToBackend(userId, roadmap, userData.goal);
+    } catch {
+      set({ generating: false });
     }
   },
 
@@ -222,11 +241,13 @@ const useRoadmapStore = create((set, get) => ({
         set({ roadmapData: withStatuses, initialized: true });
       } else {
         // Lần đầu tạo lộ trình → ưu tiên Gemini, AI lỗi thì fallback thuật toán local
+        aiSkipped = false;
         set({ generating: true });
         try {
           aiAbortController = new AbortController();
           const aiRoadmap = await fetchAiRoadmap(exercises, aiAbortController.signal);
           aiAbortController = null;
+          if (aiSkipped) return; // đã bấm "dùng lộ trình mặc định" → skip đã dựng lộ trình, bỏ kết quả AI
           const localRoadmap = aiRoadmap || generateDynamicRoadmap(userData, exercises);
           const key = getRoadmapKey(userId);
           const withStatuses = deriveStatuses(localRoadmap);
