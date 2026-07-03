@@ -5,7 +5,7 @@ import { fetchAiRoadmap } from '../services/aiRoadmapService';
 import useExerciseStore from './useExerciseStore';
 import usePetStore from './usePetStore';
 import axiosClient from '../api/axiosClient';
-import { getAdviceKey } from '../utils/userStorage';
+import { getAdviceKey, getScheduleKey } from '../utils/userStorage';
 import { fetchProfile } from '../api/profileApi';
 
 // Hồ sơ dùng cho thuật toán lộ trình dự phòng (local) — LẤY TỪ SERVER, không đọc localStorage
@@ -119,6 +119,21 @@ const useRoadmapStore = create((set, get) => ({
     try {
       const userId = getUserId();
       const key = getRoadmapKey(userId);
+      // Reset/tạo lộ trình mới → xóa tick bài cũ trong pet-schedule (lưu theo NGÀY+TÊN bài,
+      // không theo roadmap nên không tự mất khi sinh lộ trình mới) để lộ trình mới bắt đầu sạch tick.
+      try {
+        const schedKey = getScheduleKey();
+        const sched = JSON.parse(localStorage.getItem(schedKey) || '{}');
+        let changed = false;
+        Object.keys(sched).forEach(dk => {
+          if (sched[dk]?.completedExercises?.length) {
+            sched[dk].completedExercises = [];
+            sched[dk].note = '';
+            changed = true;
+          }
+        });
+        if (changed) localStorage.setItem(schedKey, JSON.stringify(sched));
+      } catch { /* ignore */ }
       const userData = await buildGeneratorUserData();
       lastGenUserData = userData; // để skip dùng lại, không phải fetch /me
       const exercises = await useExerciseStore.getState().fetchExercises();
@@ -212,7 +227,10 @@ const useRoadmapStore = create((set, get) => ({
         return {
           ...localDay,
           backendDayId: backendDay.id,
-          status: backendDay.is_completed ? 'completed' : localDay.status
+          status: backendDay.is_completed ? 'completed' : localDay.status,
+          // Backend không lưu ngày hoàn thành → nếu thiếu thì coi như hoàn thành HÔM NAY, KHÔNG để null
+          // (deriveStatuses coi completedDate null = "quá khứ" nên sẽ tự nhảy ngày ngay khi refresh).
+          completedDate: backendDay.is_completed ? (localDay.completedDate || getTodayKey()) : localDay.completedDate
         };
       });
 
@@ -237,7 +255,14 @@ const useRoadmapStore = create((set, get) => ({
         const days = userRoadmaps[0].days || [];
         const merged = localRoadmap.map(localDay => {
           const bd = days.find(d => d.day_number === localDay.dayId);
-          return bd ? { ...localDay, backendDayId: bd.id, status: bd.is_completed ? 'completed' : localDay.status } : localDay;
+          if (!bd) return localDay;
+          return {
+            ...localDay,
+            backendDayId: bd.id,
+            status: bd.is_completed ? 'completed' : localDay.status,
+            // Thiếu ngày hoàn thành (backend không lưu) → coi như hôm nay, tránh deriveStatuses tự nhảy ngày
+            completedDate: bd.is_completed ? (localDay.completedDate || getTodayKey()) : localDay.completedDate
+          };
         });
         const withStatuses = deriveStatuses(merged);
         const key = getRoadmapKey(userId);
