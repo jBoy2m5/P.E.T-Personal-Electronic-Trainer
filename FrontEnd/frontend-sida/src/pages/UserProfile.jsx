@@ -5,16 +5,13 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
 import usePetStore from '../store/usePetStore';
-import useAuthStore from '../store/useAuthStore';
-import { logout } from '../utils/userStorage';
+import { saveUserData } from '../utils/userStorage';
 import { fetchProfile } from '../api/profileApi';
 
 export default function UserProfile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  // Hồ sơ user từ authStore (server-only); số đo + kế hoạch tập từ GET /users/me (fetchProfile)
-  const userData = useAuthStore((s) => s.user);
-  const updateUser = useAuthStore((s) => s.updateUser);
+  const [userData, setUserData] = useState(null);
   const [profile, setProfile] = useState(null); // height/weight/bmi lấy từ server (/users/me) — không cache/không tính ở client
   const [stats, setStats] = useState({ totalWorkouts: 0, totalCalories: 0, streak: 0 });
   const fileInputRef = useRef(null);
@@ -26,10 +23,13 @@ export default function UserProfile() {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64String = reader.result;
-        // Lưu avatar lên server (nguồn duy nhất) rồi cập nhật authStore in-memory
+        const updatedData = { ...userData, pictureUrl: base64String };
+        setUserData(updatedData);
+        saveUserData(updatedData);
+        window.dispatchEvent(new Event('storage'));
+        // Lưu avatar lên server để không mất khi đăng xuất/đăng nhập lại
         try {
           await axiosClient.put('/users/avatar', { picture_url: base64String });
-          updateUser({ pictureUrl: base64String });
         } catch (err) {
           console.error('Không thể lưu avatar lên server:', err);
         }
@@ -39,7 +39,16 @@ export default function UserProfile() {
   };
 
   useEffect(() => {
-    // Load Stats từ server (buổi tập + kcal hôm nay); streak lấy từ pet store (server)
+    // 1. Load User Data
+    const saved = localStorage.getItem('user-data');
+    if (saved) {
+      setUserData(JSON.parse(saved));
+    } else {
+      navigate('/login');
+      return;
+    }
+
+    // 2. Load Stats từ server (buổi tập + kcal hôm nay); streak lấy từ pet store (server)
     const loadStats = async () => {
       try {
         // Gửi ngày theo giờ địa phương vì server chạy UTC
@@ -67,9 +76,11 @@ export default function UserProfile() {
   }, [navigate, checkinStreak]);
 
   const handleLogout = () => {
-    // logout() bỏ jwt-token + dọn localStorage rồi reload cả trang để xóa state Zustand
-    // của tài khoản cũ khỏi bộ nhớ, tránh dữ liệu còn sót khi đăng nhập tài khoản khác.
-    logout();
+    localStorage.removeItem('user-data');
+    localStorage.removeItem('jwt-token');
+    // Reload cả trang (như TopNav) để xóa state Zustand của tài khoản cũ khỏi bộ nhớ,
+    // tránh dữ liệu còn sót khi đăng nhập tài khoản khác ngay sau đó.
+    window.location.href = '/login';
   };
 
   const getBMIStatus = (v) => {

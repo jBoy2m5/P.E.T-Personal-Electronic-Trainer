@@ -36,14 +36,6 @@ const TARGET_EN = {
     'Chân': 'Legs', 'Mông': 'Glutes', 'Core': 'Core', 'Cardio': 'Cardio'
 };
 
-// Target nội bộ của generator KHÁC tên nhóm cơ trong DB: DB không có nhóm 'Core' (đặt là 'Bụng')
-// và không có nhóm 'Cardio'. Ánh xạ target → tên nhóm cơ DB để filter không bị rỗng.
-// 'Cardio' không có nhóm riêng → để rỗng ở đây, phần top-up trong pickExercises sẽ bù bài.
-const TARGET_ALIAS = { 'Core': 'Bụng' };
-
-// Số bài tối thiểu mỗi ngày tập — tránh ngày chỉ 1 bài khi một target ánh xạ ra pool rỗng.
-const MIN_EX_PER_WORKDAY = 3;
-
 export const generateDynamicRoadmap = (userData, exercises = []) => {
     const isBeginner = userData.fitnessLevel === 'Mới bắt đầu' || userData.fitnessLevel === 'Đã có nền tảng';
     const isFatLoss = userData.goal.toLowerCase().includes('giảm');
@@ -121,46 +113,41 @@ export const generateDynamicRoadmap = (userData, exercises = []) => {
         let picked = [];
         let usedIds = new Set();
 
-        // Pool bài đã lọc theo overweight + cấp độ cho một target (đã ánh xạ tên nhóm cơ DB)
-        const levelPoolFor = (target) => {
-            const dbTarget = TARGET_ALIAS[target] || target;
-            let pool = exercises.filter(ex => ex.target === dbTarget);
-            if (isOverweight) pool = pool.filter(ex => !ex.isJump); // bỏ bật nhảy nếu thừa cân
-            let levelPool = pool.filter(ex => isBeginner ? ex.level === 'Cơ bản' : ex.level !== 'Cơ bản');
-            if (levelPool.length === 0) levelPool = pool; // fallback: không đủ đúng cấp độ thì lấy cả pool
-            return levelPool;
-        };
-
-        // Lấy tối đa `count` bài chưa dùng từ pool, bắt đầu ở vị trí deterministic (seed theo height)
-        const takeFrom = (pool, count) => {
-            if (!pool.length || count <= 0) return;
-            const start = (workDayIndex + userData.height) % pool.length;
-            for (let k = 0; k < pool.length && count > 0; k++) {
-                const ex = pool[(start + k) % pool.length];
-                if (!usedIds.has(ex.id)) { picked.push({ ...ex }); usedIds.add(ex.id); count--; }
-            }
-        };
-
         targets.forEach(target => {
-            // Nhóm cơ trọng tâm của buổi (Ngực/Lưng cho nam, Chân/Mông cho nữ) lấy 2 bài, còn lại 1
-            const isPrimary = (!isFemale && (target === 'Ngực' || target === 'Lưng')) ||
-                              (isFemale && (target === 'Chân' || target === 'Mông'));
-            takeFrom(levelPoolFor(target), isPrimary ? 2 : 1);
-        });
-
-        // Top-up: nếu chưa đủ tối thiểu (vd target 'Cardio' không có nhóm DB) → bù thêm từ các
-        // target của ngày, rồi từ toàn bộ bài phù hợp cấp độ, để mỗi ngày tập luôn đủ số bài.
-        if (picked.length < MIN_EX_PER_WORKDAY) {
-            for (const target of targets) {
-                if (picked.length >= MIN_EX_PER_WORKDAY) break;
-                takeFrom(levelPoolFor(target), MIN_EX_PER_WORKDAY - picked.length);
+            // Filter pool
+            let pool = exercises.filter(ex => ex.target === target);
+            
+            // Modifier: No Jumps if Overweight
+            if (isOverweight) {
+                pool = pool.filter(ex => !ex.isJump);
             }
-        }
-        if (picked.length < MIN_EX_PER_WORKDAY) {
-            let global = exercises.filter(ex => isBeginner ? ex.level === 'Cơ bản' : ex.level !== 'Cơ bản');
-            if (isOverweight) global = global.filter(ex => !ex.isJump);
-            takeFrom(global, MIN_EX_PER_WORKDAY - picked.length);
-        }
+
+            // Modifier: Level matching
+            let levelPool = pool.filter(ex => isBeginner ? ex.level === 'Cơ bản' : ex.level !== 'Cơ bản');
+            if (levelPool.length === 0) levelPool = pool; // fallback
+
+            // Pick 1-2 random (using deterministic pseudo-random based on workDayIndex to keep it stable)
+            if (levelPool.length > 0) {
+                const index1 = (workDayIndex + userData.height) % levelPool.length;
+                const ex1 = levelPool[index1];
+                if (!usedIds.has(ex1.id)) {
+                    picked.push({...ex1});
+                    usedIds.add(ex1.id);
+                }
+
+                // If target is main focus (e.g., Legs for Female, Chest for Male), add a second exercise
+                if ((target === 'Chân' || target === 'Mông') && isFemale && levelPool.length > 1) {
+                    const index2 = (index1 + 1) % levelPool.length;
+                    const ex2 = levelPool[index2];
+                    if (!usedIds.has(ex2.id)) { picked.push({...ex2}); usedIds.add(ex2.id); }
+                }
+                if ((target === 'Ngực' || target === 'Lưng') && !isFemale && levelPool.length > 1) {
+                    const index2 = (index1 + 1) % levelPool.length;
+                    const ex2 = levelPool[index2];
+                    if (!usedIds.has(ex2.id)) { picked.push({...ex2}); usedIds.add(ex2.id); }
+                }
+            }
+        });
 
         // 4. Assign Volume
         picked = picked.map(ex => {

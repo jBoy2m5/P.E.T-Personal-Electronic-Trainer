@@ -5,12 +5,8 @@ import { fetchAiRoadmap } from '../services/aiRoadmapService';
 import useExerciseStore from './useExerciseStore';
 import usePetStore from './usePetStore';
 import axiosClient from '../api/axiosClient';
-import { getUserId } from '../utils/userStorage';
+import { getAdviceKey } from '../utils/userStorage';
 import { fetchProfile } from '../api/profileApi';
-
-// LỘ TRÌNH SERVER-ONLY: tài liệu 28 ngày (kèm tick từng bài trong day.completedExercises,
-// gắn theo dayId chứ KHÔNG theo ngày lịch/tên bài) sống trong cột roadmap_json của server.
-// Không còn localStorage — F5/máy khác/đăng nhập lại đều đọc đúng một nguồn.
 
 // Hồ sơ dùng cho thuật toán lộ trình dự phòng (local) — LẤY TỪ SERVER, không đọc localStorage
 // (số đo không còn cache ở client). Áp giá trị mặc định để thuật toán luôn chạy được khi thiếu.
@@ -23,6 +19,18 @@ const buildGeneratorUserData = async () => {
     fitnessLevel: p.fitnessLevel || 'Mới bắt đầu',
     goal: p.goal || 'Giữ dáng',
   };
+};
+
+const getUserId = () => {
+  try {
+    const saved = localStorage.getItem('user-data');
+    return saved ? JSON.parse(saved)?.userId : null;
+  } catch { return null; }
+};
+
+const getRoadmapKey = (userId) => {
+  const uid = userId || getUserId();
+  return uid ? `roadmap-data-${uid}` : 'roadmap-data';
 };
 
 const getTodayKey = () => {
@@ -66,107 +74,63 @@ const deriveStatuses = (roadmap) => {
   for (let i = 0; i <= lastCompletedIdx; i++) updated[i].status = 'completed';
   const activeIdx = lastCompletedIdx + 1;
   if (activeIdx < updated.length) {
-    // Ngày đầu tiên của lộ trình LUÔN mở — cần mở để người dùng bắt đầu/điểm danh (không thể
-    // yêu cầu điểm danh trước khi có ngày nào mở). Từ ngày 2 trở đi mới gate theo điểm danh + sang ngày mới.
-    const isFirstDay = lastCompletedIdx < 0;
-    const unlocked = isFirstDay || (checkedInToday && prevDoneBeforeToday(lastCompletedIdx));
+    const unlocked = checkedInToday && prevDoneBeforeToday(lastCompletedIdx);
     updated[activeIdx].status = unlocked ? 'active' : 'locked';
     for (let i = activeIdx + 1; i < updated.length; i++) updated[i].status = 'locked';
   }
   return updated;
 };
 
-const sameRoadmap = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-
 const useRoadmapStore = create((set, get) => ({
   roadmapData: [],
-  roadmapId: null, // id row roadmap trên server — đích của mọi PUT roadmap_json
   initialized: false,
   generating: false, // đang chờ AI sinh lộ trình → UI hiển thị màn hình chờ thay vì lộ trình cũ/mặc định
 
   loadRoadmap: async () => {
     const userId = getUserId();
-    if (!userId) {
-      // Chưa đăng nhập (App chặn /roadmap rồi, đây chỉ là lưới an toàn)
-      set({ roadmapData: [], initialized: true });
+    const key = getRoadmapKey(userId);
+    const saved = localStorage.getItem(key);
+
+    if (saved) {
+      const parsed = deriveStatuses(JSON.parse(saved));
+      localStorage.setItem(key, JSON.stringify(parsed));
+      set({ roadmapData: parsed, initialized: true });
+      // Sync completion from backend in background
+      if (userId) get()._syncCompletionFromBackend(userId, parsed);
       return;
     }
 
-    let server = null;
-    try {
-      server = await axiosClient.get('/roadmaps/me');
-    } catch (err) {
-      if (err?.response?.status !== 404) {
-        // Lỗi mạng/server (không phải "chưa có lộ trình") → KHÔNG tự tạo mới để
-        // tránh đè lộ trình thật đang có trên server; hiển thị rỗng, lần sau thử lại
-        set({ initialized: true });
-        return;
-      }
+    if (userId) {
+      await get()._fetchOrCreate(userId);
+    } else {
+      await get().generateRoadmap();
     }
-
-    if (server?.roadmap_json) {
-      try {
-        const parsed = JSON.parse(server.roadmap_json);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const withStatuses = deriveStatuses(parsed);
-          set({ roadmapData: withStatuses, roadmapId: server.id, initialized: true });
-          // deriveStatuses có thể vừa tự hoàn thành ngày nghỉ → ghi lại server
-          if (!sameRoadmap(parsed, withStatuses)) get()._persist(withStatuses);
-          return;
-        }
-      } catch { /* JSON hỏng → rơi xuống nhánh migration/tạo mới */ }
-    }
-
-    // Server chưa có roadmap_json → MIGRATION MỘT LẦN từ localStorage phiên bản cũ
-    // (roadmap-data-{userId} + tick hôm nay trong pet-schedule-{userId})
-    const migrated = get()._readLegacyLocal(userId);
-    if (migrated) {
-      const withStatuses = deriveStatuses(migrated);
-      set({ roadmapData: withStatuses, roadmapId: server?.id ?? null, initialized: true });
-      const saved = await get()._persist(withStatuses);
-      if (saved) {
-        // Server đã giữ dữ liệu → xóa hẳn bản local (không còn nguồn thứ hai)
-        localStorage.removeItem(`roadmap-data-${userId}`);
-        localStorage.removeItem(`pet-schedule-${userId}`);
-      }
-      return;
-    }
-
-    await get().generateRoadmap();
   },
 
-  // Dùng cho lần tạo đầu và nút ↺ Reset: sinh lộ trình mới (AI → fallback local) rồi
-  // POST tạo ROW MỚI trên server — tick cũ và advice cache cũ tự hết hiệu lực theo row cũ.
   generateRoadmap: async () => {
     set({ generating: true });
     try {
       const userId = getUserId();
+      const key = getRoadmapKey(userId);
       const userData = await buildGeneratorUserData();
       const exercises = await useExerciseStore.getState().fetchExercises();
       // Ưu tiên lộ trình do Gemini sinh; AI lỗi/timeout/bị người dùng hủy thì fallback thuật toán local
       aiAbortController = new AbortController();
       const aiRoadmap = await fetchAiRoadmap(exercises, aiAbortController.signal);
       aiAbortController = null;
-      const fresh = (aiRoadmap || generateDynamicRoadmap(userData, exercises))
-        .map(d => ({ ...d, completedExercises: [] })); // tick gắn theo dayId, lộ trình mới = sạch tick
-      const roadmap = deriveStatuses(fresh);
+      const roadmap = deriveStatuses(aiRoadmap || generateDynamicRoadmap(userData, exercises));
 
-      set({ roadmapData: roadmap, roadmapId: null, initialized: true });
+      localStorage.setItem(key, JSON.stringify(roadmap));
+      set({ roadmapData: roadmap, initialized: true });
 
-      if (userId) {
-        try {
-          const created = await axiosClient.post('/roadmaps', {
-            goal: userData.goal,
-            roadmap_json: JSON.stringify(roadmap),
-          });
-          set({ roadmapId: created?.id ?? null });
-        } catch { /* server tạm lỗi: giữ in-memory, _persist sẽ POST lại khi có thay đổi */ }
-      }
+      // Save to backend (fire-and-forget)
+      if (userId) get()._saveToBackend(userId, roadmap, userData.goal);
 
-      // Prefetch lời khuyên AI theo ngôn ngữ hiện tại — server tự cache vào cột
-      // advice_vi/advice_en của roadmap, Roadmap.jsx chỉ việc GET lại là có ngay
+      // Lời khuyên AI theo ngôn ngữ hiện tại, cache theo key có hậu tố ngôn ngữ (Roadmap.jsx đọc/fetch bổ sung)
       const langKey = (i18n.language || 'vi').toLowerCase().startsWith('vi') ? 'vi' : 'en';
-      axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).catch(() => {});
+      axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).then(res => {
+        if (res?.advice) localStorage.setItem(getAdviceKey(langKey), res.advice);
+      }).catch(() => {});
     } finally {
       set({ generating: false });
     }
@@ -186,36 +150,8 @@ const useRoadmapStore = create((set, get) => ({
     const { roadmapData } = get();
     if (!roadmapData.length) return;
     const withStatuses = deriveStatuses(roadmapData);
-    if (sameRoadmap(roadmapData, withStatuses)) return;
+    localStorage.setItem(getRoadmapKey(), JSON.stringify(withStatuses));
     set({ roadmapData: withStatuses });
-    get()._persist(withStatuses);
-  },
-
-  // Tick MỘT bài của MỘT ngày lộ trình (nguồn duy nhất của dấu ✓ trong DailyWorkout).
-  // Đủ hết bài của ngày → ngày tự hoàn thành (ghi completedDate để ràng buộc mở khóa hoạt động).
-  markExerciseDone: (localDayId, exerciseName) => {
-    const { roadmapData } = get();
-    const idx = roadmapData.findIndex(d => d.dayId.toString() === localDayId.toString());
-    if (idx === -1 || !exerciseName) return;
-
-    const updated = roadmapData.map(d => ({ ...d }));
-    const day = updated[idx];
-    const ticks = new Set(day.completedExercises || []);
-    if (ticks.has(exerciseName)) return;
-    ticks.add(exerciseName);
-    day.completedExercises = [...ticks];
-
-    const allDone = (day.exercises || []).length > 0 &&
-      day.exercises.every(ex => ticks.has(ex.name));
-    if (allDone && day.status !== 'completed') {
-      day.status = 'completed';
-      // Ngày kế tiếp KHÔNG mở ngay mà chờ sang ngày lịch mới + điểm danh (deriveStatuses)
-      day.completedDate = getTodayKey();
-    }
-
-    const withStatuses = deriveStatuses(updated);
-    set({ roadmapData: withStatuses });
-    get()._persist(withStatuses);
   },
 
   markDayComplete: (localDayId) => {
@@ -225,65 +161,116 @@ const useRoadmapStore = create((set, get) => ({
 
     const updated = roadmapData.map(d => ({ ...d }));
     updated[idx].status = 'completed';
+    // Ghi ngày hoàn thành — ngày kế tiếp KHÔNG mở ngay mà chờ sang ngày lịch mới + điểm danh (deriveStatuses)
     updated[idx].completedDate = getTodayKey();
     const withStatuses = deriveStatuses(updated);
+
+    const key = getRoadmapKey();
+    localStorage.setItem(key, JSON.stringify(withStatuses));
     set({ roadmapData: withStatuses });
-    get()._persist(withStatuses);
-  },
 
-  // Ghi cả tài liệu lộ trình lên server. Trả về true nếu server đã nhận.
-  _persist: async (roadmap) => {
-    const body = { roadmap_json: JSON.stringify(roadmap) };
-    try {
-      const { roadmapId } = get();
-      if (roadmapId) {
-        await axiosClient.put(`/roadmaps/${roadmapId}`, body);
-      } else {
-        // Chưa có row trên server (POST lúc tạo bị lỗi mạng / migration khi server chưa có) → tạo mới
-        const created = await axiosClient.post('/roadmaps', body);
-        set({ roadmapId: created?.id ?? null });
-        if (!created?.id) return false;
-      }
-      return true;
-    } catch {
-      return false;
+    // Sync to backend
+    const backendDayId = updated[idx].backendDayId;
+    if (backendDayId) {
+      axiosClient.put(`/roadmaps/days/${backendDayId}`, { is_completed: true }).catch(() => {});
     }
   },
 
-  // Đọc roadmap từ localStorage phiên bản cũ và dựng lại tick theo dayId:
-  // - ngày đã completed → coi như đã tập đủ mọi bài của ngày đó
-  // - ngày đang mở (chưa xong đầu tiên) → nhận tick HÔM NAY từ pet-schedule (per-date, theo tên bài)
-  // Trả null nếu không có gì để migrate.
-  _readLegacyLocal: (userId) => {
+  _syncCompletionFromBackend: async (userId, localRoadmap) => {
     try {
-      const raw = localStorage.getItem(`roadmap-data-${userId}`);
-      if (!raw) return null;
-      const roadmap = JSON.parse(raw);
-      if (!Array.isArray(roadmap) || roadmap.length === 0) return null;
+      const userRoadmaps = await axiosClient.get(`/roadmaps/user/${userId}`);
+      if (!userRoadmaps?.length) return;
 
-      let todayTicks = [];
-      try {
-        const sched = JSON.parse(localStorage.getItem(`pet-schedule-${userId}`) || '{}');
-        todayTicks = sched?.[getTodayKey()]?.completedExercises || [];
-      } catch { /* ignore */ }
+      const days = userRoadmaps[0].days || [];
+      if (!days.length) return;
 
-      const firstOpenIdx = roadmap.findIndex(d => d.status !== 'completed');
-      return roadmap.map((day, i) => {
-        const rest = { ...day };
-        delete rest.backendDayId; // bỏ field của cơ chế sync cũ
-        const names = (rest.exercises || []).map(e => e.name);
-        let completedExercises = [];
-        if (rest.status === 'completed' && !rest.isRestDay) {
-          completedExercises = names;
-        } else if (i === firstOpenIdx) {
-          completedExercises = names.filter(n => todayTicks.includes(n));
-        }
-        return { ...rest, completedExercises };
+      const merged = localRoadmap.map(localDay => {
+        const backendDay = days.find(d => d.day_number === localDay.dayId);
+        if (!backendDay) return localDay;
+        return {
+          ...localDay,
+          backendDayId: backendDay.id,
+          status: backendDay.is_completed ? 'completed' : localDay.status
+        };
       });
+
+      const withStatuses = deriveStatuses(merged);
+      const key = getRoadmapKey(userId);
+      localStorage.setItem(key, JSON.stringify(withStatuses));
+      set({ roadmapData: withStatuses });
+    } catch { /* ignore, use local data */ }
+  },
+
+  _fetchOrCreate: async (userId) => {
+    try {
+      const userRoadmaps = await axiosClient.get(`/roadmaps/user/${userId}`);
+      const userData = await buildGeneratorUserData();
+      const exercises = await useExerciseStore.getState().fetchExercises();
+
+      if (userRoadmaps?.length) {
+        // Đã có lộ trình trên server → dựng lại bằng thuật toán local (nhanh, ổn định)
+        // rồi merge trạng thái hoàn thành; không gọi AI lại để tránh lệch lộ trình gốc
+        const localRoadmap = generateDynamicRoadmap(userData, exercises);
+        const days = userRoadmaps[0].days || [];
+        const merged = localRoadmap.map(localDay => {
+          const bd = days.find(d => d.day_number === localDay.dayId);
+          return bd ? { ...localDay, backendDayId: bd.id, status: bd.is_completed ? 'completed' : localDay.status } : localDay;
+        });
+        const withStatuses = deriveStatuses(merged);
+        const key = getRoadmapKey(userId);
+        localStorage.setItem(key, JSON.stringify(withStatuses));
+        set({ roadmapData: withStatuses, initialized: true });
+      } else {
+        // Lần đầu tạo lộ trình → ưu tiên Gemini, AI lỗi thì fallback thuật toán local
+        set({ generating: true });
+        try {
+          aiAbortController = new AbortController();
+          const aiRoadmap = await fetchAiRoadmap(exercises, aiAbortController.signal);
+          aiAbortController = null;
+          const localRoadmap = aiRoadmap || generateDynamicRoadmap(userData, exercises);
+          const key = getRoadmapKey(userId);
+          const withStatuses = deriveStatuses(localRoadmap);
+          localStorage.setItem(key, JSON.stringify(withStatuses));
+          set({ roadmapData: withStatuses, initialized: true });
+          get()._saveToBackend(userId, withStatuses, userData.goal);
+        } finally {
+          set({ generating: false });
+        }
+      }
     } catch {
-      return null;
+      set({ generating: false });
+      await get().generateRoadmap();
     }
   },
+
+  _saveToBackend: async (userId, roadmap, goal) => {
+    try {
+      const created = await axiosClient.post('/roadmaps', { user_id: userId, goal });
+      const roadmapId = created.id;
+      const days = await Promise.all(
+        roadmap.map(day =>
+          axiosClient.post(`/roadmaps/${roadmapId}/days`, {
+            day_number: day.dayId,
+            challenge_name: day.quest || day.muscleGroup,
+            duration: day.duration || 0,
+            is_completed: false,
+            kcal: day.kcal || 0,
+            muscle_group: day.muscleGroup
+          }).catch(() => null)
+        )
+      );
+
+      // Store backendDayIds in local roadmap
+      const key = getRoadmapKey(userId);
+      const local = JSON.parse(localStorage.getItem(key) || '[]');
+      const updated = local.map(localDay => {
+        const bd = days.find(d => d?.day_number === localDay.dayId);
+        return bd ? { ...localDay, backendDayId: bd.id } : localDay;
+      });
+      localStorage.setItem(key, JSON.stringify(updated));
+      set({ roadmapData: updated });
+    } catch { /* backend unavailable, continue with local */ }
+  }
 }));
 
 export default useRoadmapStore;

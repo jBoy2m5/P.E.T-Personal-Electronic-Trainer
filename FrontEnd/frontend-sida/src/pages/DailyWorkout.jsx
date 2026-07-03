@@ -8,7 +8,7 @@ import useExerciseStore from '../store/useExerciseStore';
 import { SPLIT_NAME_EN } from '../services/roadmapGenerator';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
-import useAuthStore from '../store/useAuthStore';
+import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
 
 const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
 const PET_THRESHOLDS_LIST = [0, 10, 50, 150, 300, 600, 1200, 2500];
@@ -21,24 +21,60 @@ const getTodayKey = () => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+const markDayAsTrained = (exerciseTitle) => {
+    const key = getTodayKey();
+    const saved = localStorage.getItem(getScheduleKey());
+    const scheduleData = saved ? JSON.parse(saved) : {};
+
+    const existing = scheduleData[key] || { trained: false, note: '', completedExercises: [] };
+    existing.trained = true;
+
+    if (!existing.completedExercises) existing.completedExercises = [];
+    if (!existing.completedExercises.includes(exerciseTitle)) {
+        existing.completedExercises.push(exerciseTitle);
+    }
+    existing.note = `Trained: ${existing.completedExercises.join(', ')}`;
+
+    scheduleData[key] = existing;
+    localStorage.setItem(getScheduleKey(), JSON.stringify(scheduleData));
+
+    window.dispatchEvent(new Event('storage'));
+};
+
+const getCompletedToday = () => {
+    const key = getTodayKey();
+    const saved = localStorage.getItem(getScheduleKey());
+    if (!saved) return [];
+    const data = JSON.parse(saved);
+    return data[key]?.completedExercises || [];
+};
+
+const saveSessionToLocal = (kcal, reps, sets, startMs) => {
+    const sessionData = {
+        start_time: new Date(startMs).toISOString().slice(0, 19),
+        end_time: new Date().toISOString().slice(0, 19),
+        total_calories_burned: kcal,
+        total_valid_reps: reps * sets
+    };
+    const saved = JSON.parse(localStorage.getItem(getSessionsKey()) || '[]');
+    saved.push(sessionData);
+    localStorage.setItem(getSessionsKey(), JSON.stringify(saved));
+    window.dispatchEvent(new Event('storage'));
+};
+
+
 export default function DailyWorkout() {
     const navigate = useNavigate();
     const { dayId } = useParams();
     const { t, i18n } = useTranslation();
     const isVi = (i18n.language || '').toLowerCase().startsWith('vi');
+    const [completedExercises, setCompletedExercises] = useState(getCompletedToday());
     const [dailyData, setDailyData] = useState(null);
     const addExp = usePetStore(state => state.addExp);
-    // Tick bài tập sống TRONG roadmap JSON trên server theo dayId (không theo ngày lịch/tên bài) —
-    // F5, máy khác hay reset lộ trình đều đúng vì chỉ có một nguồn
-    const markExerciseDone = useRoadmapStore(state => state.markExerciseDone);
+    const markDayComplete = useRoadmapStore(state => state.markDayComplete);
     const roadmapData = useRoadmapStore(state => state.roadmapData);
     const roadmapInitialized = useRoadmapStore(state => state.initialized);
     const loadRoadmap = useRoadmapStore(state => state.loadRoadmap);
-    // Ngày lộ trình hiện tại đọc thẳng từ store (reactive) — tick nằm trong day.completedExercises
-    // của roadmap JSON trên server, markExerciseDone ghi vào JSON + PUT server
-    const currentDay = useRoadmapStore(state =>
-        state.roadmapData.find(d => d.dayId.toString() === dayId));
-    const completedExercises = currentDay?.completedExercises || [];
     const totalPoints = usePetStore(state => state.totalPoints);
     const lastCheckinDate = usePetStore(state => state.lastCheckinDate);
     const isSadFn = usePetStore(state => state.isSad);
@@ -106,10 +142,6 @@ export default function DailyWorkout() {
     }, [roadmapInitialized, loadRoadmap]);
 
     useEffect(() => {
-        // Chờ roadmap (server) load xong rồi mới dựng dữ liệu ngày — tránh chớp nội dung
-        // fallback sai (vd bốc 4 bài mặc định) khi chưa biết ngày này là ngày gì
-        if (!roadmapInitialized) return;
-
         let dayInfo = {
             dayId: dayId,
             muscleGroup: 'Full Body',
@@ -120,12 +152,9 @@ export default function DailyWorkout() {
         const found = (roadmapData || []).find(d => d.dayId.toString() === dayId);
         if (found) dayInfo = found;
 
-        // NGÀY NGHỈ: render thẳng màn hình nghỉ từ currentDay (không dựng dailyData) —
-        // TUYỆT ĐỐI không rơi xuống nhánh fallback bốc bài (bug cũ: ngày nghỉ vẫn hiện 4 bài)
-        if (dayInfo.isRestDay) return;
-
-        // Mục tiêu tập lấy từ authStore (bootstrap từ server) — không còn localStorage 'user-data'
-        const goal = useAuthStore.getState().user?.goal || 'Tăng cơ nạc';
+        const savedUser = localStorage.getItem('user-data');
+        const parsedUser = savedUser ? JSON.parse(savedUser) : {};
+        const goal = parsedUser.goal || parsedUser.fitness_goal || 'Tăng cơ nạc';
 
         const mgTranslations = {
             'NGỰC (CHEST)': 'mg_chest',
@@ -233,7 +262,7 @@ export default function DailyWorkout() {
                 buildDailyData(picked);
             });
         }
-    }, [dayId, t, isVi, roadmapData, roadmapInitialized]);
+    }, [dayId, t, isVi, roadmapData]);
 
     const handleOpenDetail = (exercise) => {
         if (completedExercises.includes(exercise.name)) return;
@@ -326,13 +355,19 @@ export default function DailyWorkout() {
     };
 
     const handleFinishManual = () => {
-        // Tick vào roadmap JSON theo dayId + PUT server; đủ hết bài thì store tự hoàn thành ngày
-        markExerciseDone(dayId, currentExercise.name);
+        const updatedCompleted = [...completedExercises, currentExercise.name];
+        markDayAsTrained(currentExercise.name);
+        setCompletedExercises(updatedCompleted);
         setShowManualModal(false);
 
         const kcal = currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25;
         const startMs = Date.now() - targetReps * targetSets * 2000;
         const result = addExp(kcal, currentExercise.name);
+
+        saveSessionToLocal(kcal, targetReps, targetSets, startMs);
+        if ((dailyData?.exercises || []).every(ex => updatedCompleted.includes(ex.name))) {
+            markDayComplete(dayId);
+        }
 
         axiosClient.post('/workout-sessions', {
             start_time: toLocalISOString(new Date(startMs)),
@@ -414,15 +449,20 @@ export default function DailyWorkout() {
                         };
                         axiosClient.post('/workout-sessions', sessionData)
                             .catch(err => console.error('Could not save workout session:', err));
+                        saveSessionToLocal(sessionCalories, targetReps, targetSets, Date.now() - 60000);
 
                         setTimeout(() => {
-                            // Tick vào roadmap JSON theo dayId + PUT server; đủ hết bài thì store tự hoàn thành ngày
-                            markExerciseDone(dayId, currentExercise.name);
+                            const updatedCompleted = [...completedExercises, currentExercise.name];
+                            markDayAsTrained(currentExercise.name);
+                            setCompletedExercises(updatedCompleted);
                             setShowAIModal(false);
                             stopAI();
 
                             const kcal = sessionData.total_calories_burned;
                             const result = addExp(kcal, currentExercise.name);
+                            if ((dailyData?.exercises || []).every(ex => updatedCompleted.includes(ex.name))) {
+                                markDayComplete(dayId);
+                            }
 
                             setSummaryData({
                                 exerciseName: currentExercise.name,
@@ -457,9 +497,10 @@ export default function DailyWorkout() {
         if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
     };
 
+    if (!dailyData) return null;
+
     // Chặn ngày chưa mở khóa: phải điểm danh hôm nay + hoàn thành trọn ngày trước (và đã sang ngày mới)
-    // Đọc từ currentDay (store) vì ngày nghỉ/ngày khóa không dựng dailyData
-    if (currentDay?.status === 'locked') {
+    if (dailyData.status === 'locked') {
         const needCheckin = lastCheckinDate !== getTodayKey();
         return (
             <Container className="d-flex flex-column justify-content-center align-items-center text-center px-4" style={{ minHeight: '85vh' }}>
@@ -483,25 +524,6 @@ export default function DailyWorkout() {
             </Container>
         );
     }
-
-    // NGÀY NGHỈ (đã mở khóa): màn hình nghỉ ngơi — điểm danh là ngày tự hoàn thành
-    // (deriveStatuses), không hiển thị bất kỳ bài tập nào
-    if (currentDay?.isRestDay) {
-        return (
-            <Container className="d-flex flex-column justify-content-center align-items-center text-center px-4" style={{ minHeight: '85vh' }}>
-                <div style={{ fontSize: '4.5rem' }} className="mb-3">🌙</div>
-                <h4 className="fw-black text-primary-dynamic mb-2">{t('daily_workout.rest_title')}</h4>
-                <p className="text-secondary fw-bold mb-4" style={{ maxWidth: '420px' }}>
-                    {(isVi ? currentDay.storyDesc : (currentDay.storyDescEn || currentDay.storyDesc)) || t('daily_workout.rest_desc')}
-                </p>
-                <Button variant="outline-secondary" className="fw-bold rounded-pill px-4 py-2" onClick={() => navigate('/roadmap')}>
-                    {t('daily_workout.back_roadmap')}
-                </Button>
-            </Container>
-        );
-    }
-
-    if (!dailyData) return null;
 
     return (
         <Container className="py-5" style={{ minHeight: '100vh' }}>

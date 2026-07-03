@@ -6,11 +6,33 @@ import { getMuscleGroupById } from '../api/exerciseApi';
 import axiosClient from '../api/axiosClient';
 import usePetStore from '../store/usePetStore';
 import confetti from 'canvas-confetti';
+import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
 
-// Buổi tập tự do được ghi nhận HOÀN TOÀN trên server: POST /workout-sessions (lịch/calo)
-// + usePetStore.addExp (EXP, nhiệm vụ) — không còn ghi pet-schedule/workout-sessions localStorage.
+
+const getTodayKey = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const markDayAsTrained = () => {
+    const key = getTodayKey();
+    const saved = localStorage.getItem(getScheduleKey());
+    const scheduleData = saved ? JSON.parse(saved) : {};
+
+    const existing = scheduleData[key] || { trained: false, note: '', completedExercises: [] };
+    existing.trained = true;
+
+    // Trong ExerciseList (Tập tự do), chúng ta chỉ đánh dấu ngày là đã có tập (trained: true)
+    // KHÔNG đẩy tên bài tập vào completedExercises để tránh trùng/ảnh hưởng tới Lộ trình (Roadmap).
+
+    scheduleData[key] = existing;
+    localStorage.setItem(getScheduleKey(), JSON.stringify(scheduleData));
+    
+    // Đẩy event để component Daily cập nhật ngay lập tức nếu cần
+    window.dispatchEvent(new Event('storage'));
+};
 
 // Giờ địa phương thật của người dùng (toISOString trả về giờ UTC nên buổi tập 0h-7h sáng VN bị lệch sang ngày hôm trước)
 const toLocalISOString = (date) => {
@@ -224,6 +246,7 @@ export default function ExerciseList() {
     };
 
     const handleFinishManual = () => {
+        markDayAsTrained();
         setShowManualModal(false);
         
         const kcalPerRep = currentExercise.kcalPerRep || currentExercise.estimated_calories_per_rep || 1;
@@ -301,8 +324,12 @@ export default function ExerciseList() {
                         };
                         // Lưu buổi tập lên DB để hiển thị ở trang Quản lý calo
                         saveSessionToBackend(currentExercise, sessionData.total_valid_reps, sessionData.total_calories_burned);
+                        const savedSessions = JSON.parse(localStorage.getItem(getSessionsKey()) || '[]');
+                        savedSessions.push(sessionData);
+                        localStorage.setItem(getSessionsKey(), JSON.stringify(savedSessions));
 
                         setTimeout(() => {
+                            markDayAsTrained();
                             setShowAIModal(false);
                             stopAI();
 

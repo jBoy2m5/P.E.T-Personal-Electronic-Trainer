@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Button, ProgressBar, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
-import useAuthStore from '../store/useAuthStore';
+import { saveUserData } from '../utils/userStorage';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -43,9 +43,9 @@ export default function Onboarding() {
       const res = await axiosClient.put('/users/onboarding', formData);
       
       if (res.status === 'success') {
-        // Server đã lưu số đo → bootstrap lại authStore từ GET /users/me
-        // (needsOnboarding tự thành false vì height/weight đã có trên server)
-        await useAuthStore.getState().bootstrap();
+        // Cập nhật lại thông tin user trong localStorage (loại bmi/height/weight — số đo chỉ ở server).
+        // Vừa hoàn tất onboarding nên needsOnboarding = false.
+        saveUserData(res.user, false);
         navigate('/');
       } else {
         alert("Có lỗi xảy ra: " + (res.message || 'Không xác định'));

@@ -1,9 +1,7 @@
 package org.example.pettrainerbe.controller;
 
-import org.example.pettrainerbe.model.Roadmap;
 import org.example.pettrainerbe.model.User;
 import org.example.pettrainerbe.repository.ExerciseRepository;
-import org.example.pettrainerbe.repository.RoadmapRepository;
 import org.example.pettrainerbe.repository.UserRepository;
 import org.example.pettrainerbe.service.GeminiService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,13 +26,6 @@ public class AiController {
     @Autowired
     private ExerciseRepository exerciseRepository;
 
-    @Autowired
-    private RoadmapRepository roadmapRepository;
-
-    /**
-     * Lời khuyên AI cho lộ trình, cache trong DB theo ngôn ngữ (cột advice_vi/advice_en
-     * trên roadmap mới nhất của user — reset lộ trình tạo row mới nên advice tự làm mới).
-     */
     @GetMapping("/roadmap-advice")
     public ResponseEntity<?> getRoadmapAdvice(@RequestParam(value = "lang", defaultValue = "vi") String lang) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -42,17 +33,6 @@ public class AiController {
 
         if (user == null) {
             return ResponseEntity.ok(Map.of("advice", ""));
-        }
-
-        boolean isEn = "en".equalsIgnoreCase(lang);
-        Roadmap roadmap = roadmapRepository
-            .findFirstByUserUserIdOrderByIdDesc(user.getUserId()).orElse(null);
-
-        if (roadmap != null) {
-            String cached = isEn ? roadmap.getAdviceEn() : roadmap.getAdviceVi();
-            if (cached != null && !cached.isBlank()) {
-                return ResponseEntity.ok(Map.of("advice", cached));
-            }
         }
 
         double bmi = user.getBmi() != null ? user.getBmi().doubleValue() : 22.0;
@@ -63,12 +43,6 @@ public class AiController {
             user.getFitnessLevel() != null ? user.getFitnessLevel() : "Mới bắt đầu",
             lang
         );
-
-        if (roadmap != null && advice != null && !advice.isBlank()) {
-            if (isEn) roadmap.setAdviceEn(advice);
-            else roadmap.setAdviceVi(advice);
-            roadmapRepository.save(roadmap);
-        }
 
         return ResponseEntity.ok(Map.of("advice", advice != null ? advice : ""));
     }
