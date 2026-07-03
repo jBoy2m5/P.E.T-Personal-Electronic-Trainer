@@ -28,31 +28,43 @@ export const getAdviceKey = (langKey) => scopedKey(`ai-roadmap-advice-v2-${langK
 // Khóa dùng chung cho cả thiết bị (không gắn userId), luôn được giữ lại khi dọn dữ liệu.
 const DEVICE_KEYS = ['theme', 'user-data', 'jwt-token'];
 
-// BMI là chỉ số sức khỏe, nguồn dữ liệu DUY NHẤT là server DB (tính từ height/weight khi
-// onboarding). KHÔNG được cache ở client vì bản sao localStorage dễ lỗi thời (đổi cân nặng
-// mà không cập nhật) và từng gây rò rỉ giữa các tài khoản. Server trả `bmi` trong nhiều
-// response (login, /users/me...) nhưng khi lưu hồ sơ vào localStorage phải loại bmi ra;
-// cần BMI thì gọi GET /users/me.
-export const saveUserData = (user) => {
-  if (user && typeof user === 'object') {
-    const rest = { ...user };
-    delete rest.bmi;
-    localStorage.setItem('user-data', JSON.stringify(rest));
-  } else {
+// bmi + height + weight là dữ liệu cơ thể, nguồn DUY NHẤT là server DB. KHÔNG cache ở client
+// (bản localStorage dễ lỗi thời khi đổi cân nặng, và từng gây rò rỉ giữa các tài khoản). Server
+// vẫn trả các field này trong response (login, /users/me) nhưng khi lưu hồ sơ vào localStorage
+// phải loại chúng ra; component cần số đo/BMI thì gọi GET /users/me (fetchProfile trong api/profileApi).
+// Chỉ giữ lại cờ `needsOnboarding` (suy ra từ height/weight) để App.jsx biết có ép onboarding không.
+const BODY_METRIC_FIELDS = ['bmi', 'height', 'weight'];
+
+export const saveUserData = (user, needsOnboarding) => {
+  if (!user || typeof user !== 'object') {
     localStorage.setItem('user-data', JSON.stringify(user));
+    return;
   }
+  const rest = { ...user };
+  if (typeof needsOnboarding === 'boolean') {
+    rest.needsOnboarding = needsOnboarding;
+  } else if (rest.height != null && rest.weight != null) {
+    rest.needsOnboarding = false;
+  }
+  // else: payload không kèm số đo (vd chỉ đổi avatar) → giữ nguyên rest.needsOnboarding sẵn có
+  BODY_METRIC_FIELDS.forEach((f) => delete rest[f]);
+  localStorage.setItem('user-data', JSON.stringify(rest));
 };
 
-// Dọn bmi khỏi user-data đã lỡ lưu ở phiên bản cũ (chạy 1 lần lúc app khởi động).
+// Dọn bmi/height/weight khỏi user-data đã lỡ lưu ở phiên bản cũ (chạy 1 lần lúc app khởi động).
+// Suy ra cờ needsOnboarding từ số đo cũ trước khi xóa để không bắt user đã onboarding làm lại.
 export const sanitizeStoredUserData = () => {
   try {
     const saved = localStorage.getItem('user-data');
     if (!saved) return;
     const parsed = JSON.parse(saved);
-    if (parsed && typeof parsed === 'object' && 'bmi' in parsed) {
-      delete parsed.bmi;
-      localStorage.setItem('user-data', JSON.stringify(parsed));
+    if (!parsed || typeof parsed !== 'object') return;
+    if (!BODY_METRIC_FIELDS.some((f) => f in parsed)) return;
+    if (parsed.needsOnboarding === undefined) {
+      parsed.needsOnboarding = !(parsed.height != null && parsed.weight != null);
     }
+    BODY_METRIC_FIELDS.forEach((f) => delete parsed[f]);
+    localStorage.setItem('user-data', JSON.stringify(parsed));
   } catch { /* ignore */ }
 };
 

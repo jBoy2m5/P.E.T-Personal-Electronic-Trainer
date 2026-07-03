@@ -6,6 +6,20 @@ import useExerciseStore from './useExerciseStore';
 import usePetStore from './usePetStore';
 import axiosClient from '../api/axiosClient';
 import { getAdviceKey } from '../utils/userStorage';
+import { fetchProfile } from '../api/profileApi';
+
+// Hồ sơ dùng cho thuật toán lộ trình dự phòng (local) — LẤY TỪ SERVER, không đọc localStorage
+// (số đo không còn cache ở client). Áp giá trị mặc định để thuật toán luôn chạy được khi thiếu.
+const buildGeneratorUserData = async () => {
+  const p = await fetchProfile().catch(() => ({}));
+  return {
+    gender: p.gender || 'Nam',
+    height: p.height || 170,
+    weight: p.weight || 65,
+    fitnessLevel: p.fitnessLevel || 'Mới bắt đầu',
+    goal: p.goal || 'Giữ dáng',
+  };
+};
 
 const getUserId = () => {
   try {
@@ -98,12 +112,7 @@ const useRoadmapStore = create((set, get) => ({
     try {
       const userId = getUserId();
       const key = getRoadmapKey(userId);
-      const saved = localStorage.getItem('user-data');
-      let userData = { gender: 'Nam', height: 170, weight: 65, fitnessLevel: 'Mới bắt đầu', goal: 'Giữ dáng' };
-      if (saved) {
-        const p = JSON.parse(saved);
-        userData = { gender: p.gender || 'Nam', height: p.height || 170, weight: p.weight || 65, fitnessLevel: p.fitnessLevel || 'Mới bắt đầu', goal: p.goal || p.fitness_goal || 'Giữ dáng' };
-      }
+      const userData = await buildGeneratorUserData();
       const exercises = await useExerciseStore.getState().fetchExercises();
       // Ưu tiên lộ trình do Gemini sinh; AI lỗi/timeout/bị người dùng hủy thì fallback thuật toán local
       aiAbortController = new AbortController();
@@ -195,9 +204,7 @@ const useRoadmapStore = create((set, get) => ({
   _fetchOrCreate: async (userId) => {
     try {
       const userRoadmaps = await axiosClient.get(`/roadmaps/user/${userId}`);
-      const saved = localStorage.getItem('user-data');
-      const p = saved ? JSON.parse(saved) : {};
-      const userData = { gender: p.gender || 'Nam', height: p.height || 170, weight: p.weight || 65, fitnessLevel: p.fitnessLevel || 'Mới bắt đầu', goal: p.goal || p.fitness_goal || 'Giữ dáng' };
+      const userData = await buildGeneratorUserData();
       const exercises = await useExerciseStore.getState().fetchExercises();
 
       if (userRoadmaps?.length) {

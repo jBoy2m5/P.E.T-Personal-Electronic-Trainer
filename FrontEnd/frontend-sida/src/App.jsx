@@ -55,8 +55,9 @@ function Layout() {
     if (isAuthenticated) syncPet();
   }, [userData?.userId]);
 
-  // Check if user still needs onboarding
-  const needsOnboarding = isAuthenticated && (!userData.height || !userData.weight);
+  // Check if user still needs onboarding — dùng cờ needsOnboarding lưu trong user-data
+  // (suy ra từ height/weight lúc lưu). Số đo KHÔNG còn nằm trong localStorage nữa (chỉ ở server).
+  const needsOnboarding = isAuthenticated && userData.needsOnboarding === true;
 
   // Điều hướng nếu chưa đăng nhập
   if (!isAuthenticated && location.pathname !== '/login' && location.pathname !== '/') {

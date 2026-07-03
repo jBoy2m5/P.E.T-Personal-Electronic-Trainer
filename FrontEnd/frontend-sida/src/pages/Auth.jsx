@@ -42,7 +42,7 @@ export default function Auth() {
       if (res.token) {
         localStorage.setItem('jwt-token', res.token);
       }
-      saveUserData(res.user); // loại bmi trước khi lưu — BMI chỉ ở server
+      saveUserData(res.user, res.needsOnboarding); // loại bmi/height/weight — số đo chỉ ở server
 
       // Chống rò rỉ giữa các tài khoản: xóa mọi dữ liệu localStorage của tài khoản trước,
       // rồi reload cả trang (window.location, KHÔNG dùng navigate) để các store Zustand

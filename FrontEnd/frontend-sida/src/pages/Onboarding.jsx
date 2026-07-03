@@ -43,8 +43,9 @@ export default function Onboarding() {
       const res = await axiosClient.put('/users/onboarding', formData);
       
       if (res.status === 'success') {
-        // Cập nhật lại thông tin user trong localStorage (loại bmi — BMI chỉ ở server)
-        saveUserData(res.user);
+        // Cập nhật lại thông tin user trong localStorage (loại bmi/height/weight — số đo chỉ ở server).
+        // Vừa hoàn tất onboarding nên needsOnboarding = false.
+        saveUserData(res.user, false);
         navigate('/');
       } else {
         alert("Có lỗi xảy ra: " + (res.message || 'Không xác định'));

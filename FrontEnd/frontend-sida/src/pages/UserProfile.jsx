@@ -6,12 +6,13 @@ import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
 import usePetStore from '../store/usePetStore';
 import { saveUserData } from '../utils/userStorage';
+import { fetchProfile } from '../api/profileApi';
 
 export default function UserProfile() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
-  const [bmi, setBmi] = useState(null); // BMI lấy từ server (/users/me), không lưu/không tính ở client
+  const [profile, setProfile] = useState(null); // height/weight/bmi lấy từ server (/users/me) — không cache/không tính ở client
   const [stats, setStats] = useState({ totalWorkouts: 0, totalCalories: 0, streak: 0 });
   const fileInputRef = useRef(null);
   const checkinStreak = usePetStore((s) => s.checkinStreak);
@@ -63,16 +64,15 @@ export default function UserProfile() {
     };
     loadStats();
 
-    // 3. BMI lấy thẳng từ server (nguồn duy nhất) — không tính/không cache ở client
-    const loadBmi = async () => {
+    // 3. Số đo cơ thể (height/weight/bmi) lấy thẳng từ server (nguồn duy nhất) — không cache ở client
+    const loadProfile = async () => {
       try {
-        const me = await axiosClient.get('/users/me');
-        setBmi(me?.bmi != null ? Number(me.bmi).toFixed(1) : null);
+        setProfile(await fetchProfile());
       } catch (err) {
-        console.error('Không thể tải BMI từ server:', err);
+        console.error('Không thể tải hồ sơ cơ thể từ server:', err);
       }
     };
-    loadBmi();
+    loadProfile();
   }, [navigate, checkinStreak]);
 
   const handleLogout = () => {
@@ -93,7 +93,9 @@ export default function UserProfile() {
 
   if (!userData) return null;
 
-  const bmiStatus = getBMIStatus(bmi != null ? Number(bmi) : null);
+  const bmiValue = profile?.bmi != null ? Number(profile.bmi) : null;
+  const bmiDisplay = bmiValue != null ? bmiValue.toFixed(1) : '--';
+  const bmiStatus = getBMIStatus(bmiValue);
 
   return (
     <Container fluid className="py-5 bg-surface-main min-vh-100 position-relative overflow-hidden">
@@ -221,20 +223,20 @@ export default function UserProfile() {
                                     <Col sm={6}>
                                         <div className="p-3 bg-surface-main rounded-4 border-surface" style={{ border: '1px solid' }}>
                                             <p className="text-secondary small fw-bold text-uppercase mb-1">{t('profile.height', 'Chiều cao')}</p>
-                                            <div className="fs-4 fw-bold text-primary-dynamic">{userData.height || '--'} <span className="fs-6 text-muted">cm</span></div>
+                                            <div className="fs-4 fw-bold text-primary-dynamic">{profile?.height ?? '--'} <span className="fs-6 text-muted">cm</span></div>
                                         </div>
                                     </Col>
                                     <Col sm={6}>
                                         <div className="p-3 bg-surface-main rounded-4 border-surface" style={{ border: '1px solid' }}>
                                             <p className="text-secondary small fw-bold text-uppercase mb-1">{t('profile.weight', 'Cân nặng')}</p>
-                                            <div className="fs-4 fw-bold text-primary-dynamic">{userData.weight || '--'} <span className="fs-6 text-muted">kg</span></div>
+                                            <div className="fs-4 fw-bold text-primary-dynamic">{profile?.weight ?? '--'} <span className="fs-6 text-muted">kg</span></div>
                                         </div>
                                     </Col>
                                     <Col sm={12}>
                                         <div className="p-4 bg-surface-main rounded-4 border-surface d-flex justify-content-between align-items-center" style={{ border: '1px solid' }}>
                                             <div>
                                                 <p className="text-secondary small fw-bold text-uppercase mb-1">BMI</p>
-                                                <div className="fs-3 fw-bold text-primary-dynamic">{bmi || '--'}</div>
+                                                <div className="fs-3 fw-bold text-primary-dynamic">{bmiDisplay}</div>
                                             </div>
                                             <div className="text-end">
                                                 <Badge bg="dark" className={`border border-secondary px-3 py-2 rounded-pill ${bmiStatus.color}`}>
