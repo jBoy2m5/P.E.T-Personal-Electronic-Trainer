@@ -6,6 +6,7 @@ import useRoadmapStore from '../store/useRoadmapStore';
 import usePetStore from '../store/usePetStore';
 import { SPLIT_NAME_EN, PLAN_TITLE_EN } from '../services/roadmapGenerator';
 import axiosClient from '../api/axiosClient';
+import { getAdviceKey } from '../utils/userStorage';
 
 export default function Roadmap() {
   const navigate = useNavigate();
@@ -27,12 +28,12 @@ export default function Roadmap() {
   // → bỏ qua cache kiểu cũ ('ai-roadmap-advice' và '-{lang}' không version) để sinh lại một lần
   useEffect(() => {
     const langKey = isVi ? 'vi' : 'en';
-    const cached = localStorage.getItem(`ai-roadmap-advice-v2-${langKey}`);
+    const cached = localStorage.getItem(getAdviceKey(langKey));
     setAiAdvice(cached || '');
     if (cached) return;
     axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).then(res => {
       if (res?.advice) {
-        localStorage.setItem(`ai-roadmap-advice-v2-${langKey}`, res.advice);
+        localStorage.setItem(getAdviceKey(langKey), res.advice);
         setAiAdvice(res.advice);
       }
     }).catch(() => {});

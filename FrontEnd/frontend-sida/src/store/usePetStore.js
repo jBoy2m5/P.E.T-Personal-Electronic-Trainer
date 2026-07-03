@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axiosClient from '../api/axiosClient';
+import { getScheduleKey } from '../utils/userStorage';
 
 const PET_LEVELS = [
   { level: 1, name: 'Trứng', minPoints: 0, icon: '🥚' },
@@ -125,7 +126,7 @@ const usePetStore = create((set, get) => ({
   },
 
   isSad: () => {
-    const schedule = localStorage.getItem('pet-schedule');
+    const schedule = localStorage.getItem(getScheduleKey());
     if (!schedule) return false;
     const data = JSON.parse(schedule);
     const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

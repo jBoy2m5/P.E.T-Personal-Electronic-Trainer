@@ -5,6 +5,7 @@ import { fetchAiRoadmap } from '../services/aiRoadmapService';
 import useExerciseStore from './useExerciseStore';
 import usePetStore from './usePetStore';
 import axiosClient from '../api/axiosClient';
+import { getAdviceKey } from '../utils/userStorage';
 
 const getUserId = () => {
   try {
@@ -119,7 +120,7 @@ const useRoadmapStore = create((set, get) => ({
       // Lời khuyên AI theo ngôn ngữ hiện tại, cache theo key có hậu tố ngôn ngữ (Roadmap.jsx đọc/fetch bổ sung)
       const langKey = (i18n.language || 'vi').toLowerCase().startsWith('vi') ? 'vi' : 'en';
       axiosClient.get(`/ai/roadmap-advice?lang=${langKey}`).then(res => {
-        if (res?.advice) localStorage.setItem(`ai-roadmap-advice-v2-${langKey}`, res.advice);
+        if (res?.advice) localStorage.setItem(getAdviceKey(langKey), res.advice);
       }).catch(() => {});
     } finally {
       set({ generating: false });

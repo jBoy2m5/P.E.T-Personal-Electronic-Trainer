@@ -6,6 +6,7 @@ import { getMuscleGroupById } from '../api/exerciseApi';
 import axiosClient from '../api/axiosClient';
 import usePetStore from '../store/usePetStore';
 import confetti from 'canvas-confetti';
+import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
 
@@ -17,17 +18,17 @@ const getTodayKey = () => {
 
 const markDayAsTrained = () => {
     const key = getTodayKey();
-    const saved = localStorage.getItem('pet-schedule');
+    const saved = localStorage.getItem(getScheduleKey());
     const scheduleData = saved ? JSON.parse(saved) : {};
 
     const existing = scheduleData[key] || { trained: false, note: '', completedExercises: [] };
     existing.trained = true;
-    
+
     // Trong ExerciseList (Tập tự do), chúng ta chỉ đánh dấu ngày là đã có tập (trained: true)
     // KHÔNG đẩy tên bài tập vào completedExercises để tránh trùng/ảnh hưởng tới Lộ trình (Roadmap).
 
     scheduleData[key] = existing;
-    localStorage.setItem('pet-schedule', JSON.stringify(scheduleData));
+    localStorage.setItem(getScheduleKey(), JSON.stringify(scheduleData));
     
     // Đẩy event để component Daily cập nhật ngay lập tức nếu cần
     window.dispatchEvent(new Event('storage'));
@@ -323,9 +324,9 @@ export default function ExerciseList() {
                         };
                         // Lưu buổi tập lên DB để hiển thị ở trang Quản lý calo
                         saveSessionToBackend(currentExercise, sessionData.total_valid_reps, sessionData.total_calories_burned);
-                        const savedSessions = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
+                        const savedSessions = JSON.parse(localStorage.getItem(getSessionsKey()) || '[]');
                         savedSessions.push(sessionData);
-                        localStorage.setItem('workout-sessions', JSON.stringify(savedSessions));
+                        localStorage.setItem(getSessionsKey(), JSON.stringify(savedSessions));
 
                         setTimeout(() => {
                             markDayAsTrained();

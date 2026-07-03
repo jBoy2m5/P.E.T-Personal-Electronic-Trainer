@@ -8,6 +8,7 @@ import useExerciseStore from '../store/useExerciseStore';
 import { SPLIT_NAME_EN } from '../services/roadmapGenerator';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
+import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
 
 const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
 const PET_THRESHOLDS_LIST = [0, 10, 50, 150, 300, 600, 1200, 2500];
@@ -22,7 +23,7 @@ const getTodayKey = () => {
 
 const markDayAsTrained = (exerciseTitle) => {
     const key = getTodayKey();
-    const saved = localStorage.getItem('pet-schedule');
+    const saved = localStorage.getItem(getScheduleKey());
     const scheduleData = saved ? JSON.parse(saved) : {};
 
     const existing = scheduleData[key] || { trained: false, note: '', completedExercises: [] };
@@ -35,14 +36,14 @@ const markDayAsTrained = (exerciseTitle) => {
     existing.note = `Trained: ${existing.completedExercises.join(', ')}`;
 
     scheduleData[key] = existing;
-    localStorage.setItem('pet-schedule', JSON.stringify(scheduleData));
-    
+    localStorage.setItem(getScheduleKey(), JSON.stringify(scheduleData));
+
     window.dispatchEvent(new Event('storage'));
 };
 
 const getCompletedToday = () => {
     const key = getTodayKey();
-    const saved = localStorage.getItem('pet-schedule');
+    const saved = localStorage.getItem(getScheduleKey());
     if (!saved) return [];
     const data = JSON.parse(saved);
     return data[key]?.completedExercises || [];
@@ -55,9 +56,9 @@ const saveSessionToLocal = (kcal, reps, sets, startMs) => {
         total_calories_burned: kcal,
         total_valid_reps: reps * sets
     };
-    const saved = JSON.parse(localStorage.getItem('workout-sessions') || '[]');
+    const saved = JSON.parse(localStorage.getItem(getSessionsKey()) || '[]');
     saved.push(sessionData);
-    localStorage.setItem('workout-sessions', JSON.stringify(saved));
+    localStorage.setItem(getSessionsKey(), JSON.stringify(saved));
     window.dispatchEvent(new Event('storage'));
 };
 
