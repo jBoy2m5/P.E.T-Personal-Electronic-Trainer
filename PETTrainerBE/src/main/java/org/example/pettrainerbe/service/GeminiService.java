@@ -66,6 +66,57 @@ public class GeminiService {
     }
 
     /**
+     * Chatbot pet huấn luyện viên (modal Chat AI trang Pet). Nhận lịch sử hội thoại nhiều lượt
+     * (role: user/model) + tin nhắn mới, trả về câu trả lời hoặc null nếu key chưa cấu hình / Gemini lỗi.
+     */
+    public String chat(String gender, double bmi, String goal, String fitnessLevel,
+                       String petName, List<Map<String, String>> history, String message, String lang) {
+        if (apiKey == null || apiKey.isBlank() || apiKey.startsWith("AIzaSy_REPLACE")) {
+            return null;
+        }
+        if (message == null || message.isBlank()) return null;
+
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
+
+        String replyLang = "en".equalsIgnoreCase(lang) ? "tiếng Anh (English)" : "tiếng Việt";
+        String persona = String.format(
+            "Bạn là \"%s\" — chú mèo thú cưng kiêm huấn luyện viên cá nhân trong ứng dụng fitness P.E.T. " +
+            "Hồ sơ người dùng bạn đang huấn luyện: Giới tính: %s, BMI: %.1f, Mục tiêu: %s, Trình độ: %s. " +
+            "Quy tắc: (1) Trả lời NGẮN GỌN 2-4 câu, thân thiện, đúng tính cách một chú mèo huấn luyện viên đáng yêu nhưng chuyên môn vững. " +
+            "(2) Chỉ trả lời về tập luyện, dinh dưỡng, sức khỏe, phục hồi và cách dùng app P.E.T; chủ đề khác thì từ chối khéo léo và kéo về chuyện tập luyện. " +
+            "(3) Không kê đơn thuốc hay chẩn đoán y tế; vấn đề sức khỏe nghiêm trọng thì khuyên gặp bác sĩ. " +
+            "(4) Luôn trả lời bằng %s.",
+            petName != null && !petName.isBlank() ? petName : "P.E.T",
+            gender, bmi, goal, fitnessLevel, replyLang
+        );
+
+        // contents nhiều lượt: Gemini yêu cầu bắt đầu bằng lượt user → bỏ các lượt model dẫn đầu
+        // (vd câu chào mặc định của pet); giới hạn 10 lượt gần nhất để prompt gọn
+        List<Map<String, Object>> contents = new ArrayList<>();
+        if (history != null) {
+            int from = Math.max(0, history.size() - 10);
+            boolean userSeen = false;
+            for (int i = from; i < history.size(); i++) {
+                Map<String, String> h = history.get(i);
+                String role = "model".equals(h.get("role")) ? "model" : "user";
+                String text = h.get("text");
+                if (text == null || text.isBlank()) continue;
+                if (!userSeen && "model".equals(role)) continue;
+                userSeen = true;
+                contents.add(Map.of("role", role, "parts", List.of(Map.of("text", text))));
+            }
+        }
+        contents.add(Map.of("role", "user", "parts", List.of(Map.of("text", message))));
+
+        Map<String, Object> requestBody = Map.of(
+            "system_instruction", Map.of("parts", List.of(Map.of("text", persona))),
+            "contents", contents
+        );
+
+        return callGeminiForText(url, requestBody);
+    }
+
+    /**
      * Sinh lộ trình 28 ngày bằng Gemini. Trả về danh sách 28 ngày (JSON snake_case)
      * hoặc null nếu key chưa cấu hình / Gemini lỗi / kết quả không hợp lệ
      * (frontend sẽ fallback về thuật toán local).

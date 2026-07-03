@@ -6,6 +6,7 @@ import usePetStore from '../store/usePetStore';
 import useRoadmapStore from '../store/useRoadmapStore';
 import useExerciseStore from '../store/useExerciseStore';
 import { getDailyMissions } from '../services/rewards';
+import axiosClient from '../api/axiosClient';
 import petChatbot from '../assets/pet_chatbot.png';
 import petBgImage from '../assets/pet_bg.webp'; // File background ảnh thật
 
@@ -28,7 +29,7 @@ const PET_LEVELS = [
 
 export default function PetProfile() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { totalPoints, exercisesTrained, getCurrentLevel, claimedMissions, claimMission, checkinStreak, lastCheckinDate, performCheckin, petName, updatePetName, equippedOutfits, toggleOutfit } = usePetStore();
   const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
@@ -138,17 +139,35 @@ export default function PetProfile() {
     setShowEditName(false);
   };
 
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
-    const newMsg = { sender: 'user', text: chatInput };
-    setChatMessages([...chatMessages, newMsg]);
+  // Chat với Gemini qua backend (POST /ai/chat) — gửi kèm lịch sử hội thoại để AI nhớ ngữ cảnh
+  const handleSendMessage = async () => {
+    const text = chatInput.trim();
+    if (!text || isTyping) return;
+    const updated = [...chatMessages, { sender: 'user', text }];
+    setChatMessages(updated);
     setChatInput('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, { sender: 'ai', text: t('pet_profile.auto_reply') }]);
+    try {
+      // Lịch sử = các tin trước tin vừa gửi (backend tự giới hạn 10 lượt gần nhất)
+      const history = updated.slice(0, -1).map(m => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        text: m.text
+      }));
+      const res = await axiosClient.post('/ai/chat', {
+        message: text,
+        history,
+        lang: (i18n.language || 'vi').toLowerCase().startsWith('vi') ? 'vi' : 'en',
+        pet_name: petData.pet_name
+      }, { timeout: 30000 });
+
+      const reply = res?.reply;
+      setChatMessages(prev => [...prev, { sender: 'ai', text: reply || t('pet_profile.chat_error') }]);
+    } catch {
+      setChatMessages(prev => [...prev, { sender: 'ai', text: t('pet_profile.chat_error') }]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handlePetClick = (e) => {

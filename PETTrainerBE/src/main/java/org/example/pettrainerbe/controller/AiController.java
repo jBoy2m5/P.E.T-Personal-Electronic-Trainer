@@ -48,6 +48,46 @@ public class AiController {
     }
 
     /**
+     * Chatbot pet huấn luyện viên (modal Chat AI trang Pet).
+     * Body: {"message": "...", "history": [{"role": "user"|"model", "text": "..."}], "lang": "vi"|"en", "pet_name": "..."}
+     * Trả về {"reply": "..."} — reply rỗng nếu AI lỗi (frontend hiện thông báo thử lại).
+     */
+    @PostMapping("/chat")
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<?> chat(@RequestBody Map<String, Object> payload) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email);
+
+        String message = payload.get("message") instanceof String s ? s : "";
+        String lang = payload.get("lang") instanceof String l ? l : "vi";
+        String petName = payload.get("pet_name") instanceof String p ? p : null;
+        List<Map<String, String>> history = payload.get("history") instanceof List<?> raw
+            ? raw.stream()
+                .filter(item -> item instanceof Map<?, ?>)
+                .map(item -> (Map<String, String>) item)
+                .toList()
+            : List.of();
+
+        if (user == null || message.isBlank()) {
+            return ResponseEntity.ok(Map.of("reply", ""));
+        }
+
+        double bmi = user.getBmi() != null ? user.getBmi().doubleValue() : 22.0;
+        String reply = geminiService.chat(
+            user.getGender() != null ? user.getGender() : "Nam",
+            bmi,
+            user.getFitnessGoal() != null ? user.getFitnessGoal() : "Tăng cơ nạc",
+            user.getFitnessLevel() != null ? user.getFitnessLevel() : "Mới bắt đầu",
+            petName,
+            history,
+            message,
+            lang
+        );
+
+        return ResponseEntity.ok(Map.of("reply", reply != null ? reply : ""));
+    }
+
+    /**
      * Sinh lộ trình 28 ngày bằng Gemini từ hồ sơ user + danh sách bài tập trong DB.
      * Trả về {"roadmap": [...28 ngày...]} hoặc {"roadmap": null} nếu AI lỗi
      * (frontend tự fallback về thuật toán local).

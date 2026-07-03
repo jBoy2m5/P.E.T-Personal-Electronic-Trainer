@@ -94,6 +94,7 @@
   "pet_profile": {
     "hello_ai": "Hey there! Do you need advice on workouts or nutrition?",
     "auto_reply": "This is an automated response from AI. Keep focusing on your weights!",
+    "chat_error": "I'm a bit busy right now — please send your message again in a moment!",
     "level": "LEVEL",
     "work_hard": "✨ Work hard on your missions to level up!",
     "outfit": "Outfit",

@@ -94,6 +94,7 @@
   "pet_profile": {
     "hello_ai": "Chào đằng ấy! Cần mình tư vấn gì về lịch tập hay dinh dưỡng không?",
     "auto_reply": "Đây là câu trả lời tự động từ AI (Gắn API thực tế sau nhé!). Bạn cứ tập trung đẩy tạ đi!",
+    "chat_error": "Mình đang hơi bận, bạn gửi lại tin nhắn sau chút nhé!",
     "level": "CẤP ĐỘ",
     "work_hard": "✨ Chăm chỉ hoàn thành nhiệm vụ để thăng cấp nhé!",
     "outfit": "Trang phục",
