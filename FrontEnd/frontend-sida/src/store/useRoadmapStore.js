@@ -101,8 +101,9 @@ const useRoadmapStore = create((set, get) => ({
       const parsed = deriveStatuses(JSON.parse(saved));
       localStorage.setItem(key, JSON.stringify(parsed));
       set({ roadmapData: parsed, initialized: true });
-      // Sync completion from backend in background
-      if (userId) get()._syncCompletionFromBackend(userId, parsed);
+      // KHÔNG sync completion từ backend: backend d740ad1 tích lũy nhiều roadmap row và
+      // hàm sync đọc userRoadmaps[0] (row cũ nhất, còn is_completed từ lần trước) → merge
+      // nhầm khiến lộ trình mới hiện completed sai. localStorage là nguồn completion duy nhất.
       return;
     }
 
@@ -249,22 +250,12 @@ const useRoadmapStore = create((set, get) => ({
       const exercises = await useExerciseStore.getState().fetchExercises();
 
       if (userRoadmaps?.length) {
-        // Đã có lộ trình trên server → dựng lại bằng thuật toán local (nhanh, ổn định)
-        // rồi merge trạng thái hoàn thành; không gọi AI lại để tránh lệch lộ trình gốc
+        // Server đã có lộ trình → dựng lại bằng thuật toán local (nhanh, không gọi AI lại).
+        // KHÔNG merge is_completed từ backend: backend tích lũy nhiều row, userRoadmaps[0] là
+        // row CŨ NHẤT nên completion của nó bị lệch → lộ trình mới hiện completed sai.
+        // Completion sống ở localStorage; localStorage trống (vd sau purge) thì bắt đầu sạch.
         const localRoadmap = generateDynamicRoadmap(userData, exercises);
-        const days = userRoadmaps[0].days || [];
-        const merged = localRoadmap.map(localDay => {
-          const bd = days.find(d => d.day_number === localDay.dayId);
-          if (!bd) return localDay;
-          return {
-            ...localDay,
-            backendDayId: bd.id,
-            status: bd.is_completed ? 'completed' : localDay.status,
-            // Thiếu ngày hoàn thành (backend không lưu) → coi như hôm nay, tránh deriveStatuses tự nhảy ngày
-            completedDate: bd.is_completed ? (localDay.completedDate || getTodayKey()) : localDay.completedDate
-          };
-        });
-        const withStatuses = deriveStatuses(merged);
+        const withStatuses = deriveStatuses(localRoadmap);
         const key = getRoadmapKey(userId);
         localStorage.setItem(key, JSON.stringify(withStatuses));
         set({ roadmapData: withStatuses, initialized: true });
