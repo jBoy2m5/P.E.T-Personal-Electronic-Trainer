@@ -11,5 +11,6 @@ public class RoadmapDTO {
     private Integer userId;
     private String goal;
     private LocalDateTime createdAt;
+    private String roadmapJson;
     private List<RoadmapDayDTO> days;
 }

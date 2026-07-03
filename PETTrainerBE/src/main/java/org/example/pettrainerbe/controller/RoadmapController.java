@@ -9,7 +9,9 @@ import org.example.pettrainerbe.repository.RoadmapDayRepository;
 import org.example.pettrainerbe.repository.RoadmapRepository;
 import org.example.pettrainerbe.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -25,6 +27,19 @@ public class RoadmapController {
     @Autowired private UserRepository userRepository;
 
     // ===== ROADMAP ENDPOINTS =====
+
+    /**
+     * Lộ trình mới nhất của user đang đăng nhập (kèm roadmap_json — nguồn sự thật
+     * duy nhất của tick bài tập/trạng thái ngày). 404 nếu user chưa có lộ trình.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<?> getMyRoadmap() {
+        User me = currentUser();
+        if (me == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return roadmapRepository.findFirstByUserUserIdOrderByIdDesc(me.getUserId())
+                .map(r -> ResponseEntity.ok(toDTO(r)))
+                .orElse(ResponseEntity.notFound().build());
+    }
 
     @GetMapping
     public List<RoadmapDTO> getAllRoadmaps() {
@@ -49,12 +64,16 @@ public class RoadmapController {
 
     @PostMapping
     public ResponseEntity<?> createRoadmap(@RequestBody RoadmapDTO dto) {
-        User user = userRepository.findById(dto.getUserId()).orElse(null);
+        // user_id trong body giữ tương thích cũ; mặc định là user đang đăng nhập
+        User user = dto.getUserId() != null
+                ? userRepository.findById(dto.getUserId()).orElse(null)
+                : currentUser();
         if (user == null) return ResponseEntity.badRequest().body("User không tồn tại");
 
         Roadmap roadmap = new Roadmap();
         roadmap.setUser(user);
         roadmap.setGoal(dto.getGoal());
+        roadmap.setRoadmapJson(dto.getRoadmapJson());
         roadmap.setCreatedAt(dto.getCreatedAt() != null ? dto.getCreatedAt() : LocalDateTime.now());
 
         Roadmap saved = roadmapRepository.save(roadmap);
@@ -63,8 +82,15 @@ public class RoadmapController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateRoadmap(@PathVariable Integer id, @RequestBody RoadmapDTO dto) {
+        User me = currentUser();
         return roadmapRepository.findById(id).map(roadmap -> {
+            // roadmap_json chứa tick/tiến độ cá nhân → chỉ chủ sở hữu được sửa
+            if (me == null || roadmap.getUser() == null
+                    || !roadmap.getUser().getUserId().equals(me.getUserId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Không phải lộ trình của bạn");
+            }
             if (dto.getGoal() != null) roadmap.setGoal(dto.getGoal());
+            if (dto.getRoadmapJson() != null) roadmap.setRoadmapJson(dto.getRoadmapJson());
             return ResponseEntity.ok(toDTO(roadmapRepository.save(roadmap)));
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -131,11 +157,18 @@ public class RoadmapController {
 
     // ===== CONVERTERS =====
 
+    private User currentUser() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return null;
+        return userRepository.findByEmail(auth.getName());
+    }
+
     private RoadmapDTO toDTO(Roadmap r) {
         RoadmapDTO dto = new RoadmapDTO();
         dto.setId(r.getId());
         dto.setGoal(r.getGoal());
         dto.setCreatedAt(r.getCreatedAt());
+        dto.setRoadmapJson(r.getRoadmapJson());
         if (r.getUser() != null) dto.setUserId(r.getUser().getUserId());
         if (r.getDays() != null) {
             dto.setDays(r.getDays().stream().map(this::toDayDTO).collect(Collectors.toList()));
