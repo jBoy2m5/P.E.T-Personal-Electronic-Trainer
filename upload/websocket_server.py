@@ -41,6 +41,16 @@ async def handle_client(websocket):
                     continue
 
                 result = tracker.process_frame(frame, mode)
+
+                # Chuẩn hóa payload cho JSON: NormalizedLandmarkList của MediaPipe
+                # không serialize trực tiếp được. Không đụng tới thuật toán AI trong ai_core.
+                landmarks = result.get("raw_landmarks")
+                if landmarks is not None:
+                    result["raw_landmarks"] = [
+                        {"x": lm.x, "y": lm.y, "z": lm.z, "visibility": lm.visibility}
+                        for lm in landmarks.landmark
+                    ]
+
                 await websocket.send(json.dumps(result))
 
             except Exception as e:
