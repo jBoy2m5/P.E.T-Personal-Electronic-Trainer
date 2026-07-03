@@ -124,6 +124,7 @@ public class GeminiService {
     public List<Map<String, Object>> generateRoadmap(String gender, double bmi, String goal,
                                                      String fitnessLevel, List<Exercise> exercises) {
         if (apiKey == null || apiKey.isBlank() || apiKey.startsWith("AIzaSy_REPLACE")) {
+            System.err.println("Gemini roadmap skipped: GEMINI_API_KEY is missing or placeholder");
             return null;
         }
 
@@ -133,7 +134,7 @@ public class GeminiService {
         Set<String> validNames = new HashSet<>();
         for (Exercise ex : exercises) {
             if (ex.getName() == null) continue;
-            validNames.add(ex.getName().trim().toLowerCase());
+            validNames.add(normalizeName(ex.getName()));
             String group = ex.getMuscleGroup() != null ? ex.getMuscleGroup().getName() : "Khác";
             catalog.append("- \"").append(ex.getName()).append("\"")
                    .append(" | nhóm cơ: ").append(group)
@@ -231,7 +232,10 @@ public class GeminiService {
      */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> validateRoadmap(List<Map<String, Object>> days, Set<String> validNames) {
-        if (days == null || days.size() != 28) return null;
+        if (days == null || days.size() != 28) {
+            System.err.println("Gemini roadmap rejected: expected 28 days, got " + (days == null ? "null" : days.size()));
+            return null;
+        }
 
         for (Map<String, Object> day : days) {
             boolean isRest = Boolean.TRUE.equals(day.get("is_rest_day"));
@@ -241,20 +245,38 @@ public class GeminiService {
             }
             Object raw = day.get("exercises");
             List<Map<String, Object>> kept = new ArrayList<>();
+            List<String> returnedNames = new ArrayList<>();
             if (raw instanceof List<?> list) {
                 for (Object item : list) {
                     if (item instanceof Map<?, ?> exMap) {
                         Object name = exMap.get("name");
-                        if (name instanceof String s && validNames.contains(s.trim().toLowerCase())) {
-                            kept.add((Map<String, Object>) exMap);
+                        if (name instanceof String s) {
+                            returnedNames.add(s);
+                            // So khớp CHUẨN HÓA (bỏ ký tự không phải chữ/số) để bắt lệch format
+                            // nhỏ như "Push-Up" vs "Push Up", tránh loại sạch cả lộ trình vì 1 ngày lệch tên
+                            if (validNames.contains(normalizeName(s))) {
+                                kept.add((Map<String, Object>) exMap);
+                            }
                         }
                     }
                 }
             }
-            if (kept.isEmpty()) return null; // ngày tập mà không còn bài hợp lệ → coi như kết quả hỏng
+            if (kept.isEmpty()) {
+                // ngày tập mà không còn bài hợp lệ → coi như kết quả hỏng; log tên Gemini trả về để dò lệch
+                System.err.println("Gemini roadmap rejected: day " + day.get("day") +
+                    " has no exercise matching DB names. Gemini returned: " + returnedNames);
+                return null;
+            }
             day.put("exercises", kept);
         }
         return days;
+    }
+
+    // Chuẩn hóa tên bài để so khớp: lowercase + bỏ mọi ký tự không phải chữ/số
+    // ("Push-Up", "push up", "Push  Up" → "pushup"). Dùng cho cả build danh sách hợp lệ lẫn tra cứu.
+    private String normalizeName(String name) {
+        if (name == null) return "";
+        return name.trim().toLowerCase().replaceAll("[^a-z0-9]", "");
     }
 
     private String levelLabel(String level) {
