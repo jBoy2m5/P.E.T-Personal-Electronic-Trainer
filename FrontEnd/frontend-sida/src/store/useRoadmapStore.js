@@ -43,6 +43,9 @@ let aiAbortController = null;
 // Cờ báo người dùng đã bấm "dùng lộ trình mặc định": skip tự dựng lộ trình local ngay,
 // và flow AI đang chạy khi thấy cờ này thì bỏ kết quả AI (không đè lên lộ trình đã chọn).
 let aiSkipped = false;
+// Hồ sơ đã nạp cho lần generate đang chạy — để skip dựng lộ trình local NGAY (đồng bộ),
+// không phải gọi lại /users/me (ở bản này /me nặng nên await sẽ treo màn chờ).
+let lastGenUserData = null;
 
 // Ràng buộc mở khóa lộ trình:
 // - Ngày kế tiếp chỉ 'active' khi: ngày trước đã hoàn thành TRƯỚC hôm nay (đã sang ngày lịch mới)
@@ -117,6 +120,7 @@ const useRoadmapStore = create((set, get) => ({
       const userId = getUserId();
       const key = getRoadmapKey(userId);
       const userData = await buildGeneratorUserData();
+      lastGenUserData = userData; // để skip dùng lại, không phải fetch /me
       const exercises = await useExerciseStore.getState().fetchExercises();
       // Ưu tiên lộ trình do Gemini sinh; AI lỗi/timeout/bị người dùng hủy thì fallback thuật toán local
       aiAbortController = new AbortController();
@@ -144,24 +148,23 @@ const useRoadmapStore = create((set, get) => ({
   // Người dùng chọn "dùng lộ trình mặc định" trong lúc chờ AI: đặt cờ + hủy request Gemini,
   // rồi DỰNG NGAY lộ trình local và tắt màn chờ — không chờ abort lan tới request (không đáng tin
   // khi backend đang giữ ~45s). Flow AI khi quay lại thấy aiSkipped=true sẽ bỏ kết quả của nó.
-  skipAiGeneration: async () => {
+  skipAiGeneration: () => {
     if (!get().generating) return;
     aiSkipped = true;
     if (aiAbortController) {
       aiAbortController.abort();
       aiAbortController = null;
     }
-    try {
-      const userId = getUserId();
-      const userData = await buildGeneratorUserData();
-      const exercises = await useExerciseStore.getState().fetchExercises();
-      const roadmap = deriveStatuses(generateDynamicRoadmap(userData, exercises));
-      localStorage.setItem(getRoadmapKey(userId), JSON.stringify(roadmap));
-      set({ roadmapData: roadmap, initialized: true, generating: false });
-      if (userId) get()._saveToBackend(userId, roadmap, userData.goal);
-    } catch {
-      set({ generating: false });
-    }
+    // Dựng lộ trình local ĐỒNG BỘ từ dữ liệu đã nạp sẵn — KHÔNG gọi mạng (tránh treo ở /me):
+    // profile đã fetch lúc bắt đầu generate (lastGenUserData), exercises đã cache trong store.
+    const userId = getUserId();
+    const userData = lastGenUserData ||
+      { gender: 'Nam', height: 170, weight: 65, fitnessLevel: 'Mới bắt đầu', goal: 'Giữ dáng' };
+    const exercises = useExerciseStore.getState().exercises || [];
+    const roadmap = deriveStatuses(generateDynamicRoadmap(userData, exercises));
+    localStorage.setItem(getRoadmapKey(userId), JSON.stringify(roadmap));
+    set({ roadmapData: roadmap, initialized: true, generating: false });
+    if (userId) get()._saveToBackend(userId, roadmap, userData.goal);
   },
 
   // Tính lại trạng thái khóa/mở theo ngày hôm nay + điểm danh (gọi sau khi check-in hoặc khi mở trang)
@@ -224,6 +227,7 @@ const useRoadmapStore = create((set, get) => ({
     try {
       const userRoadmaps = await axiosClient.get(`/roadmaps/user/${userId}`);
       const userData = await buildGeneratorUserData();
+      lastGenUserData = userData; // để skip dùng lại, không phải fetch /me
       const exercises = await useExerciseStore.getState().fetchExercises();
 
       if (userRoadmaps?.length) {
