@@ -6,7 +6,6 @@ import useRoadmapStore from '../store/useRoadmapStore';
 import usePetStore from '../store/usePetStore';
 import { SPLIT_NAME_EN, PLAN_TITLE_EN } from '../services/roadmapGenerator';
 import axiosClient from '../api/axiosClient';
-import { getUserId } from '../utils/userStorage';
 
 export default function Roadmap() {
   const navigate = useNavigate();
@@ -182,9 +181,8 @@ export default function Roadmap() {
           style={{ fontSize: '0.75rem' }}
           onClick={() => {
             if (window.confirm('Reset lộ trình về ngày 1?')) {
-              const userId = getUserId();
-              const key = userId ? `roadmap-data-${userId}` : 'roadmap-data';
-              localStorage.removeItem(key);
+              // Server-only: generateRoadmap POST tạo row lộ trình mới trên server —
+              // tick cũ và advice cũ hết hiệu lực theo row cũ, không có gì để xóa ở client
               generateRoadmap();
             }
           }}
