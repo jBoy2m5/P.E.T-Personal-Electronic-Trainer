@@ -75,6 +75,9 @@ const getInitialState = () => {
 
 const usePetStore = create((set, get) => ({
   ...getInitialState(),
+  petReactionTick: 0, // đếm tăng dần mỗi lần cần pet phản ứng tức thì (rep hợp lệ...); không lưu localStorage/server
+
+  triggerPetReaction: () => set((state) => ({ petReactionTick: (state.petReactionTick || 0) + 1 })),
 
   syncFromBackend: async () => {
     const userId = getUserId();

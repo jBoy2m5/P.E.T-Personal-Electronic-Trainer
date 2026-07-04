@@ -72,6 +72,7 @@ export default function DailyWorkout() {
     const [completedExercises, setCompletedExercises] = useState(getCompletedToday());
     const [dailyData, setDailyData] = useState(null);
     const addExp = usePetStore(state => state.addExp);
+    const triggerPetReaction = usePetStore(state => state.triggerPetReaction);
     const markDayComplete = useRoadmapStore(state => state.markDayComplete);
     const roadmapData = useRoadmapStore(state => state.roadmapData);
     const roadmapInitialized = useRoadmapStore(state => state.initialized);
@@ -101,7 +102,6 @@ export default function DailyWorkout() {
     const suspiciousSetsRef = useRef(0);
     const lastRepsRef = useRef(0); // theo dõi rep hợp lệ mới để pet phản ứng real-time
     const lastRepTimeRef = useRef(0); // chống đối phó: khoảng cách giữa 2 rep liên tiếp quá nhanh
-    const [petBounce, setPetBounce] = useState(0);
 
     // States cho Detailed Exercise Modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -434,7 +434,7 @@ export default function DailyWorkout() {
                             if (tooFast) {
                                 suspiciousSetsRef.current += 1;
                             } else {
-                                setPetBounce(b => b + 1); // pet to lên tức thì rồi co lại, chỉ khi rep đúng nhịp độ
+                                triggerPetReaction(); // pet (widget nổi góc màn hình) pop tức thì, chỉ khi rep đúng nhịp độ
                             }
                         }
                         if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
@@ -758,13 +758,7 @@ export default function DailyWorkout() {
                             <Button variant="link" className="text-white p-0 m-0 text-decoration-none" onClick={() => setShowAIModal(false)}><span className="fs-1 fw-bold text-shadow">&times;</span></Button>
                         </div>
 
-                        {/* Pet animation: to lên tức thì rồi co lại về bình thường mỗi rep hợp lệ */}
-                        <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '200px', right: '24px', zIndex: 2 }}>
-                            {petBounce > 0 && (
-                                <div key={`particle-${petBounce}`} className="pet-happy-particle">💖</div>
-                            )}
-                            <div key={petBounce} className="pet-working pet-cheer" style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>{petIcon}</div>
-                        </div>
+                        {/* Pet phản ứng ở widget FloatingPet (nổi z-index cao trên cả modal này) - xem triggerPetReaction */}
 
                         <div className="mt-auto p-4 rounded-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' }}>
                             <Row className="text-center g-2 mb-4">
@@ -905,18 +899,6 @@ export default function DailyWorkout() {
                 @keyframes pet-rest { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
                 .pet-working { animation: pet-bounce 0.6s ease-in-out infinite; }
                 .pet-resting { animation: pet-rest 1.5s ease-in-out infinite; }
-                @keyframes pet-happy-float {
-                    0% { transform: translateY(0) scale(0.6); opacity: 0; }
-                    20% { opacity: 1; }
-                    100% { transform: translateY(-45px) scale(1.2); opacity: 0; }
-                }
-                .pet-happy-particle {
-                    position: absolute;
-                    top: -10px;
-                    font-size: 1.5rem;
-                    pointer-events: none;
-                    animation: pet-happy-float 0.9s ease-out forwards;
-                }
                 /* Hide scrollbar for Chrome, Safari and Opera */
                 .d-flex.gap-4::-webkit-scrollbar { display: none; }
                 /* Hide scrollbar for IE, Edge and Firefox */

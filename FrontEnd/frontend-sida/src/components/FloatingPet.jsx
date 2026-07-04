@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import petChatbot from '../assets/pet_chatbot.png';
@@ -7,9 +7,12 @@ import usePetStore from '../store/usePetStore';
 export default function FloatingPet() {
   const navigate = useNavigate();
   const [hearts, setHearts] = useState([]);
-  
+  const [pop, setPop] = useState(0);
+  const firstReactionRef = useRef(true);
+
   // Lấy dữ liệu trực tiếp từ Store (tự động re-render khi store thay đổi)
   const currentLevel = usePetStore(state => state.getCurrentLevel());
+  const petReactionTick = usePetStore(state => state.petReactionTick);
 
   const handleHover = () => {
     const newHeart = {
@@ -17,13 +20,21 @@ export default function FloatingPet() {
       x: Math.random() * 40 - 20,
       y: Math.random() * 20 - 10
     };
-    
+
     setHearts(prev => [...prev, newHeart]);
-    
+
     setTimeout(() => {
       setHearts(prev => prev.filter(h => h.id !== newHeart.id));
     }, 1000);
   };
+
+  // Pet là widget cố định (z-index cao, luôn nổi trên mọi modal kể cả camera AI fullscreen)
+  // nên đây mới là pet người dùng thực sự nhìn thấy khi tập -> pop tức thì mỗi rep hợp lệ.
+  useEffect(() => {
+    if (firstReactionRef.current) { firstReactionRef.current = false; return; }
+    setPop(p => p + 1);
+    handleHover();
+  }, [petReactionTick]);
 
   return (
     <>
@@ -76,11 +87,13 @@ export default function FloatingPet() {
             ❤️
           </div>
         ))}
-        {currentLevel.level === 1 ? (
-          <span style={{ fontSize: '5rem', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }}>{currentLevel.icon}</span>
-        ) : (
-          <img src={petChatbot} alt="Pet" style={{ width: '90px', height: '90px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }} />
-        )}
+        <div key={pop} className="pet-pop-wrap">
+          {currentLevel.level === 1 ? (
+            <span style={{ fontSize: '5rem', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }}>{currentLevel.icon}</span>
+          ) : (
+            <img src={petChatbot} alt="Pet" style={{ width: '90px', height: '90px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }} />
+          )}
+        </div>
         <Badge bg="dark" className="position-absolute" style={{
           top: '-10px', right: '-10px',
           fontSize: '0.7rem', padding: '5px 10px', borderRadius: '12px',
@@ -105,6 +118,13 @@ export default function FloatingPet() {
           0% { transform: translateY(0) scale(1); opacity: 1; }
           100% { transform: translateY(-80px) scale(1.2); opacity: 0; }
         }
+        @keyframes floatingPetPop {
+          0% { transform: scale(1); }
+          30% { transform: scale(1.3); }
+          55% { transform: scale(0.95); }
+          100% { transform: scale(1); }
+        }
+        .pet-pop-wrap { animation: floatingPetPop 0.5s ease-out; }
       `}</style>
     </>
   );
