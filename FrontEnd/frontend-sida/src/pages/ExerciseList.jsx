@@ -10,6 +10,9 @@ import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
 const MIN_MS_PER_REP = 500; // ngưỡng nhịp độ hợp lý tối thiểu — set nhanh hơn mức này bị coi là đối phó
+// Icon pet theo mốc tổng EXP — giữ đồng bộ với DailyWorkout.jsx (trang tập AI còn lại)
+const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
+const PET_THRESHOLDS_LIST = [0, 10, 50, 150, 300, 600, 1200, 2500];
 
 
 const getTodayKey = () => {
@@ -68,6 +71,9 @@ export default function ExerciseList() {
     const { t, i18n } = useTranslation();
     const isVi = (i18n.language || '').toLowerCase().startsWith('vi');
     const addExp = usePetStore((s) => s.addExp);
+    const triggerPetReaction = usePetStore((s) => s.triggerPetReaction);
+    const totalPoints = usePetStore((s) => s.totalPoints);
+    const petIcon = PET_ICONS_LIST[PET_THRESHOLDS_LIST.filter(th => totalPoints >= th).length - 1] || '🥚';
 
     const [groupData, setGroupData] = useState({ name: '', desc: '', exercises: [] });
     const [loading, setLoading] = useState(true);
@@ -117,6 +123,9 @@ export default function ExerciseList() {
     const needsResetRef = useRef(true); // báo AI server reset bộ đếm khi bắt đầu Set mới
     const setStartTimeRef = useRef(0); // chống đối phó: set hoàn thành quá nhanh so với target
     const suspiciousSetsRef = useRef(0);
+    const lastRepsRef = useRef(0); // theo dõi rep hợp lệ mới để pet phản ứng real-time
+    const lastRepTimeRef = useRef(0); // chống đối phó: khoảng cách giữa 2 rep liên tiếp quá nhanh
+    const [repReward, setRepReward] = useState(0); // tăng mỗi rep hợp lệ → pet trái pop + tim
 
     // States cho Detailed Exercise Modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -284,6 +293,9 @@ export default function ExerciseList() {
                     needsResetRef.current = true;
                     setStartTimeRef.current = Date.now();
                     suspiciousSetsRef.current = 0;
+                    lastRepsRef.current = 0;
+                    lastRepTimeRef.current = 0;
+                    setRepReward(0);
                     setAiStatus("Đang yêu cầu quyền Camera...");
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } });
                     streamRef.current = stream;
@@ -297,6 +309,20 @@ export default function ExerciseList() {
                         const data = JSON.parse(event.data);
                         setAiStatus(data.feedback || "Đang theo dõi...");
                         setSimReps(data.reps || 0);
+                        if ((data.reps || 0) > lastRepsRef.current) {
+                            lastRepsRef.current = data.reps;
+                            const now = Date.now();
+                            // rep cách rep trước nhanh hơn nhịp độ người thật hợp lý -> nghi đối phó,
+                            // không thưởng pet + tính vào cờ chống đối phó (không chỉ dựa tốc độ TB cả set)
+                            const tooFast = lastRepTimeRef.current > 0 && (now - lastRepTimeRef.current) < MIN_MS_PER_REP;
+                            lastRepTimeRef.current = now;
+                            if (tooFast) {
+                                suspiciousSetsRef.current += 1;
+                            } else {
+                                setRepReward(r => r + 1); // pet trái trong khung camera pop + tim
+                                triggerPetReaction();     // pet nổi góc phải cũng phản ứng
+                            }
+                        }
                         if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
                             handleSetComplete();
                         }
@@ -370,6 +396,8 @@ export default function ExerciseList() {
                         setAiStatus('Nghỉ ngơi 1 lát...');
                         setSimReps(0);
                         needsResetRef.current = true;
+                        lastRepsRef.current = 0;
+                        lastRepTimeRef.current = 0;
                         setTimeout(() => {
                             setStartTimeRef.current = Date.now();
                             if (showAIModal) { sendFrames(); }
@@ -612,6 +640,27 @@ export default function ExerciseList() {
                             </Button>
                         </div>
 
+                        {/* Pet đồng hành cố định bên TRÁI trong lúc tập AI — đối xứng với FloatingPet bên phải.
+                            Luôn hiện suốt buổi tập, riêng animation phóng to + tim chỉ chạy khi rep đúng nhịp độ. */}
+                        <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '30px', left: '30px', zIndex: 2, pointerEvents: 'none' }}>
+                            <div style={{
+                                position: 'absolute', width: '150px', height: '150px', borderRadius: '50%',
+                                background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.18) 0%, transparent 70%)',
+                                animation: 'breathe 3s ease-in-out infinite', filter: 'blur(8px)'
+                            }}></div>
+                            <div className="position-relative d-flex flex-column align-items-center">
+                                {repReward > 0 && (
+                                    <>
+                                        <div key={`heart-${repReward}`} className="rep-reward-heart">💖</div>
+                                        <div key={`plus-${repReward}`} className="rep-reward-plus">+1</div>
+                                    </>
+                                )}
+                                <div key={`petleft-pop-${repReward}`} className={repReward > 0 ? 'rep-reward-pet' : ''}>
+                                    <div className="pet-working" style={{ fontSize: '5rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="mt-auto p-4 rounded-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' }}>
                             <Row className="text-center g-2 mb-4">
                                 <Col xs={6}>
@@ -821,6 +870,39 @@ export default function ExerciseList() {
                 @keyframes blink-anim {
                     0%, 100% { opacity: 1; }
                     50% { opacity: 0; }
+                }
+                /* Pet đồng hành + phần thưởng mỗi rep hợp lệ — giữ đồng bộ với DailyWorkout.jsx */
+                @keyframes pet-bounce {
+                    0%, 100% { transform: translateY(0) scale(1); }
+                    50% { transform: translateY(-12px) scale(1.1); }
+                }
+                .pet-working { animation: pet-bounce 0.6s ease-in-out infinite; }
+                @keyframes repRewardPop {
+                    0% { transform: scale(1); }
+                    35% { transform: scale(1.6) rotate(-4deg); }
+                    60% { transform: scale(0.92) rotate(3deg); }
+                    100% { transform: scale(1) rotate(0); }
+                }
+                .rep-reward-pet { animation: repRewardPop 0.55s ease-out; }
+                @keyframes repRewardHeartFloat {
+                    0% { transform: translateY(0) scale(0.6); opacity: 0; }
+                    25% { opacity: 1; }
+                    100% { transform: translateY(-70px) scale(1.3); opacity: 0; }
+                }
+                .rep-reward-heart {
+                    position: absolute; top: -20px; font-size: 2rem;
+                    pointer-events: none; animation: repRewardHeartFloat 0.9s ease-out forwards;
+                }
+                @keyframes repRewardPlusFloat {
+                    0% { transform: translateY(0); opacity: 0; }
+                    25% { opacity: 1; }
+                    100% { transform: translateY(-55px); opacity: 0; }
+                }
+                .rep-reward-plus {
+                    position: absolute; top: -8px; right: -34px;
+                    color: var(--brand-neon); font-weight: 900; font-size: 1.6rem;
+                    text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+                    pointer-events: none; animation: repRewardPlusFloat 0.9s ease-out forwards;
                 }
             `}</style>
         </Container>
