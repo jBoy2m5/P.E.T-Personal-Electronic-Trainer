@@ -38,6 +38,10 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Không có 2 cờ này, service worker mới cài xong sẽ nằm "waiting" mãi khi còn tab cũ
+        // mở — bundle cũ tiếp tục được phục vụ vô thời hạn dù đã deploy bản mới lên Vercel.
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {

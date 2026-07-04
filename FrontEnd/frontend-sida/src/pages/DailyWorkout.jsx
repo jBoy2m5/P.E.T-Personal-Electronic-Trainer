@@ -761,9 +761,15 @@ export default function DailyWorkout() {
                             <Button variant="link" className="text-white p-0 m-0 text-decoration-none" onClick={() => setShowAIModal(false)}><span className="fs-1 fw-bold text-shadow">&times;</span></Button>
                         </div>
 
-                        {/* Phần thưởng tức thời trong khung camera: pet to bật lên + tim mỗi rep hợp lệ.
-                            Đặt ngay giữa khung, to rõ để không bỏ lỡ (khác pet nhỏ ở góc). */}
-                        <div className="d-flex justify-content-center align-items-end" style={{ position: 'absolute', bottom: '210px', left: 0, width: '100%', zIndex: 2, pointerEvents: 'none' }}>
+                        {/* Pet đồng hành cố định bên TRÁI trong lúc tập AI — đối xứng với FloatingPet cố định
+                            bên phải. Luôn hiện suốt buổi tập (đúng hay sai vẫn ở đó, không chỉ chớp nhoáng
+                            lúc có rep), riêng animation phóng to + tim chỉ chạy khi rep đúng nhịp độ. */}
+                        <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '30px', left: '30px', zIndex: 2, pointerEvents: 'none' }}>
+                            <div style={{
+                                position: 'absolute', width: '150px', height: '150px', borderRadius: '50%',
+                                background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.18) 0%, transparent 70%)',
+                                animation: 'breathe 3s ease-in-out infinite', filter: 'blur(8px)'
+                            }}></div>
                             <div className="position-relative d-flex flex-column align-items-center">
                                 {repReward > 0 && (
                                     <>
@@ -771,7 +777,9 @@ export default function DailyWorkout() {
                                         <div key={`plus-${repReward}`} className="rep-reward-plus">+1</div>
                                     </>
                                 )}
-                                <div key={`petbig-${repReward}`} className={repReward > 0 ? 'rep-reward-pet' : ''} style={{ fontSize: '4.5rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
+                                <div key={`petleft-pop-${repReward}`} className={repReward > 0 ? 'rep-reward-pet' : ''}>
+                                    <div className="pet-working" style={{ fontSize: '5rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
+                                </div>
                             </div>
                         </div>
 

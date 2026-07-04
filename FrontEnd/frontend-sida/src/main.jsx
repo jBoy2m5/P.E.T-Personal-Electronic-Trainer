@@ -6,8 +6,14 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './i18n'; // Khởi tạo i18n
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { sanitizeStoredUserData } from './utils/userStorage';
+import { registerSW } from 'virtual:pwa-register';
 
 const clientId = "691147162344-2iulu9dr1tm8e2olaqtvsjtrq26mkj0d.apps.googleusercontent.com";
+
+// Không có bước này, service worker cũ vẫn phục vụ bundle cũ dù Vercel đã deploy bản mới —
+// trước đây phải tự vào DevTools unregister mới thấy code mới. Tự reload 1 lần khi có bản
+// mới để luôn chạy đúng bản vừa deploy mà không cần thao tác thủ công.
+registerSW({ immediate: true, onNeedRefresh() { window.location.reload(); } });
 
 // Dọn bmi lỡ lưu trong localStorage từ phiên bản cũ — BMI chỉ được phép tồn tại ở server DB
 sanitizeStoredUserData();
