@@ -36,6 +36,14 @@ const TARGET_EN = {
     'Chân': 'Legs', 'Mông': 'Glutes', 'Core': 'Core', 'Cardio': 'Cardio'
 };
 
+// DB KHÔNG có nhóm cơ tên 'Core' hay 'Cardio' — nhóm bụng tên 'Bụng', động tác kỹ năng/động
+// (bear crawl, handstand...) nằm ở nhóm 'Skills'. Các split của generator lại dùng nhãn
+// 'Core'/'Cardio', nên phải ánh xạ về tên nhóm THẬT trước khi lọc; nếu không filter ra rỗng
+// khiến ngày tập chỉ còn 1 bài (vd Skills ngày 1 targets ['Core','Vai'] → chỉ còn Wall Handstand Hold).
+const TARGET_ALIAS = { 'Core': 'Bụng', 'Cardio': 'Skills' };
+// Ngày tập ra ít hơn mức này (do nhóm mục tiêu rỗng hoặc trùng bài) sẽ được bù thêm từ pool chung.
+const MIN_EX_PER_WORKDAY = 3;
+
 export const generateDynamicRoadmap = (userData, exercises = []) => {
     const isBeginner = userData.fitnessLevel === 'Mới bắt đầu' || userData.fitnessLevel === 'Đã có nền tảng';
     const isFatLoss = userData.goal.toLowerCase().includes('giảm');
@@ -114,9 +122,10 @@ export const generateDynamicRoadmap = (userData, exercises = []) => {
         let usedIds = new Set();
 
         targets.forEach(target => {
-            // Filter pool
-            let pool = exercises.filter(ex => ex.target === target);
-            
+            // Filter pool — ánh xạ nhãn split ('Core'/'Cardio') về tên nhóm cơ thật trong DB
+            const realTarget = TARGET_ALIAS[target] || target;
+            let pool = exercises.filter(ex => ex.target === realTarget);
+
             // Modifier: No Jumps if Overweight
             if (isOverweight) {
                 pool = pool.filter(ex => !ex.isJump);
@@ -148,6 +157,19 @@ export const generateDynamicRoadmap = (userData, exercises = []) => {
                 }
             }
         });
+
+        // 3b. Bù bài nếu split ra quá ít (nhóm mục tiêu rỗng/trùng) — không để ngày tập chỉ 1 bài.
+        // Lấy thêm từ toàn bộ pool phù hợp cấp độ/thể trạng, chọn ổn định theo workDayIndex.
+        if (picked.length < MIN_EX_PER_WORKDAY) {
+            let topupPool = exercises.filter(ex => !usedIds.has(ex.id));
+            if (isOverweight) topupPool = topupPool.filter(ex => !ex.isJump);
+            let leveled = topupPool.filter(ex => isBeginner ? ex.level === 'Cơ bản' : ex.level !== 'Cơ bản');
+            if (leveled.length === 0) leveled = topupPool;
+            for (let i = 0; picked.length < MIN_EX_PER_WORKDAY && i < leveled.length; i++) {
+                const ex = leveled[(workDayIndex + userData.height + i) % leveled.length];
+                if (!usedIds.has(ex.id)) { picked.push({...ex}); usedIds.add(ex.id); }
+            }
+        }
 
         // 4. Assign Volume
         picked = picked.map(ex => {
