@@ -9,6 +9,7 @@ import { SPLIT_NAME_EN } from '../services/roadmapGenerator';
 import { useTranslation } from 'react-i18next';
 import axiosClient from '../api/axiosClient';
 import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
+import petChatbot from '../assets/pet_chatbot.png';
 
 const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
 const PET_THRESHOLDS_LIST = [0, 10, 50, 150, 300, 600, 1200, 2500];
@@ -766,7 +767,7 @@ export default function DailyWorkout() {
                             lúc có rep), riêng animation phóng to + tim chỉ chạy khi rep đúng nhịp độ. */}
                         <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '30px', left: '30px', zIndex: 2, pointerEvents: 'none' }}>
                             <div style={{
-                                position: 'absolute', width: '150px', height: '150px', borderRadius: '50%',
+                                position: 'absolute', width: '180px', height: '180px', borderRadius: '50%',
                                 background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.18) 0%, transparent 70%)',
                                 animation: 'breathe 3s ease-in-out infinite', filter: 'blur(8px)'
                             }}></div>
@@ -778,7 +779,12 @@ export default function DailyWorkout() {
                                     </>
                                 )}
                                 <div key={`petleft-pop-${repReward}`} className={repReward > 0 ? 'rep-reward-pet' : ''}>
-                                    <div className="pet-working" style={{ fontSize: '5rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
+                                    {/* Cùng ảnh mèo với FloatingPet bên phải (level 1 vẫn là trứng), to hơn một chút, không huy hiệu level */}
+                                    {totalPoints >= 10 ? (
+                                        <img src={petChatbot} alt="Pet" className="pet-working" style={{ width: '160px', height: '160px', objectFit: 'contain', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }} />
+                                    ) : (
+                                        <div className="pet-working" style={{ fontSize: '5rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
+                                    )}
                                 </div>
                             </div>
                         </div>

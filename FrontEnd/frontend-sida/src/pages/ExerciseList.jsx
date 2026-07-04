@@ -7,6 +7,7 @@ import axiosClient from '../api/axiosClient';
 import usePetStore from '../store/usePetStore';
 import confetti from 'canvas-confetti';
 import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
+import petChatbot from '../assets/pet_chatbot.png';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
 const MIN_MS_PER_REP = 500; // ngưỡng nhịp độ hợp lý tối thiểu — set nhanh hơn mức này bị coi là đối phó
@@ -644,7 +645,7 @@ export default function ExerciseList() {
                             Luôn hiện suốt buổi tập, riêng animation phóng to + tim chỉ chạy khi rep đúng nhịp độ. */}
                         <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '30px', left: '30px', zIndex: 2, pointerEvents: 'none' }}>
                             <div style={{
-                                position: 'absolute', width: '150px', height: '150px', borderRadius: '50%',
+                                position: 'absolute', width: '180px', height: '180px', borderRadius: '50%',
                                 background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.18) 0%, transparent 70%)',
                                 animation: 'breathe 3s ease-in-out infinite', filter: 'blur(8px)'
                             }}></div>
@@ -656,7 +657,12 @@ export default function ExerciseList() {
                                     </>
                                 )}
                                 <div key={`petleft-pop-${repReward}`} className={repReward > 0 ? 'rep-reward-pet' : ''}>
-                                    <div className="pet-working" style={{ fontSize: '5rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
+                                    {/* Cùng ảnh mèo với FloatingPet bên phải (level 1 vẫn là trứng), to hơn một chút, không huy hiệu level */}
+                                    {totalPoints >= 10 ? (
+                                        <img src={petChatbot} alt="Pet" className="pet-working" style={{ width: '160px', height: '160px', objectFit: 'contain', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }} />
+                                    ) : (
+                                        <div className="pet-working" style={{ fontSize: '5rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
+                                    )}
                                 </div>
                             </div>
                         </div>
