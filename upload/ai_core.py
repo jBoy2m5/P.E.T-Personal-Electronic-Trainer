@@ -19,6 +19,7 @@ class FitnessTracker:
         self.stage = None
         self.last_feedback = "WAITING FOR DETECTIONS..."
         self.current_angle = 0
+        self.display_time = 0  # Thời gian hiển thị cho Frontend
         
         # Các biến đặc thù
         self.total_plank_time = 0
@@ -55,6 +56,7 @@ class FitnessTracker:
         self.last_feedback = "READY"
         self.hang_shoulder_y = 0
         self.current_angle = 0
+        self.display_time = 0
 
     def _calculate_angle(self, a, b, c):
         a, b, c = np.array(a), np.array(b), np.array(c)
@@ -80,13 +82,11 @@ class FitnessTracker:
         image.flags.writeable = False 
         results = self.pose.process(image)
         
-        display_time = self.total_handstand_time if app_mode == "HANDSTAND" else self.total_plank_time
-        
         # Dữ liệu API chuẩn bị gửi đi
         api_response = {
             "mode": app_mode,
             "reps": self.counter,
-            "timer": round(display_time, 2),
+            "timer": round(self.display_time, 2),
             "feedback": self.last_feedback,
             "stage": self.stage,
             "angle": int(self.current_angle),
@@ -315,7 +315,6 @@ class FitnessTracker:
                     if not self.is_handstanding:
                         self.is_handstanding = True
                         self.handstand_start_time = time.time()
-                    display_time = self.total_handstand_time + (time.time() - self.handstand_start_time)
 
         # --------------------------------------------------
         # PLANK: Chống đứng + Feedback hông chi tiết
@@ -337,7 +336,6 @@ class FitnessTracker:
                     if not self.is_planking:
                         self.is_planking = True
                         self.plank_start_time = time.time()
-                    display_time = self.total_plank_time + (time.time() - self.plank_start_time)
                 else:
                     if self.is_planking:
                         self.is_planking = False
@@ -347,10 +345,20 @@ class FitnessTracker:
                     else: self.last_feedback = "STRAIGHTEN YOUR LEGS!"
                 
         # Cập nhật kết quả cuối cùng trước khi trả về Frontend
+        # Tính display_time LUÔN LUÔN ở đây — đảm bảo chính xác bất kể code path
+        if self.is_planking:
+            self.display_time = self.total_plank_time + (time.time() - self.plank_start_time)
+        elif self.is_handstanding:
+            self.display_time = self.total_handstand_time + (time.time() - self.handstand_start_time)
+        elif app_mode == "PLANK":
+            self.display_time = self.total_plank_time
+        elif app_mode == "HANDSTAND":
+            self.display_time = self.total_handstand_time
+
         api_response["reps"] = self.counter
         api_response["feedback"] = self.last_feedback
         api_response["stage"] = self.stage
-        api_response["timer"] = round(display_time, 2)
+        api_response["timer"] = round(self.display_time, 2)
         api_response["angle"] = int(self.current_angle)
         
         return api_response
