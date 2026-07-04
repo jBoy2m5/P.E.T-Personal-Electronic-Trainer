@@ -3,7 +3,7 @@ import { Navbar, Nav, Container, Dropdown } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import logo from '../assets/logo-black.png';
-import { getUnclaimedCount } from '../services/rewards';
+import { getUnclaimedDailyMissionCount } from '../services/rewards';
 
 export default function TopNav() {
   const { t, i18n } = useTranslation();
@@ -32,6 +32,8 @@ export default function TopNav() {
       const data = localStorage.getItem('user-data');
       setUserData(data ? JSON.parse(data) : null);
       setIsAuthenticated(!!data);
+      // Cập nhật badge nhiệm vụ Missions mỗi nhịp để phản ánh việc vừa tập/nhận ở trang khác
+      setUnclaimedTasks(getUnclaimedDailyMissionCount());
     };
     window.addEventListener('storage', handleStorageChange);
     const interval = setInterval(handleStorageChange, 1000); // Check every second to respond inside the same tab
@@ -52,7 +54,7 @@ export default function TopNav() {
       if (saved) {
         setNotifications(JSON.parse(saved));
       }
-      setUnclaimedTasks(getUnclaimedCount());
+      setUnclaimedTasks(getUnclaimedDailyMissionCount());
     };
     loadNotifs();
     window.addEventListener('storage', loadNotifs);

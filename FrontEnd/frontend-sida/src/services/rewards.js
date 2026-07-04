@@ -88,23 +88,39 @@ export const getDailyMissions = (dateKey, roadmapData = [], allExercises = []) =
   return shuffled.slice(0, 3);
 };
 
-export const getUnclaimedCount = () => {
-  let count = 0;
+// Đọc userId + lộ trình + trạng thái pet daily (bài đã tập / nhiệm vụ đã nhận hôm nay) từ localStorage.
+const readDailyState = () => {
   const todayKey = getTodayKey();
-
   try {
     const userData = localStorage.getItem('user-data');
     const userId = userData ? JSON.parse(userData)?.userId : null;
-    const key = userId ? `pet-daily-${userId}` : 'pet-daily';
-    const saved = localStorage.getItem(key);
-    const data = saved ? JSON.parse(saved) : {};
-    const claimedToday = data.claimedMissions?.[todayKey] || [];
-    const trainedToday = data.exercisesTrained || [];
+    const pet = JSON.parse(localStorage.getItem(userId ? `pet-daily-${userId}` : 'pet-daily') || '{}');
+    const roadmapData = JSON.parse(localStorage.getItem(userId ? `roadmap-data-${userId}` : 'roadmap-data') || '[]');
+    // exercisesTrained chỉ tính nếu là của HÔM NAY (pet.date), tránh dính dữ liệu ngày cũ
+    const trainedToday = pet.date === todayKey ? (pet.exercisesTrained || []) : [];
+    const claimedToday = pet.claimedMissions?.[todayKey] || [];
+    return { roadmapData, trainedToday, claimedToday };
+  } catch {
+    return { roadmapData: [], trainedToday: [], claimedToday: [] };
+  }
+};
 
-    if (!claimedToday.includes('login')) count += 1;
-    if (trainedToday.length > 0 && !claimedToday.includes('exercise_1')) count += 1;
-    if (trainedToday.length >= 3 && !claimedToday.includes('exercise_3')) count += 1;
-  } catch { /* ignore */ }
-
+// Nhiệm vụ PET (login / hoàn thành 1 bài / hoàn thành 3 bài) — nhận Ở TRANG PET.
+// Hàm thuần: nhận trạng thái đã tập/đã nhận hôm nay, trả về số nhiệm vụ đủ điều kiện nhưng CHƯA nhận
+// → dùng để hiện chấm đỏ TRÊN CON PET (không phải trên nav Missions).
+export const getUnclaimedPetMissionCount = (trainedToday = [], claimedToday = []) => {
+  let count = 0;
+  if (!claimedToday.includes('login')) count += 1;
+  if (trainedToday.length > 0 && !claimedToday.includes('exercise_1')) count += 1;
+  if (trainedToday.length >= 3 && !claimedToday.includes('exercise_3')) count += 1;
   return count;
+};
+
+// Nhiệm vụ MISSIONS (bài của lộ trình hôm nay) — nhận Ở TRANG MISSIONS.
+// Trả về số nhiệm vụ đã TẬP nhưng CHƯA nhận thưởng → dùng cho chấm đỏ TRÊN NAV MISSIONS.
+// Đọc thẳng localStorage nên đúng ở mọi trang (không phụ thuộc store đã load hay chưa).
+export const getUnclaimedDailyMissionCount = () => {
+  const { roadmapData, trainedToday, claimedToday } = readDailyState();
+  const missions = getDailyMissions(getTodayKey(), roadmapData, []);
+  return missions.filter(m => trainedToday.includes(m.title) && !claimedToday.includes(m.id)).length;
 };

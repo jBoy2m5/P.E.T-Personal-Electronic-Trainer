@@ -2,13 +2,13 @@ import React from 'react';
 import { Nav } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { getUnclaimedCount } from '../services/rewards';
+import { getUnclaimedDailyMissionCount } from '../services/rewards';
 
 export default function BottomNav() {
   const { t } = useTranslation();
   const location = useLocation();
-  // Chỉ hiện số nhiệm vụ chưa nhận khi đã đăng nhập
-  const unclaimedTasks = localStorage.getItem('user-data') ? getUnclaimedCount() : 0;
+  // Badge nav Missions = nhiệm vụ lộ trình đã tập nhưng chưa nhận (nhiệm vụ Pet báo ở con pet, không ở đây)
+  const unclaimedTasks = localStorage.getItem('user-data') ? getUnclaimedDailyMissionCount() : 0;
 
   // Không hiện BottomNav ở trang đăng nhập hoặc onboarding
   if (location.pathname === '/login' || location.pathname === '/onboarding') {
