@@ -13,6 +13,7 @@ export default function FloatingPet() {
   // Lấy dữ liệu trực tiếp từ Store (tự động re-render khi store thay đổi)
   const currentLevel = usePetStore(state => state.getCurrentLevel());
   const petReactionTick = usePetStore(state => state.petReactionTick);
+  const aiWorkoutActive = usePetStore(state => state.aiWorkoutActive);
 
   const handleHover = () => {
     const newHeart = {
@@ -36,11 +37,14 @@ export default function FloatingPet() {
     handleHover();
   }, [petReactionTick]);
 
+  // Đang tập với camera AI → nhường chỗ cho pet đồng hành trong khung camera, ẩn widget góc phải
+  if (aiWorkoutActive) return null;
+
   return (
     <>
       {/* Floating Button */}
-      <div 
-        className="floating-pet-container"
+      <div
+        className="floating-pet-container pet-select-none"
         onClick={() => navigate('/pet')}
         style={{
           position: 'fixed',
@@ -91,7 +95,7 @@ export default function FloatingPet() {
           {currentLevel.level === 1 ? (
             <span style={{ fontSize: '7rem', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }}>{currentLevel.icon}</span>
           ) : (
-            <img src={petChatbot} alt="Pet" style={{ width: '130px', height: '130px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }} />
+            <img src={petChatbot} alt="Pet" draggable={false} style={{ width: '130px', height: '130px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }} />
           )}
         </div>
         <Badge bg="dark" className="position-absolute" style={{

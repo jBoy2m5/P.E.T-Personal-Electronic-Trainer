@@ -86,8 +86,10 @@ const usePetStore = create((set, get) => ({
   ...getInitialState(),
   petReactionTick: 0, // đếm tăng dần mỗi lần cần pet phản ứng tức thì (rep hợp lệ...); không lưu localStorage/server
   userWeight: null, // cân nặng thật lấy tươi từ server mỗi lần sync — KHÔNG lưu localStorage (chính sách số đo cơ thể)
+  aiWorkoutActive: false, // đang mở camera tập AI → ẩn FloatingPet góc phải, chỉ giữ pet đồng hành trong khung
 
   triggerPetReaction: () => set((state) => ({ petReactionTick: (state.petReactionTick || 0) + 1 })),
+  setAiWorkoutActive: (active) => set({ aiWorkoutActive: !!active }),
 
   syncFromBackend: async () => {
     const userId = getUserId();

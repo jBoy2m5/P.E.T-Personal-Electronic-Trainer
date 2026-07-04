@@ -74,6 +74,7 @@ export default function DailyWorkout() {
     const [dailyData, setDailyData] = useState(null);
     const addExp = usePetStore(state => state.addExp);
     const triggerPetReaction = usePetStore(state => state.triggerPetReaction);
+    const setAiWorkoutActive = usePetStore(state => state.setAiWorkoutActive);
     const markDayComplete = useRoadmapStore(state => state.markDayComplete);
     const roadmapData = useRoadmapStore(state => state.roadmapData);
     const roadmapInitialized = useRoadmapStore(state => state.initialized);
@@ -149,6 +150,12 @@ export default function DailyWorkout() {
     useEffect(() => {
         if (!roadmapInitialized) loadRoadmap();
     }, [roadmapInitialized, loadRoadmap]);
+
+    // Đang mở camera AI → ẩn FloatingPet góc phải (chỉ giữ pet đồng hành trong khung)
+    useEffect(() => {
+        setAiWorkoutActive(showAIModal);
+        return () => setAiWorkoutActive(false);
+    }, [showAIModal, setAiWorkoutActive]);
 
     useEffect(() => {
         let dayInfo = {
@@ -755,19 +762,20 @@ export default function DailyWorkout() {
                             <div className="text-start">
                                 <Badge bg="danger" className="mb-2 fw-bold px-3 py-2 rounded-pill" style={{ animation: 'blink-anim 1s infinite' }}>🔴 AI DETECTING</Badge>
                                 <h4 className="fw-black text-white mb-0 text-uppercase text-shadow">{currentExercise && t(`exercises.${currentExercise.exercise_id}`, currentExercise.name)}</h4>
-                                <div style={{ color: 'var(--brand-neon)', fontSize: '1rem', fontWeight: '900', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                                {/* Chỉ dẫn form từ AI (vd "MOVE TO CENTER OF FRAME") — cỡ chữ lớn để đọc được từ xa khi đang tập */}
+                                <div style={{ color: 'var(--brand-neon)', fontSize: '2rem', fontWeight: '900', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
                                     {aiStatus}
                                 </div>
                             </div>
                             <Button variant="link" className="text-white p-0 m-0 text-decoration-none" onClick={() => setShowAIModal(false)}><span className="fs-1 fw-bold text-shadow">&times;</span></Button>
                         </div>
 
-                        {/* Pet đồng hành cố định bên TRÁI trong lúc tập AI — đối xứng với FloatingPet cố định
-                            bên phải. Luôn hiện suốt buổi tập (đúng hay sai vẫn ở đó, không chỉ chớp nhoáng
-                            lúc có rep), riêng animation phóng to + tim chỉ chạy khi rep đúng nhịp độ. */}
-                        <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '30px', left: '30px', zIndex: 2, pointerEvents: 'none' }}>
+                        {/* Pet đồng hành duy nhất trong lúc tập AI (FloatingPet góc phải được ẩn đi).
+                            Luôn hiện suốt buổi tập, dịch lên ngang tầm số tiến độ reps; animation
+                            phóng to + tim chỉ chạy khi rep đúng nhịp độ. */}
+                        <div className="position-absolute d-flex flex-column align-items-center pet-select-none" style={{ bottom: '120px', left: '30px', zIndex: 2, pointerEvents: 'none' }}>
                             <div style={{
-                                position: 'absolute', width: '180px', height: '180px', borderRadius: '50%',
+                                position: 'absolute', width: '340px', height: '340px', borderRadius: '50%',
                                 background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.18) 0%, transparent 70%)',
                                 animation: 'breathe 3s ease-in-out infinite', filter: 'blur(8px)'
                             }}></div>
@@ -779,11 +787,11 @@ export default function DailyWorkout() {
                                     </>
                                 )}
                                 <div key={`petleft-pop-${repReward}`} className={repReward > 0 ? 'rep-reward-pet' : ''}>
-                                    {/* Cùng ảnh mèo với FloatingPet bên phải (level 1 vẫn là trứng), to hơn một chút, không huy hiệu level */}
+                                    {/* Cùng ảnh mèo với pet ở trang Pet (level 1 vẫn là trứng), không huy hiệu level */}
                                     {totalPoints >= 10 ? (
-                                        <img src={petChatbot} alt="Pet" className="pet-working" style={{ width: '160px', height: '160px', objectFit: 'contain', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }} />
+                                        <img src={petChatbot} alt="Pet" draggable={false} className="pet-working" style={{ width: '320px', height: '320px', objectFit: 'contain', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }} />
                                     ) : (
-                                        <div className="pet-working" style={{ fontSize: '5rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
+                                        <div className="pet-working" style={{ fontSize: '10rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
                                     )}
                                 </div>
                             </div>
