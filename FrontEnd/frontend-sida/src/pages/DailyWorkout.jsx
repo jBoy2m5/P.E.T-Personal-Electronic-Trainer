@@ -100,6 +100,7 @@ export default function DailyWorkout() {
     const setStartTimeRef = useRef(0); // chống đối phó: set hoàn thành quá nhanh so với target
     const suspiciousSetsRef = useRef(0);
     const lastRepsRef = useRef(0); // theo dõi rep hợp lệ mới để pet phản ứng real-time
+    const lastRepTimeRef = useRef(0); // chống đối phó: khoảng cách giữa 2 rep liên tiếp quá nhanh
     const [petBounce, setPetBounce] = useState(0);
 
     // States cho Detailed Exercise Modal
@@ -409,6 +410,7 @@ export default function DailyWorkout() {
                     setStartTimeRef.current = Date.now();
                     suspiciousSetsRef.current = 0;
                     lastRepsRef.current = 0;
+                    lastRepTimeRef.current = 0;
                     setAiStatus("Đang yêu cầu quyền Camera...");
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } });
                     streamRef.current = stream;
@@ -424,7 +426,16 @@ export default function DailyWorkout() {
                         setSimReps(data.reps || 0);
                         if ((data.reps || 0) > lastRepsRef.current) {
                             lastRepsRef.current = data.reps;
-                            setPetBounce(b => b + 1); // pet phản ứng ngay khi có rep hợp lệ mới
+                            const now = Date.now();
+                            // rep cách rep trước nhanh hơn nhịp độ người thật hợp lý -> nghi đối phó,
+                            // không thưởng pet + tính vào cờ chống đối phó (không chỉ dựa tốc độ TB cả set)
+                            const tooFast = lastRepTimeRef.current > 0 && (now - lastRepTimeRef.current) < MIN_MS_PER_REP;
+                            lastRepTimeRef.current = now;
+                            if (tooFast) {
+                                suspiciousSetsRef.current += 1;
+                            } else {
+                                setPetBounce(b => b + 1); // pet to lên tức thì rồi co lại, chỉ khi rep đúng nhịp độ
+                            }
                         }
                         if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
                             handleSetComplete();
@@ -505,6 +516,7 @@ export default function DailyWorkout() {
                         setSimReps(0);
                         needsResetRef.current = true;
                         lastRepsRef.current = 0;
+                        lastRepTimeRef.current = 0;
                         setTimeout(() => {
                             setStartTimeRef.current = Date.now();
                             if (showAIModal) { sendFrames(); }
@@ -746,8 +758,11 @@ export default function DailyWorkout() {
                             <Button variant="link" className="text-white p-0 m-0 text-decoration-none" onClick={() => setShowAIModal(false)}><span className="fs-1 fw-bold text-shadow">&times;</span></Button>
                         </div>
 
-                        {/* Pet animation */}
+                        {/* Pet animation: to lên tức thì rồi co lại về bình thường mỗi rep hợp lệ */}
                         <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '200px', right: '24px', zIndex: 2 }}>
+                            {petBounce > 0 && (
+                                <div key={`particle-${petBounce}`} className="pet-happy-particle">💖</div>
+                            )}
                             <div key={petBounce} className="pet-working pet-cheer" style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>{petIcon}</div>
                         </div>
 
@@ -890,6 +905,18 @@ export default function DailyWorkout() {
                 @keyframes pet-rest { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
                 .pet-working { animation: pet-bounce 0.6s ease-in-out infinite; }
                 .pet-resting { animation: pet-rest 1.5s ease-in-out infinite; }
+                @keyframes pet-happy-float {
+                    0% { transform: translateY(0) scale(0.6); opacity: 0; }
+                    20% { opacity: 1; }
+                    100% { transform: translateY(-45px) scale(1.2); opacity: 0; }
+                }
+                .pet-happy-particle {
+                    position: absolute;
+                    top: -10px;
+                    font-size: 1.5rem;
+                    pointer-events: none;
+                    animation: pet-happy-float 0.9s ease-out forwards;
+                }
                 /* Hide scrollbar for Chrome, Safari and Opera */
                 .d-flex.gap-4::-webkit-scrollbar { display: none; }
                 /* Hide scrollbar for IE, Edge and Firefox */
