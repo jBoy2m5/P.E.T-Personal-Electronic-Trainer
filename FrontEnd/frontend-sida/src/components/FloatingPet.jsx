@@ -70,18 +70,6 @@ export default function FloatingPet() {
         }}
         onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1) translateY(0)'}
       >
-        {/* Neon glow ring behind pet */}
-        <div style={{
-          position: 'absolute',
-          width: '150px',
-          height: '150px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.18) 0%, transparent 70%)',
-          animation: 'breathe 3s ease-in-out infinite',
-          filter: 'blur(8px)',
-          pointerEvents: 'none'
-        }}></div>
-
         {hearts.map(heart => (
           <div 
             key={heart.id} 
@@ -105,8 +93,9 @@ export default function FloatingPet() {
             <img src={petChatbot} alt="Pet" draggable={false} style={{ width: '130px', height: '130px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }} />
           )}
         </div>
+        {/* Huy hiệu Lv — kéo vào sát pet (viền ảnh có phần trong suốt nên đặt lùi vào trong) */}
         <Badge bg="dark" className="position-absolute" style={{
-          top: '-10px', right: '-10px',
+          top: '18px', right: '14px',
           fontSize: '0.7rem', padding: '5px 10px', borderRadius: '12px',
           border: '2px solid var(--brand-neon)',
           color: 'var(--brand-neon)',
@@ -119,10 +108,10 @@ export default function FloatingPet() {
           Lv.{currentLevel.level}
         </Badge>
 
-        {/* Chấm đỏ nhiệm vụ Pet chưa nhận — góc trên-trái để không đè huy hiệu Lv ở góc trên-phải */}
+        {/* Chấm đỏ nhiệm vụ Pet chưa nhận — góc trên-trái, kéo vào sát pet, không đè huy hiệu Lv */}
         {petMissionCount > 0 && (
           <span className="position-absolute d-flex align-items-center justify-content-center" style={{
-            top: '-6px', left: '-6px',
+            top: '18px', left: '14px',
             minWidth: '24px', height: '24px', padding: '0 6px',
             borderRadius: '12px', background: '#dc3545', color: '#fff',
             fontSize: '0.75rem', fontWeight: '800',
