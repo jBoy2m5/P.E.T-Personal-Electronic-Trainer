@@ -24,18 +24,24 @@ class FitnessTracker:
         self.total_plank_time = 0
         self.plank_start_time = 0
         self.is_planking = False
+        self.total_handstand_time = 0
+        self.handstand_start_time = 0
+        self.is_handstanding = False
         self.hang_shoulder_y = 0  # Mỏ neo chống gian lận Pull-up
         
-        # HỆ THỐNG FOCUS LOCK (Khóa mục tiêu) [MỚI]
-        self.target_locked = False
+        # HỆ THỐNG AUTO FOCUS (Tự động khóa người giữa khung hình)
+        self.target_locked = True  # Luôn bật, không cần nhấn phím
+        self.locked_center_x = 0.5  # Tâm khung hình
+        self.locked_center_y = 0.5  # Tâm khung hình
+        self.focus_tolerance = 0.35  # Biên độ nhiễu 35% khung hình
+        self.focus_initialized = False  # Đã khóa người đầu tiên chưa
+
+    def reset_focus(self):
+        """Reset focus về tâm khung hình (gọi khi muốn đổi người theo dõi)"""
         self.locked_center_x = 0.5
         self.locked_center_y = 0.5
-        self.focus_tolerance = 0.35  # Biên độ nhiễu 35% khung hình
-
-    def toggle_focus_lock(self):
-        """Bật/Tắt khóa mục tiêu từ Frontend"""
-        self.target_locked = not self.target_locked
-        return self.target_locked
+        self.focus_initialized = False
+        return True
 
     def _reset_state(self):
         self.counter = 0
@@ -43,6 +49,9 @@ class FitnessTracker:
         self.total_plank_time = 0
         self.plank_start_time = 0
         self.is_planking = False
+        self.total_handstand_time = 0
+        self.handstand_start_time = 0
+        self.is_handstanding = False
         self.last_feedback = "READY"
         self.hang_shoulder_y = 0
         self.current_angle = 0
@@ -71,7 +80,7 @@ class FitnessTracker:
         image.flags.writeable = False 
         results = self.pose.process(image)
         
-        display_time = self.total_plank_time
+        display_time = self.total_handstand_time if app_mode == "HANDSTAND" else self.total_plank_time
         
         # Dữ liệu API chuẩn bị gửi đi
         api_response = {
@@ -87,10 +96,13 @@ class FitnessTracker:
 
         if not results.pose_landmarks:
             api_response["feedback"] = "NO PERSON DETECTED"
-            # [FIX] Tạm dừng plank timer khi mất người hoàn toàn
+            # [FIX] Tạm dừng timer khi mất người hoàn toàn
             if self.is_planking:
                 self.is_planking = False
                 self.total_plank_time += (time.time() - self.plank_start_time)
+            if self.is_handstanding:
+                self.is_handstanding = False
+                self.total_handstand_time += (time.time() - self.handstand_start_time)
             return api_response
 
         landmarks = results.pose_landmarks.landmark
@@ -104,18 +116,32 @@ class FitnessTracker:
         LEFT_AN, RIGHT_AN = self.mp_pose.PoseLandmark.LEFT_ANKLE.value, self.mp_pose.PoseLandmark.RIGHT_ANKLE.value
 
         # ==========================================
-        # 1. BỘ LỌC FOCUS LOCK (KHÓA TRỌNG TÂM) [MỚI]
+        # 1. AUTO FOCUS (TỰ ĐỘNG KHÓA NGƯỜI GIỮA KHUNG HÌNH)
         # ==========================================
         center_x = (landmarks[LEFT_SH].x + landmarks[RIGHT_SH].x + landmarks[LEFT_HIP].x + landmarks[RIGHT_HIP].x) / 4
         center_y = (landmarks[LEFT_SH].y + landmarks[RIGHT_SH].y + landmarks[LEFT_HIP].y + landmarks[RIGHT_HIP].y) / 4
 
-        if self.target_locked:
+        if not self.focus_initialized:
+            # Lần đầu phát hiện người: khóa ngay vào người gần tâm nhất
+            dist_to_center = math.hypot(center_x - 0.5, center_y - 0.5)
+            if dist_to_center < self.focus_tolerance:
+                self.locked_center_x = center_x
+                self.locked_center_y = center_y
+                self.focus_initialized = True
+            else:
+                # Người quá xa tâm khung hình, bỏ qua
+                api_response["feedback"] = "MOVE TO CENTER OF FRAME"
+                api_response["raw_landmarks"] = None
+                return api_response
+        else:
+            # Đã khóa: lọc người không phải mục tiêu
             dist = math.hypot(center_x - self.locked_center_x, center_y - self.locked_center_y)
             if dist > self.focus_tolerance:
                 api_response["feedback"] = "BACKGROUND PERSON IGNORED"
                 api_response["raw_landmarks"] = None  # Không vẽ người ở nền
                 return api_response
             else:
+                # Cập nhật vị trí mục tiêu mượt mà (EMA)
                 self.locked_center_x = (self.locked_center_x * 0.8) + (center_x * 0.2)
                 self.locked_center_y = (self.locked_center_y * 0.8) + (center_y * 0.2)
 
@@ -133,10 +159,13 @@ class FitnessTracker:
         if not is_visible:
             self.last_feedback = "SHOW UPPER BODY!" if app_mode in ["PULL-UP", "HANDSTAND"] else "SHOW FULL BODY!"
             api_response["feedback"] = self.last_feedback
-            # [FIX] Tạm dừng plank timer khi mất visibility
+            # [FIX] Tạm dừng timer khi mất visibility
             if self.is_planking:
                 self.is_planking = False
                 self.total_plank_time += (time.time() - self.plank_start_time)
+            if self.is_handstanding:
+                self.is_handstanding = False
+                self.total_handstand_time += (time.time() - self.handstand_start_time)
             return api_response
 
         # ==========================================
@@ -258,30 +287,35 @@ class FitnessTracker:
                             self.last_feedback = "PULL HIGHER!"
 
         # --------------------------------------------------
-        # HANDSTAND: Body alignment + Core check chi tiết
+        # HANDSTAND: Tính theo giây (tương tự Plank)
         # --------------------------------------------------
         elif app_mode == "HANDSTAND":
             arm_angle = self._calculate_angle(shoulder, elbow, wrist)
             body_angle = self._calculate_angle(shoulder, hip, ankle)
-            self.current_angle = arm_angle
+            self.current_angle = body_angle
             
             if hip[1] > shoulder[1]:
                 self.last_feedback = "KICK UP INTO HANDSTAND!"
-                self.stage = None
+                if self.is_handstanding:
+                    self.is_handstanding = False
+                    self.total_handstand_time += (time.time() - self.handstand_start_time)
             elif body_angle < 160:
                 self.last_feedback = "KEEP CORE TIGHT!"
-                self.stage = None
+                if self.is_handstanding:
+                    self.is_handstanding = False
+                    self.total_handstand_time += (time.time() - self.handstand_start_time)
             else:
-                self.last_feedback = "FORM: GOOD"
-                if arm_angle > 150:
-                    if self.stage == 'down': self.counter += 1
-                    self.stage = "up"
-                elif arm_angle < 110:
-                    if shoulder[1] >= (elbow[1] - 0.05):
-                        self.stage = "down"
-                        self.last_feedback = "PERFECT DEPTH!"
-                    elif self.stage != 'down':
-                        self.last_feedback = "GO LOWER!"
+                if arm_angle < 160:
+                    self.last_feedback = "LOCK YOUR ARMS!"
+                    if self.is_handstanding:
+                        self.is_handstanding = False
+                        self.total_handstand_time += (time.time() - self.handstand_start_time)
+                else:
+                    self.last_feedback = "FORM: PERFECT!"
+                    if not self.is_handstanding:
+                        self.is_handstanding = True
+                        self.handstand_start_time = time.time()
+                    display_time = self.total_handstand_time + (time.time() - self.handstand_start_time)
 
         # --------------------------------------------------
         # PLANK: Chống đứng + Feedback hông chi tiết
