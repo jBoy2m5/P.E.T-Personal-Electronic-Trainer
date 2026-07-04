@@ -91,6 +91,30 @@ const usePetStore = create((set, get) => ({
   triggerPetReaction: () => set((state) => ({ petReactionTick: (state.petReactionTick || 0) + 1 })),
   setAiWorkoutActive: (active) => set({ aiWorkoutActive: !!active }),
 
+  // Tạo lộ trình mới → nhiệm vụ hằng ngày "tươi" lại: xóa danh sách bài đã tập + đã nhận thưởng
+  // của HÔM NAY (nhiệm vụ hiện lại "TẬP NGAY"). GIỮ NGUYÊN pointsEarnedToday để trần 300 EXP/ngày
+  // vẫn áp dụng — người dùng phải tập lại để nhận, và không thể vượt 300 EXP/ngày bằng cách reset lộ trình.
+  resetDailyMissions: () => {
+    const todayStr = getTodayKey();
+    const userId = getUserId();
+    const key = getPetKey(userId);
+    set((state) => {
+      const newState = {
+        ...state,
+        exercisesTrained: [],
+        claimedMissions: { ...state.claimedMissions, [todayStr]: [] },
+        date: todayStr,
+      };
+      localStorage.setItem(key, JSON.stringify(newState));
+      if (state.petId) {
+        axiosClient.put(`/pets/${state.petId}`, {
+          ...dailyPayload(newState, todayStr),
+        }).catch(() => {});
+      }
+      return newState;
+    });
+  },
+
   syncFromBackend: async () => {
     const userId = getUserId();
     if (!userId) return;

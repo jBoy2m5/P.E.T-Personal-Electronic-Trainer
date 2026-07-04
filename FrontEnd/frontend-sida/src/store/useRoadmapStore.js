@@ -143,6 +143,8 @@ const useRoadmapStore = create((set, get) => ({
         });
         if (changed) localStorage.setItem(schedKey, JSON.stringify(sched));
       } catch { /* ignore */ }
+      // Nhiệm vụ hằng ngày cũng tươi lại cho lộ trình mới (xóa tập/claim hôm nay, giữ trần 300 EXP)
+      usePetStore.getState().resetDailyMissions();
       const userData = await buildGeneratorUserData();
       lastGenUserData = userData; // để skip dùng lại, không phải fetch /me
       const exercises = await useExerciseStore.getState().fetchExercises();
