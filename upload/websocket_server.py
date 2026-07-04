@@ -29,6 +29,12 @@ async def handle_client(websocket):
                 mode = data.get('mode', 'SQUAT')
                 frame_data = data.get('frame', '')
 
+                # Reset bộ đếm khi Frontend bắt đầu 1 Set mới — không thì set 2/3 sẽ
+                # tự hoàn thành ngay vì counter cũ đã vượt target sẵn (lỗ hổng đối phó).
+                # Chỉ reset trạng thái đếm, không đụng tới thuật toán phân tích động tác.
+                if data.get('reset'):
+                    tracker._reset_state()
+
                 if ',' in frame_data:
                     frame_data = frame_data.split(',')[1]
 

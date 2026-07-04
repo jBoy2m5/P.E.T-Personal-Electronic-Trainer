@@ -12,6 +12,7 @@ import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
 
 const PET_ICONS_LIST = ['🥚','🐣','🐥','🐕','🦁','🐉','🦄','⭐'];
 const PET_THRESHOLDS_LIST = [0, 10, 50, 150, 300, 600, 1200, 2500];
+const MIN_MS_PER_REP = 500; // ngưỡng nhịp độ hợp lý tối thiểu — set nhanh hơn mức này bị coi là đối phó
 
 const getAiMode = (ex) => ex?.aiMode || null;
 
@@ -95,6 +96,9 @@ export default function DailyWorkout() {
     const socketRef = useRef(null);
     const streamRef = useRef(null);
     const animationFrameRef = useRef(null);
+    const needsResetRef = useRef(true); // báo AI server reset bộ đếm khi bắt đầu Set mới
+    const setStartTimeRef = useRef(0); // chống đối phó: set hoàn thành quá nhanh so với target
+    const suspiciousSetsRef = useRef(0);
 
     // States cho Detailed Exercise Modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -399,6 +403,9 @@ export default function DailyWorkout() {
 
             const initAI = async () => {
                 try {
+                    needsResetRef.current = true;
+                    setStartTimeRef.current = Date.now();
+                    suspiciousSetsRef.current = 0;
                     setAiStatus("Đang yêu cầu quyền Camera...");
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } });
                     streamRef.current = stream;
@@ -425,18 +432,26 @@ export default function DailyWorkout() {
                 const ctx = canvasRef.current.getContext('2d');
                 ctx.drawImage(videoRef.current, 0, 0, 640, 480);
                 const frameData = canvasRef.current.toDataURL('image/jpeg', 0.5);
-                socketRef.current.send(JSON.stringify({ mode: getAiMode(currentExercise), frame: frameData }));
+                socketRef.current.send(JSON.stringify({ mode: getAiMode(currentExercise), frame: frameData, reset: needsResetRef.current }));
+                needsResetRef.current = false;
                 animationFrameRef.current = setTimeout(() => requestAnimationFrame(sendFrames), 100);
             };
 
             const handleSetComplete = () => {
                 if (animationFrameRef.current) clearTimeout(animationFrameRef.current);
+                // Chống đối phó: set hoàn thành nhanh hơn nhịp độ con người hợp lý → không tính là tập thật
+                if (workoutMode === 'reps' && (Date.now() - setStartTimeRef.current) < targetReps * MIN_MS_PER_REP) {
+                    suspiciousSetsRef.current += 1;
+                }
                 setSimSets(prevSets => {
                     const newSets = prevSets + 1;
                     if (newSets > targetSets) {
                         setAiStatus(t('exercise_list.ai_done', 'Hoàn thành xuất sắc! Đang lưu dữ liệu...'));
-                        
-                        const sessionCalories = currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25;
+
+                        const isSuspicious = suspiciousSetsRef.current > 0;
+                        const baseCalories = currentExercise.kcal || Math.round((currentExercise.estimated_calories_per_rep || currentExercise.kcalPerRep || 1) * targetReps * targetSets) || 25;
+                        const sessionCalories = isSuspicious ? Math.round(baseCalories * 0.5) : baseCalories;
+                        if (isSuspicious) setAiStatus(t('exercise_list.ai_too_fast', 'Tốc độ tập nhanh bất thường — EXP đã giảm để phản ánh đúng nỗ lực'));
                         const sessionData = {
                             start_time: toLocalISOString(new Date(Date.now() - 60000)),
                             end_time: toLocalISOString(new Date()),
@@ -481,7 +496,11 @@ export default function DailyWorkout() {
                     } else {
                         setAiStatus(t('exercise_list.ai_rest', 'Nghỉ ngơi 1 lát...'));
                         setSimReps(0);
-                        setTimeout(() => { if (showAIModal) { sendFrames(); } }, 2000);
+                        needsResetRef.current = true;
+                        setTimeout(() => {
+                            setStartTimeRef.current = Date.now();
+                            if (showAIModal) { sendFrames(); }
+                        }, 2000);
                         return newSets;
                     }
                 });

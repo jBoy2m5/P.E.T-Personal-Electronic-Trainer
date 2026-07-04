@@ -9,6 +9,7 @@ import confetti from 'canvas-confetti';
 import { getScheduleKey, getSessionsKey } from '../utils/userStorage';
 
 const DEFAULT_IMG = 'https://images.unsplash.com/photo-1598971639058-fab354f66c09?q=80&w=600';
+const MIN_MS_PER_REP = 500; // ngưỡng nhịp độ hợp lý tối thiểu — set nhanh hơn mức này bị coi là đối phó
 
 
 const getTodayKey = () => {
@@ -113,6 +114,9 @@ export default function ExerciseList() {
     const socketRef = useRef(null);
     const streamRef = useRef(null);
     const animationFrameRef = useRef(null);
+    const needsResetRef = useRef(true); // báo AI server reset bộ đếm khi bắt đầu Set mới
+    const setStartTimeRef = useRef(0); // chống đối phó: set hoàn thành quá nhanh so với target
+    const suspiciousSetsRef = useRef(0);
 
     // States cho Detailed Exercise Modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -277,6 +281,9 @@ export default function ExerciseList() {
         if (showAIModal && currentExercise) {
             const initAI = async () => {
                 try {
+                    needsResetRef.current = true;
+                    setStartTimeRef.current = Date.now();
+                    suspiciousSetsRef.current = 0;
                     setAiStatus("Đang yêu cầu quyền Camera...");
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } });
                     streamRef.current = stream;
@@ -303,23 +310,30 @@ export default function ExerciseList() {
                 const ctx = canvasRef.current.getContext('2d');
                 ctx.drawImage(videoRef.current, 0, 0, 640, 480);
                 const frameData = canvasRef.current.toDataURL('image/jpeg', 0.5);
-                socketRef.current.send(JSON.stringify({ mode: currentExercise.ai_mode, frame: frameData }));
+                socketRef.current.send(JSON.stringify({ mode: currentExercise.ai_mode, frame: frameData, reset: needsResetRef.current }));
+                needsResetRef.current = false;
                 animationFrameRef.current = setTimeout(() => requestAnimationFrame(sendFrames), 100);
             };
 
             const handleSetComplete = () => {
                 if (animationFrameRef.current) clearTimeout(animationFrameRef.current);
+                // Chống đối phó: set hoàn thành nhanh hơn nhịp độ con người hợp lý → không tính là tập thật
+                if (workoutMode === 'reps' && (Date.now() - setStartTimeRef.current) < targetReps * MIN_MS_PER_REP) {
+                    suspiciousSetsRef.current += 1;
+                }
                 setSimSets(prevSets => {
                     const newSets = prevSets + 1;
                     if (newSets > targetSets) {
-                        setAiStatus('Hoàn thành xuất sắc! Đang lưu dữ liệu...');
-                        
+                        const isSuspicious = suspiciousSetsRef.current > 0;
+                        setAiStatus(isSuspicious ? 'Tốc độ tập nhanh bất thường — EXP đã giảm để phản ánh đúng nỗ lực' : 'Hoàn thành xuất sắc! Đang lưu dữ liệu...');
+
                         const sessionId = Math.floor(Math.random() * 1000000);
+                        const baseCalories = Math.round((currentExercise.kcalPerRep || currentExercise.estimated_calories_per_rep || 1) * targetReps * targetSets);
                         const sessionData = {
                             session_id: sessionId, user_id: 1,
                             start_time: new Date(Date.now() - 60000).toISOString(),
                             end_time: new Date().toISOString(),
-                            total_calories_burned: Math.round((currentExercise.kcalPerRep || currentExercise.estimated_calories_per_rep || 1) * targetReps * targetSets),
+                            total_calories_burned: isSuspicious ? Math.round(baseCalories * 0.5) : baseCalories,
                             total_valid_reps: targetReps * targetSets
                         };
                         // Lưu buổi tập lên DB để hiển thị ở trang Quản lý calo
@@ -355,7 +369,11 @@ export default function ExerciseList() {
                     } else {
                         setAiStatus('Nghỉ ngơi 1 lát...');
                         setSimReps(0);
-                        setTimeout(() => { if (showAIModal) { sendFrames(); } }, 2000);
+                        needsResetRef.current = true;
+                        setTimeout(() => {
+                            setStartTimeRef.current = Date.now();
+                            if (showAIModal) { sendFrames(); }
+                        }, 2000);
                         return newSets;
                     }
                 });
