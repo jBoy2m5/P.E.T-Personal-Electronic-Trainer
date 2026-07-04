@@ -1,14 +1,8 @@
 import cv2
-import mediapipe as mp
 from ai_core import FitnessTracker
 
 print("Khởi tạo API Lõi AI...")
 ai_engine = FitnessTracker(model_complexity=1)
-
-# Công cụ vẽ Khung xương của MediaPipe (Phục vụ hiển thị Frontend)
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-mp_pose = mp.solutions.pose
 
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -21,18 +15,8 @@ while cap.isOpened():
     if not ret: break
     frame = cv2.flip(frame, 1)
     
-    # 1. GỌI API BACKEND: Nhận lại JSON và Raw Landmarks
+    # 1. GỌI API BACKEND
     result = ai_engine.process_frame(frame, current_mode)
-    
-    # 2. VẼ BỘ KHUNG XƯƠNG (Sử dụng mp_drawing theo yêu cầu)
-    # Lõi API sẽ không nhả raw_landmarks nếu bị nhiễu người ở Background
-    if result.get("raw_landmarks"):
-        mp_drawing.draw_landmarks(
-            frame, 
-            result["raw_landmarks"], 
-            mp_pose.POSE_CONNECTIONS,
-            landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
-        )
 
     # 3. VẼ GIAO DIỆN (UI/UX) TRỰC QUAN
     # Nền bảng thông số
@@ -42,7 +26,7 @@ while cap.isOpened():
     cv2.putText(frame, f"MODE: {result['mode']}", (15, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2, cv2.LINE_AA)
     cv2.putText(frame, f"ANGLE: {result['angle']} deg", (450, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
     
-    if result['mode'] == "PLANK":
+    if result['mode'] in ["PLANK", "HANDSTAND"]:
         cv2.putText(frame, f"TIME: {result['timer']}s", (250, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2, cv2.LINE_AA)
     else:
         cv2.putText(frame, f"REPS: {result['reps']}", (250, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2, cv2.LINE_AA)
@@ -56,12 +40,11 @@ while cap.isOpened():
     cv2.putText(frame, f"STATE: {str(result['stage']).upper()}", (15, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (200, 200, 200), 2, cv2.LINE_AA)
     cv2.putText(frame, feedback, (200, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
     
-    lock_text = "ON" if result['is_locked'] else "OFF"
-    lock_color = (0, 255, 0) if result['is_locked'] else (100, 100, 100)
-    cv2.putText(frame, f"[F] FOCUS LOCK: {lock_text}", (450, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, lock_color, 2, cv2.LINE_AA)
+    lock_color = (0, 255, 0)
+    cv2.putText(frame, "AUTO FOCUS: ON", (450, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, lock_color, 2, cv2.LINE_AA)
     
     # Menu điều khiển
-    cv2.putText(frame, "KEYS: 1:Push 2:Squat 3:Pull 4:Plank 5:Handstand | F:Lock | Q:Quit", (10, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1, cv2.LINE_AA)
+    cv2.putText(frame, "KEYS: 1:Push 2:Squat 3:Pull 4:Plank 5:Handstand | R:Reset Focus | Q:Quit", (10, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1, cv2.LINE_AA)
 
     cv2.imshow('P.E.T - AI Fitness Tester', frame)
 
@@ -73,8 +56,8 @@ while cap.isOpened():
     elif key == ord('3'): current_mode = "PULL-UP"
     elif key == ord('4'): current_mode = "PLANK"
     elif key == ord('5'): current_mode = "HANDSTAND"
-    elif key == ord('f') or key == ord('F'): 
-        ai_engine.toggle_focus_lock()  # Gọi hàm thay đổi trạng thái trong API
+    elif key == ord('r') or key == ord('R'): 
+        ai_engine.reset_focus()  # Reset focus về tâm khung hình
 
 cap.release()
 cv2.destroyAllWindows()
