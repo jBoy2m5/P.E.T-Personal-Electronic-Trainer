@@ -99,6 +99,8 @@ export default function DailyWorkout() {
     const needsResetRef = useRef(true); // báo AI server reset bộ đếm khi bắt đầu Set mới
     const setStartTimeRef = useRef(0); // chống đối phó: set hoàn thành quá nhanh so với target
     const suspiciousSetsRef = useRef(0);
+    const lastRepsRef = useRef(0); // theo dõi rep hợp lệ mới để pet phản ứng real-time
+    const [petBounce, setPetBounce] = useState(0);
 
     // States cho Detailed Exercise Modal
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -406,6 +408,7 @@ export default function DailyWorkout() {
                     needsResetRef.current = true;
                     setStartTimeRef.current = Date.now();
                     suspiciousSetsRef.current = 0;
+                    lastRepsRef.current = 0;
                     setAiStatus("Đang yêu cầu quyền Camera...");
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } });
                     streamRef.current = stream;
@@ -419,6 +422,10 @@ export default function DailyWorkout() {
                         const data = JSON.parse(event.data);
                         setAiStatus(data.feedback || "Đang theo dõi...");
                         setSimReps(data.reps || 0);
+                        if ((data.reps || 0) > lastRepsRef.current) {
+                            lastRepsRef.current = data.reps;
+                            setPetBounce(b => b + 1); // pet phản ứng ngay khi có rep hợp lệ mới
+                        }
                         if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
                             handleSetComplete();
                         }
@@ -497,6 +504,7 @@ export default function DailyWorkout() {
                         setAiStatus(t('exercise_list.ai_rest', 'Nghỉ ngơi 1 lát...'));
                         setSimReps(0);
                         needsResetRef.current = true;
+                        lastRepsRef.current = 0;
                         setTimeout(() => {
                             setStartTimeRef.current = Date.now();
                             if (showAIModal) { sendFrames(); }
@@ -740,7 +748,7 @@ export default function DailyWorkout() {
 
                         {/* Pet animation */}
                         <div className="position-absolute d-flex flex-column align-items-center" style={{ bottom: '200px', right: '24px', zIndex: 2 }}>
-                            <div className="pet-working" style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>{petIcon}</div>
+                            <div key={petBounce} className="pet-working pet-cheer" style={{ fontSize: '2.5rem', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>{petIcon}</div>
                         </div>
 
                         <div className="mt-auto p-4 rounded-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' }}>

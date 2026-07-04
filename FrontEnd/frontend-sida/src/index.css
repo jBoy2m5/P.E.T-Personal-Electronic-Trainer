@@ -566,6 +566,14 @@ body {
   50% { opacity: 1; }
 }
 
+@keyframes petCheer {
+  0% { transform: scale(1) translateY(0); }
+  30% { transform: scale(1.35) translateY(-14px); }
+  55% { transform: scale(0.95) translateY(2px); }
+  100% { transform: scale(1) translateY(0); }
+}
+.pet-cheer { animation: petCheer 0.5s ease-out; }
+
 @keyframes sagaPulse {
   0% { box-shadow: 0 0 0 0 rgba(var(--brand-neon-rgb), 0.7); }
   70% { box-shadow: 0 0 0 20px rgba(var(--brand-neon-rgb), 0); }

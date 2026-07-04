@@ -31,6 +31,8 @@ export default function PetProfile() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const { totalPoints, exercisesTrained, getCurrentLevel, claimedMissions, claimMission, checkinStreak, lastCheckinDate, performCheckin, petName, updatePetName, equippedOutfits, toggleOutfit } = usePetStore();
+  const isSadFn = usePetStore(state => state.isSad);
+  const petIsSad = isSadFn();
   const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 
   const [petData, setPetData] = useState({
@@ -282,6 +284,18 @@ export default function PetProfile() {
                     </div>
                   </div>
 
+                  {/* Cảnh báo mất mát (loss-aversion): nhắc trước khi mất chuỗi/pet buồn, thay vì chỉ thưởng khi làm tốt */}
+                  {!checkinDone && checkinStreak > 0 && (
+                    <div className="rounded-3 p-2 mt-2 text-center fw-bold" style={{ background: 'rgba(220,53,69,0.12)', color: '#dc3545', fontSize: '0.85rem' }}>
+                      🔥 Đừng để mất chuỗi {checkinStreak} ngày! Điểm danh trước khi hết ngày hôm nay.
+                    </div>
+                  )}
+                  {petIsSad && (
+                    <div className="rounded-3 p-2 mt-2 text-center fw-bold" style={{ background: 'rgba(108,117,125,0.15)', color: isDark ? '#ced4da' : '#495057', fontSize: '0.85rem' }}>
+                      😢 Pet đang buồn vì bạn chưa tập vài ngày rồi — tập ngay để pet vui trở lại nhé!
+                    </div>
+                  )}
+
                   {/* Weekly progress */}
                   <div className={`rounded-3 p-3 mt-3 mb-3 ${isDark ? 'bg-black' : 'bg-light'}`}>
                     <div className="d-flex justify-content-between align-items-center mb-3">
@@ -438,7 +452,10 @@ export default function PetProfile() {
                 <span style={{ fontSize: '15vw', animation: 'petFloat 3s ease-in-out infinite', display: 'inline-block', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.2))', userSelect: 'none' }}>🥚</span>
               ) : (
                 <div className="position-relative d-inline-block" style={{ animation: 'petFloat 3s ease-in-out infinite' }}>
-                  <img src={petChatbot} alt="Pet" className="pet-img" draggable={false} style={{ width: '40vw', maxWidth: '400px', minWidth: '200px', height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 25px 35px rgba(0,0,0,0.3))', userSelect: 'none', WebkitUserSelect: 'none', WebkitUserDrag: 'none' }} />
+                  <img src={petChatbot} alt="Pet" className="pet-img" draggable={false} style={{ width: '40vw', maxWidth: '400px', minWidth: '200px', height: 'auto', objectFit: 'contain', filter: petIsSad ? 'grayscale(0.6) brightness(0.85) drop-shadow(0 25px 35px rgba(0,0,0,0.3))' : 'drop-shadow(0 25px 35px rgba(0,0,0,0.3))', userSelect: 'none', WebkitUserSelect: 'none', WebkitUserDrag: 'none' }} />
+                  {petIsSad && (
+                    <span style={{ position: 'absolute', top: '4%', right: '8%', fontSize: 'clamp(28px, 5vw, 48px)', pointerEvents: 'none', userSelect: 'none', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}>😢</span>
+                  )}
                   {/* Trang phục pet đang mặc (đồng bộ từ server qua appearance_type) */}
                   {(equippedOutfits || []).includes('cap') && (
                     <span style={{ position: 'absolute', top: '-6%', left: '50%', transform: 'translateX(-50%) rotate(-8deg)', fontSize: 'clamp(45px, 8vw, 85px)', pointerEvents: 'none', userSelect: 'none', filter: 'drop-shadow(0 6px 8px rgba(0,0,0,0.3))' }}>🧢</span>
