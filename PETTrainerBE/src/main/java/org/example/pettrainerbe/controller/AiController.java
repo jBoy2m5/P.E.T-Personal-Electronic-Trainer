@@ -1,7 +1,9 @@
 package org.example.pettrainerbe.controller;
 
+import org.example.pettrainerbe.model.Pet;
 import org.example.pettrainerbe.model.User;
 import org.example.pettrainerbe.repository.ExerciseRepository;
+import org.example.pettrainerbe.repository.PetRepository;
 import org.example.pettrainerbe.repository.UserRepository;
 import org.example.pettrainerbe.service.GeminiService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,9 @@ public class AiController {
 
     @Autowired
     private ExerciseRepository exerciseRepository;
+
+    @Autowired
+    private PetRepository petRepository;
 
     @GetMapping("/roadmap-advice")
     public ResponseEntity<?> getRoadmapAdvice(@RequestParam(value = "lang", defaultValue = "vi") String lang) {
@@ -72,6 +77,17 @@ public class AiController {
             return ResponseEntity.ok(Map.of("reply", ""));
         }
 
+        // "today" = ngày local của client (giống quy ước /workout-sessions/today) — KHÔNG dùng
+        // LocalDate.now() phía server để suy ra "hôm nay đã tập chưa" của người dùng.
+        String today = payload.get("today") instanceof String d ? d : null;
+        Pet pet = petRepository.findByUser_UserId(user.getUserId()).orElse(null);
+        int petLevel = pet != null && pet.getLevel() != null ? pet.getLevel() : 1;
+        int totalExp = pet != null && pet.getTotalExp() != null ? pet.getTotalExp() : 0;
+        int checkinStreak = pet != null && pet.getCheckinStreak() != null ? pet.getCheckinStreak() : 0;
+        boolean trainedToday = pet != null && today != null && today.equals(pet.getPetDailyDate())
+            && pet.getExercisesTrained() != null && !pet.getExercisesTrained().isBlank()
+            && !pet.getExercisesTrained().equals("[]");
+
         double bmi = user.getBmi() != null ? user.getBmi().doubleValue() : 22.0;
         String reply = geminiService.chat(
             user.getGender() != null ? user.getGender() : "Nam",
@@ -81,7 +97,11 @@ public class AiController {
             petName,
             history,
             message,
-            lang
+            lang,
+            petLevel,
+            totalExp,
+            checkinStreak,
+            trainedToday
         );
 
         return ResponseEntity.ok(Map.of("reply", reply != null ? reply : ""));

@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import axiosClient from '../api/axiosClient';
 import { getScheduleKey } from '../utils/userStorage';
+import { fetchProfile } from '../api/profileApi';
+
+// Cân nặng tham chiếu mà estimated_calories_per_rep trong DB được hiệu chỉnh theo (người trưởng
+// thành trung bình). EXP quy đổi từ kcal nên nhân thêm hệ số cân nặng thật để 2 người tập cùng
+// bài, cùng số rep nhưng thể trạng khác nhau nhận thưởng công bằng hơn (không đổi số kcal
+// hiển thị/lưu session — chỉ ảnh hưởng EXP).
+const REFERENCE_WEIGHT_KG = 65;
+const MIN_WEIGHT_FACTOR = 0.8;
+const MAX_WEIGHT_FACTOR = 1.3;
 
 const PET_LEVELS = [
   { level: 1, name: 'Trứng', minPoints: 0, icon: '🥚' },
@@ -76,6 +85,7 @@ const getInitialState = () => {
 const usePetStore = create((set, get) => ({
   ...getInitialState(),
   petReactionTick: 0, // đếm tăng dần mỗi lần cần pet phản ứng tức thì (rep hợp lệ...); không lưu localStorage/server
+  userWeight: null, // cân nặng thật lấy tươi từ server mỗi lần sync — KHÔNG lưu localStorage (chính sách số đo cơ thể)
 
   triggerPetReaction: () => set((state) => ({ petReactionTick: (state.petReactionTick || 0) + 1 })),
 
@@ -84,6 +94,8 @@ const usePetStore = create((set, get) => ({
     if (!userId) return;
     const key = getPetKey(userId);
     const todayStr = getTodayKey();
+    // Lấy cân nặng thật song song để tính hệ số EXP công bằng theo thể trạng (addExp) — lỗi thì bỏ qua, dùng mặc định.
+    fetchProfile().then((p) => { if (p?.weight) set({ userWeight: p.weight }); }).catch(() => {});
     try {
       const pet = await axiosClient.get(`/pets/user/${userId}`);
       const totalPoints = pet.total_exp || 0;
@@ -141,23 +153,39 @@ const usePetStore = create((set, get) => ({
     return !data[fmt(today)]?.trained;
   },
 
+  // Trả về { expGained, decay, daysMissed } — decay > 0 nghĩa là streak vừa bị đứt (nghỉ tập
+  // nhiều ngày liên tiếp), rủi ro thật khiến động lực chăm pet không chỉ dừng ở hiệu ứng buồn.
   performCheckin: async () => {
     const userId = getUserId();
     const key = getPetKey(userId);
     const todayStr = getTodayKey();
     const { petId, checkinStreak, lastCheckinDate, totalPoints } = get();
     if (!petId) return null;
-    if (lastCheckinDate === todayStr) return 0;
+    if (lastCheckinDate === todayStr) return { expGained: 0, decay: 0, daysMissed: 0 };
 
     // Calculate yesterday
     const d = new Date(); d.setDate(d.getDate() - 1);
     const yesterday = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
+    const streakBroken = !!lastCheckinDate && lastCheckinDate !== yesterday && (checkinStreak || 0) > 0;
     const newStreak = lastCheckinDate === yesterday ? (checkinStreak || 0) + 1 : 1;
     const dayInCycle = ((newStreak - 1) % 7) + 1;
     const expRewards = [10, 15, 20, 25, 30, 40, 100];
     const expGained = expRewards[dayInCycle - 1];
-    const newTotalExp = (totalPoints || 0) + expGained;
+
+    // Phạt nhẹ theo số ngày thực sự bỏ lỡ (streak cũ đứt), tối đa 5 ngày để không "xóa sổ"
+    // người quay lại sau kỳ nghỉ dài — mục tiêu là tạo rủi ro thật, không phải trừng phạt tuyệt đối.
+    const DECAY_PER_MISSED_DAY = 8;
+    const MAX_DECAY_DAYS = 5;
+    let daysMissed = 0;
+    let decay = 0;
+    if (streakBroken) {
+      const lastDate = new Date(`${lastCheckinDate}T00:00:00`);
+      const todayDate = new Date(`${todayStr}T00:00:00`);
+      daysMissed = Math.max(0, Math.round((todayDate - lastDate) / 86400000) - 1);
+      decay = Math.min(daysMissed, MAX_DECAY_DAYS) * DECAY_PER_MISSED_DAY;
+    }
+    const newTotalExp = Math.max(0, (totalPoints || 0) + expGained - decay);
 
     try {
       await axiosClient.put(`/pets/${petId}`, {
@@ -174,7 +202,7 @@ const usePetStore = create((set, get) => ({
       // Điểm danh = bắt đầu ngày mới → tính lại trạng thái khóa/mở của lộ trình
       // (dynamic import để tránh vòng lặp import giữa 2 store)
       import('./useRoadmapStore').then((m) => m.default.getState().refreshStatuses()).catch(() => {});
-      return expGained;
+      return { expGained, decay, daysMissed };
     } catch { return null; }
   },
 
@@ -263,7 +291,8 @@ const usePetStore = create((set, get) => ({
       let currentPointsToday = state.date === todayStr ? state.pointsEarnedToday : 0;
       let exercisesTrained = state.date === todayStr ? [...(state.exercisesTrained || [])] : [];
 
-      let expGained = Math.max(1, Math.round(kcal * 0.1));
+      const weightFactor = Math.min(MAX_WEIGHT_FACTOR, Math.max(MIN_WEIGHT_FACTOR, (state.userWeight || REFERENCE_WEIGHT_KG) / REFERENCE_WEIGHT_KG));
+      let expGained = Math.max(1, Math.round(kcal * weightFactor * 0.1));
       let isCapped = false;
 
       if (currentPointsToday + expGained > MAX_DAILY_EXP) {

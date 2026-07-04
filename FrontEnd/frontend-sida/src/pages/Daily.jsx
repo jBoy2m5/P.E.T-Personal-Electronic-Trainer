@@ -27,6 +27,7 @@ export default function Daily() {
   const [animateIn, setAnimateIn] = useState(false);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
   const [checkinReward, setCheckinReward] = useState(0);
+  const [checkinDecay, setCheckinDecay] = useState(null); // { decay, daysMissed } khi streak vừa bị đứt
 
   // Điểm danh + nhiệm vụ đã nhận lấy từ DB server qua usePetStore (đồng bộ giữa các trình duyệt)
   const checkinStreak = usePetStore((s) => s.checkinStreak);
@@ -64,11 +65,12 @@ export default function Daily() {
   const handleCheckin = async () => {
     if (hasCheckedInToday) return;
 
-    // Ghi điểm danh lên DB server; trả về EXP nhận được (hoặc null nếu lỗi/chưa có pet)
-    const expGained = await performCheckin();
-    if (expGained === null || expGained === undefined) return;
+    // Ghi điểm danh lên DB server; trả về { expGained, decay, daysMissed } (hoặc null nếu lỗi/chưa có pet)
+    const result = await performCheckin();
+    if (!result) return;
 
-    setCheckinReward(expGained);
+    setCheckinReward(result.expGained);
+    setCheckinDecay(result.decay > 0 ? { decay: result.decay, daysMissed: result.daysMissed } : null);
     setShowCheckinModal(true);
 
     const duration = 2000;
@@ -266,9 +268,14 @@ export default function Daily() {
             <div className="success-circle">✓</div>
           </div>
           <h3 className="fw-black text-primary-dynamic mb-2 text-uppercase">{t('daily.success_title')}</h3>
-          <div className="fw-black mb-4" style={{ color: 'var(--brand-neon)', fontSize: '2.5rem' }}>
+          <div className="fw-black mb-2" style={{ color: 'var(--brand-neon)', fontSize: '2.5rem' }}>
             +{checkinReward} EXP
           </div>
+          {checkinDecay && (
+            <div className="fw-bold mb-4 text-danger" style={{ fontSize: '0.95rem' }}>
+              {t('daily.streak_broken_penalty', { count: checkinDecay.decay, days: checkinDecay.daysMissed })}
+            </div>
+          )}
           <button className="gym-btn w-100 py-3" onClick={() => setShowCheckinModal(false)}>
             {t('daily.awesome')}
           </button>

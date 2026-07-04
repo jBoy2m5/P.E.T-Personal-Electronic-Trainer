@@ -70,7 +70,8 @@ public class GeminiService {
      * (role: user/model) + tin nhắn mới, trả về câu trả lời hoặc null nếu key chưa cấu hình / Gemini lỗi.
      */
     public String chat(String gender, double bmi, String goal, String fitnessLevel,
-                       String petName, List<Map<String, String>> history, String message, String lang) {
+                       String petName, List<Map<String, String>> history, String message, String lang,
+                       int petLevel, int totalExp, int checkinStreak, boolean trainedToday) {
         if (apiKey == null || apiKey.isBlank() || apiKey.startsWith("AIzaSy_REPLACE")) {
             return null;
         }
@@ -82,12 +83,18 @@ public class GeminiService {
         String persona = String.format(
             "Bạn là \"%s\" — chú mèo thú cưng kiêm huấn luyện viên cá nhân trong ứng dụng fitness P.E.T. " +
             "Hồ sơ người dùng bạn đang huấn luyện: Giới tính: %s, BMI: %.1f, Mục tiêu: %s, Trình độ: %s. " +
+            "Tiến độ THẬT của người dùng (dùng để cá nhân hóa câu trả lời, không chỉ đưa lời khuyên chung chung): " +
+            "cấp độ pet hiện tại %d, tổng EXP %d, chuỗi điểm danh liên tục %d ngày, hôm nay %s. " +
             "Quy tắc: (1) Trả lời NGẮN GỌN 2-4 câu, thân thiện, đúng tính cách một chú mèo huấn luyện viên đáng yêu nhưng chuyên môn vững. " +
             "(2) Chỉ trả lời về tập luyện, dinh dưỡng, sức khỏe, phục hồi và cách dùng app P.E.T; chủ đề khác thì từ chối khéo léo và kéo về chuyện tập luyện. " +
             "(3) Không kê đơn thuốc hay chẩn đoán y tế; vấn đề sức khỏe nghiêm trọng thì khuyên gặp bác sĩ. " +
-            "(4) Luôn trả lời bằng %s.",
+            "(4) Nếu hôm nay CHƯA tập và câu hỏi có liên quan hoặc phù hợp ngữ cảnh, khéo léo nhắc/động viên tập — đừng nhồi nhét vào mọi câu trả lời. " +
+            "(5) Nếu chuỗi điểm danh dài hoặc cấp độ cao, ghi nhận nỗ lực thật và có thể gợi ý tăng nhẹ độ khó khi phù hợp. " +
+            "(6) Luôn trả lời bằng %s.",
             petName != null && !petName.isBlank() ? petName : "P.E.T",
-            gender, bmi, goal, fitnessLevel, replyLang
+            gender, bmi, goal, fitnessLevel,
+            petLevel, totalExp, checkinStreak, trainedToday ? "đã tập rồi" : "chưa tập",
+            replyLang
         );
 
         // contents nhiều lượt: Gemini yêu cầu bắt đầu bằng lượt user → bỏ các lượt model dẫn đầu

@@ -59,6 +59,7 @@ export default function PetProfile() {
   const todayMissions = getDailyMissions(todayKey, roadmapData, allExercises);
   const actualCompletedToday = exercisesTrained || [];
   const [checkinExpGained, setCheckinExpGained] = useState(0);
+  const [checkinDecay, setCheckinDecay] = useState(null); // { decay, daysMissed } khi streak vừa bị đứt
 
   // Modal States
   const [showEditName, setShowEditName] = useState(false);
@@ -124,10 +125,11 @@ export default function PetProfile() {
 
   const handleCheckin = async () => {
     if (checkinDone) return;
-    const exp = await performCheckin();
-    if (exp !== null) {
+    const result = await performCheckin();
+    if (result) {
       setCheckinDone(true);
-      setCheckinExpGained(exp);
+      setCheckinExpGained(result.expGained);
+      setCheckinDecay(result.decay > 0 ? { decay: result.decay, daysMissed: result.daysMissed } : null);
     }
   };
 
@@ -160,7 +162,8 @@ export default function PetProfile() {
         message: text,
         history,
         lang: (i18n.language || 'vi').toLowerCase().startsWith('vi') ? 'vi' : 'en',
-        pet_name: petData.pet_name
+        pet_name: petData.pet_name,
+        today: todayKey // ngày local của client — backend dùng để biết hôm nay đã tập chưa
       }, { timeout: 30000 });
 
       const reply = res?.reply;
@@ -340,6 +343,11 @@ export default function PetProfile() {
                   {checkinExpGained > 0 && (
                     <div className="text-center mb-2 fw-bold" style={{ color: '#c8f000', fontSize: '0.9rem' }}>
                       +{checkinExpGained} EXP đã được cộng!
+                    </div>
+                  )}
+                  {checkinDecay && (
+                    <div className="text-center mb-2 fw-bold text-danger" style={{ fontSize: '0.85rem' }}>
+                      {t('daily.streak_broken_penalty', { count: checkinDecay.decay, days: checkinDecay.daysMissed })}
                     </div>
                   )}
 

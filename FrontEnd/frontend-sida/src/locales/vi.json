@@ -79,7 +79,8 @@
     "claim_reward": "NHẬN THƯỞNG",
     "claimed": "✓ ĐÃ NHẬN",
     "success_title": "ĐIỂM DANH THÀNH CÔNG",
-    "awesome": "TUYỆT VỜI"
+    "awesome": "TUYỆT VỜI",
+    "streak_broken_penalty": "-{{count}} EXP vì bỏ lỡ {{days}} ngày tập — pet buồn vì bạn đó!"
   },
   "calorie_tracker": {
     "title": "QUẢN LÝ CALO",

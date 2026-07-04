@@ -79,7 +79,8 @@
     "claim_reward": "CLAIM REWARD",
     "claimed": "✓ CLAIMED",
     "success_title": "CHECK-IN SUCCESSFUL",
-    "awesome": "AWESOME"
+    "awesome": "AWESOME",
+    "streak_broken_penalty": "-{{count}} EXP for missing {{days}} day(s) of training — your pet missed you!"
   },
   "calorie_tracker": {
     "title": "CALORIES MANAGEMENT",
