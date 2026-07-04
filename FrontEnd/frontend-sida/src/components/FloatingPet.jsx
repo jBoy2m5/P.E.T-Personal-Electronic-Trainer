@@ -62,10 +62,10 @@ export default function FloatingPet() {
         {/* Neon glow ring behind pet */}
         <div style={{
           position: 'absolute',
-          width: '110px',
-          height: '110px',
+          width: '150px',
+          height: '150px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.15) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(var(--brand-neon-rgb),0.18) 0%, transparent 70%)',
           animation: 'breathe 3s ease-in-out infinite',
           filter: 'blur(8px)',
           pointerEvents: 'none'
@@ -89,9 +89,9 @@ export default function FloatingPet() {
         ))}
         <div key={pop} className="pet-pop-wrap">
           {currentLevel.level === 1 ? (
-            <span style={{ fontSize: '5rem', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }}>{currentLevel.icon}</span>
+            <span style={{ fontSize: '7rem', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }}>{currentLevel.icon}</span>
           ) : (
-            <img src={petChatbot} alt="Pet" style={{ width: '90px', height: '90px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }} />
+            <img src={petChatbot} alt="Pet" style={{ width: '130px', height: '130px', objectFit: 'contain', animation: 'petBounce 3s infinite ease-in-out', filter: 'drop-shadow(0 15px 25px rgba(0,0,0,0.4))' }} />
           )}
         </div>
         <Badge bg="dark" className="position-absolute" style={{
