@@ -20,6 +20,7 @@ class FitnessTracker:
         self.last_feedback = "WAITING FOR DETECTIONS..."
         self.current_angle = 0
         self.display_time = 0  # Thời gian hiển thị cho Frontend
+        self.last_rep_time = 0 # Debounce đếm rep (tránh đếm đúp do nhiễu)
         
         # Các biến đặc thù
         self.total_plank_time = 0
@@ -57,6 +58,7 @@ class FitnessTracker:
         self.hang_shoulder_y = 0
         self.current_angle = 0
         self.display_time = 0
+        self.last_rep_time = 0
 
     def _calculate_angle(self, a, b, c):
         a, b, c = np.array(a), np.array(b), np.array(c)
@@ -196,7 +198,10 @@ class FitnessTracker:
             else:
                 self.last_feedback = "FORM: GOOD"
                 if arm_angle > 160:
-                    if self.stage == 'down': self.counter += 1
+                    if self.stage == 'down':
+                        if time.time() - self.last_rep_time > 1.0: # Cooldown 1s
+                            self.counter += 1
+                            self.last_rep_time = time.time()
                     self.stage = "up"
                 elif arm_angle < 110:
                     if shoulder[1] >= (elbow[1] - 0.05):
@@ -225,7 +230,10 @@ class FitnessTracker:
                 feedback = "KEEP CHEST UP!"
             
             if knee_angle > 160:
-                if self.stage == 'down': self.counter += 1
+                if self.stage == 'down':
+                    if time.time() - self.last_rep_time > 1.0: # Cooldown 1s
+                        self.counter += 1
+                        self.last_rep_time = time.time()
                 self.stage = 'up'
             elif knee_angle < 140:
                 if hip[1] >= (knee[1] - 0.04):
@@ -269,7 +277,10 @@ class FitnessTracker:
                     
                     # Pha 1: Thả lỏng (Hanging)
                     if arm_angle > 140:
-                        if self.stage == 'up': self.counter += 1
+                        if self.stage == 'up':
+                            if time.time() - self.last_rep_time > 1.0: # Cooldown 1s
+                                self.counter += 1
+                                self.last_rep_time = time.time()
                         self.stage = "down"
                         self.hang_shoulder_y = shoulder[1]  # Khóa mỏ neo [MỚI]
                         
@@ -299,22 +310,24 @@ class FitnessTracker:
                 if self.is_handstanding:
                     self.is_handstanding = False
                     self.total_handstand_time += (time.time() - self.handstand_start_time)
-            elif body_angle < 160:
+            elif body_angle < 150: # Ngưỡng tắt (hysteresis 10 độ so với ngưỡng bật 160)
                 self.last_feedback = "KEEP CORE TIGHT!"
                 if self.is_handstanding:
                     self.is_handstanding = False
                     self.total_handstand_time += (time.time() - self.handstand_start_time)
             else:
-                if arm_angle < 160:
+                if arm_angle < 150: # Ngưỡng tắt (hysteresis 10 độ so với ngưỡng bật 160)
                     self.last_feedback = "LOCK YOUR ARMS!"
                     if self.is_handstanding:
                         self.is_handstanding = False
                         self.total_handstand_time += (time.time() - self.handstand_start_time)
-                else:
+                elif body_angle > 160 and arm_angle > 160: # Ngưỡng bật chuẩn
                     self.last_feedback = "FORM: PERFECT!"
                     if not self.is_handstanding:
                         self.is_handstanding = True
                         self.handstand_start_time = time.time()
+                elif self.is_handstanding:
+                    self.last_feedback = "FORM: PERFECT!" # Đang chạy mà nằm trong khoảng 150-160 -> Vẫn báo PERFECT
 
         # --------------------------------------------------
         # PLANK: Chống đứng + Feedback hông chi tiết
@@ -331,18 +344,20 @@ class FitnessTracker:
                     self.total_plank_time += (time.time() - self.plank_start_time)
             else:
                 ref_y = (shoulder[1] + ankle[1]) / 2
-                if body_angle > 165:
+                if body_angle > 165: # Ngưỡng bật chuẩn
                     self.last_feedback = "FORM: PERFECT!"
                     if not self.is_planking:
                         self.is_planking = True
                         self.plank_start_time = time.time()
-                else:
+                elif body_angle < 155: # Ngưỡng tắt (hysteresis 10 độ)
                     if self.is_planking:
                         self.is_planking = False
                         self.total_plank_time += (time.time() - self.plank_start_time)
                     if hip[1] < ref_y - 0.05: self.last_feedback = "LOWER YOUR HIPS!"
                     elif hip[1] > ref_y + 0.05: self.last_feedback = "RAISE YOUR HIPS!"
                     else: self.last_feedback = "STRAIGHTEN YOUR LEGS!"
+                elif self.is_planking:
+                    self.last_feedback = "FORM: PERFECT!" # Đang chạy mà ở khoảng 155-165 -> vẫn tính là tốt
                 
         # Cập nhật kết quả cuối cùng trước khi trả về Frontend
         # Tính display_time LUÔN LUÔN ở đây — đảm bảo chính xác bất kể code path
