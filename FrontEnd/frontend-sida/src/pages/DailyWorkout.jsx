@@ -90,6 +90,7 @@ export default function DailyWorkout() {
     const [targetReps, setTargetReps] = useState(0);
     const [targetSets, setTargetSets] = useState(0);
     const [aiStatus, setAiStatus] = useState('');
+    const [repReward, setRepReward] = useState(0); // tăng mỗi rep hợp lệ → kích hoạt pet pop + tim ngay trong khung camera
 
     // AI Refs
     const videoRef = useRef(null);
@@ -411,6 +412,7 @@ export default function DailyWorkout() {
                     suspiciousSetsRef.current = 0;
                     lastRepsRef.current = 0;
                     lastRepTimeRef.current = 0;
+                    setRepReward(0);
                     setAiStatus("Đang yêu cầu quyền Camera...");
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } });
                     streamRef.current = stream;
@@ -434,7 +436,8 @@ export default function DailyWorkout() {
                             if (tooFast) {
                                 suspiciousSetsRef.current += 1;
                             } else {
-                                triggerPetReaction(); // pet (widget nổi góc màn hình) pop tức thì, chỉ khi rep đúng nhịp độ
+                                setRepReward(r => r + 1); // pet lớn trong khung camera pop + tim, ngay khi rep đúng nhịp độ
+                                triggerPetReaction();     // đồng thời pet nổi ở góc màn hình cũng phản ứng
                             }
                         }
                         if ((workoutMode === 'reps' && data.reps >= targetReps) || (workoutMode === 'time' && data.timer >= targetReps)) {
@@ -758,7 +761,19 @@ export default function DailyWorkout() {
                             <Button variant="link" className="text-white p-0 m-0 text-decoration-none" onClick={() => setShowAIModal(false)}><span className="fs-1 fw-bold text-shadow">&times;</span></Button>
                         </div>
 
-                        {/* Pet phản ứng ở widget FloatingPet (nổi z-index cao trên cả modal này) - xem triggerPetReaction */}
+                        {/* Phần thưởng tức thời trong khung camera: pet to bật lên + tim mỗi rep hợp lệ.
+                            Đặt ngay giữa khung, to rõ để không bỏ lỡ (khác pet nhỏ ở góc). */}
+                        <div className="d-flex justify-content-center align-items-end" style={{ position: 'absolute', bottom: '210px', left: 0, width: '100%', zIndex: 2, pointerEvents: 'none' }}>
+                            <div className="position-relative d-flex flex-column align-items-center">
+                                {repReward > 0 && (
+                                    <>
+                                        <div key={`heart-${repReward}`} className="rep-reward-heart">💖</div>
+                                        <div key={`plus-${repReward}`} className="rep-reward-plus">+1</div>
+                                    </>
+                                )}
+                                <div key={`petbig-${repReward}`} className={repReward > 0 ? 'rep-reward-pet' : ''} style={{ fontSize: '4.5rem', filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.6))' }}>{petIcon}</div>
+                            </div>
+                        </div>
 
                         <div className="mt-auto p-4 rounded-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)' }}>
                             <Row className="text-center g-2 mb-4">
@@ -899,6 +914,34 @@ export default function DailyWorkout() {
                 @keyframes pet-rest { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
                 .pet-working { animation: pet-bounce 0.6s ease-in-out infinite; }
                 .pet-resting { animation: pet-rest 1.5s ease-in-out infinite; }
+                /* Phần thưởng tức thời mỗi rep hợp lệ trong khung camera */
+                @keyframes repRewardPop {
+                    0% { transform: scale(1); }
+                    35% { transform: scale(1.6) rotate(-4deg); }
+                    60% { transform: scale(0.92) rotate(3deg); }
+                    100% { transform: scale(1) rotate(0); }
+                }
+                .rep-reward-pet { animation: repRewardPop 0.55s ease-out; }
+                @keyframes repRewardHeartFloat {
+                    0% { transform: translateY(0) scale(0.6); opacity: 0; }
+                    25% { opacity: 1; }
+                    100% { transform: translateY(-70px) scale(1.3); opacity: 0; }
+                }
+                .rep-reward-heart {
+                    position: absolute; top: -20px; font-size: 2rem;
+                    pointer-events: none; animation: repRewardHeartFloat 0.9s ease-out forwards;
+                }
+                @keyframes repRewardPlusFloat {
+                    0% { transform: translateY(0); opacity: 0; }
+                    25% { opacity: 1; }
+                    100% { transform: translateY(-55px); opacity: 0; }
+                }
+                .rep-reward-plus {
+                    position: absolute; top: -8px; right: -34px;
+                    color: var(--brand-neon); font-weight: 900; font-size: 1.6rem;
+                    text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+                    pointer-events: none; animation: repRewardPlusFloat 0.9s ease-out forwards;
+                }
                 /* Hide scrollbar for Chrome, Safari and Opera */
                 .d-flex.gap-4::-webkit-scrollbar { display: none; }
                 /* Hide scrollbar for IE, Edge and Firefox */
