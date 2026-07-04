@@ -185,8 +185,12 @@ body {
   background: linear-gradient(180deg, #0d2818 0%, #1a0a2e 30%, #2d0a0a 70%, #000000 100%) !important;
 }
 [data-bs-theme="light"] .bg-roadmap-gradient {
-  background: linear-gradient(180deg, #0d2818 0%, #1a0a2e 30%, #2d0a0a 70%, #000000 100%) !important;
+  background: linear-gradient(180deg, #e8f7ea 0%, #f1e9fb 30%, #fbe9e9 70%, #f8f9fa 100%) !important;
 }
+
+/* Roadmap "current position" node — pops against the gradient in both themes */
+:root { --roadmap-active-node: #ffffff; --roadmap-active-icon: #000000; }
+[data-bs-theme="light"] { --roadmap-active-node: #1a1a2e; --roadmap-active-icon: #ffffff; }
 
 /* SVG Gradient stops cho Calorie Tracker */
 [data-bs-theme="light"] #kcalGradientPremium stop:nth-child(1),

@@ -601,9 +601,15 @@ export default function DailyWorkout() {
                             <div className="d-flex align-items-center p-3">
                                 <div style={{ width: '120px', height: '100px', flexShrink: 0, position: 'relative', borderRadius: '10px', overflow: 'hidden' }}>
                                     <img src={ex.img} alt={ex.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    {isDone && (
+                                    {isDone ? (
                                         <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
                                             <span style={{ color: 'var(--brand-neon)', fontSize: '2rem', fontWeight: 'bold' }}>✓</span>
+                                        </div>
+                                    ) : (
+                                        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ background: 'rgba(0,0,0,0.25)' }}>
+                                            <div className="rounded-circle d-flex align-items-center justify-content-center" style={{ width: '36px', height: '36px', background: 'var(--brand-neon)', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
+                                                <span style={{ color: '#000', fontSize: '1rem', marginLeft: '3px' }}>▶</span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

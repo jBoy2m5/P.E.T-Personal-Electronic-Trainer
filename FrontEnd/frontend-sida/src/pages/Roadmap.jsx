@@ -40,7 +40,8 @@ export default function Roadmap() {
   }, [isVi]);
 
   const handleNodeClick = (day) => {
-    if (day.status === 'locked') return; // Don't open locked days
+    // Locked days also open the modal so the user can see *why* it's locked
+    // instead of the tap silently doing nothing (judge feedback: felt broken).
     setSelectedDay(day);
     setShowModal(true);
   };
@@ -128,23 +129,23 @@ export default function Roadmap() {
             {generating ? '🤖' : '🗺️'}
           </span>
         </div>
-        <h4 className="text-white fw-bold" style={{ letterSpacing: '1px' }}>
+        <h4 className="text-primary-dynamic fw-bold" style={{ letterSpacing: '1px' }}>
           {generating ? t('roadmap.generating_title') : t('roadmap.loading')}
         </h4>
         {generating && (
           <>
-            <p className="mb-0" style={{ color: 'rgba(255,255,255,0.7)', maxWidth: 420 }}>
+            <p className="text-secondary mb-0" style={{ maxWidth: 420 }}>
               {t('roadmap.generating_desc')}
             </p>
             <Button
-              variant="outline-light"
+              variant="outline-secondary"
               size="sm"
               className="rounded-pill px-4 mt-4 fw-bold"
               onClick={skipAiGeneration}
             >
               {t('roadmap.use_default')}
             </Button>
-            <p className="mt-2 mb-0 small" style={{ color: 'rgba(255,255,255,0.45)', maxWidth: 420 }}>
+            <p className="text-muted mt-2 mb-0 small" style={{ maxWidth: 420 }}>
               {t('roadmap.use_default_hint')}
             </p>
           </>
@@ -168,15 +169,15 @@ export default function Roadmap() {
 
       {/* Top Header */}
       <div className="position-absolute top-0 start-0 w-100 p-4 d-flex justify-content-between align-items-center" style={{ zIndex: 10 }}>
-        <Button variant="dark" className="rounded-pill px-4 border-secondary fw-bold" onClick={() => navigate('/')}>
+        <Button variant="outline-secondary" className="rounded-pill px-4 fw-bold bg-surface-card" onClick={() => navigate('/')}>
           <span className="me-2">←</span> {t('roadmap.back')}
         </Button>
-        
+
         <div className="text-center">
-          <h1 className="fw-black text-white m-0" style={{ fontSize: '2rem', letterSpacing: '2px', textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>
+          <h1 className="fw-black text-primary-dynamic m-0" style={{ fontSize: '2rem', letterSpacing: '2px' }}>
             {t('roadmap.title_1')} <span className="text-neon">{t('roadmap.title_2')}</span>
           </h1>
-          <p className="m-0 fw-bold" style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', textShadow: '0 2px 5px rgba(0,0,0,0.9)' }}>
+          <p className="text-secondary m-0 fw-bold" style={{ fontSize: '0.9rem' }}>
             {t('roadmap.subtitle')}
           </p>
         </div>
@@ -203,10 +204,10 @@ export default function Roadmap() {
       {/* AI Coach Advice Banner */}
       {aiAdvice && (
         <div className="position-relative mx-auto px-4 pb-2" style={{ zIndex: 1, maxWidth: '1200px', marginTop: '110px' }}>
-          <div className="p-3 rounded-4 border" style={{ background: 'rgba(0,0,0,0.6)', borderColor: 'var(--brand-neon)', backdropFilter: 'blur(10px)' }}>
+          <div className="p-3 rounded-4 border bg-surface-card" style={{ borderColor: 'var(--brand-neon)', backdropFilter: 'blur(10px)' }}>
             <div className="d-flex align-items-start gap-2">
               <span style={{ fontSize: '1.2rem' }}>🤖</span>
-              <p className="text-white fw-bold mb-0 small" style={{ lineHeight: 1.6 }}>{aiAdvice}</p>
+              <p className="text-primary-dynamic fw-bold mb-0 small" style={{ lineHeight: 1.6 }}>{aiAdvice}</p>
             </div>
           </div>
         </div>
@@ -264,9 +265,9 @@ export default function Roadmap() {
                       width: '70px',
                       height: '70px',
                       borderRadius: '50%',
-                      backgroundColor: isCompleted ? 'var(--brand-neon)' : (isActive ? '#ffffff' : 'var(--surface-4, #222222)'),
+                      backgroundColor: isCompleted ? 'var(--brand-neon)' : (isActive ? 'var(--roadmap-active-node)' : 'var(--surface-4, #222222)'),
                       border: `4px solid ${isActive ? 'var(--brand-neon)' : (isCompleted ? '#aacc00' : 'var(--border-default, #333)')}`,
-                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      cursor: 'pointer',
                       zIndex: 2,
                       transition: 'all 0.3s ease',
                       boxShadow: isActive 
@@ -279,14 +280,17 @@ export default function Roadmap() {
                     onClick={() => handleNodeClick(day)}
                   >
                     {isCompleted && <span className="fs-3 text-dark fw-bold">✓</span>}
-                    {isActive && <span className="fs-4 text-dark fw-bold">★</span>}
+                    {isActive && <span className="fs-4 fw-bold" style={{ color: 'var(--roadmap-active-icon)' }}>★</span>}
                     {isLocked && <span className="fs-5 text-muted">🔒</span>}
                   </div>
 
                   <div className="saga-label-container d-block pointer-events-none">
-                     <div className="fw-black text-white" style={{ fontSize: '1rem', textShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>{t('roadmap.day')} {day.dayId}</div>
+                     <div className="fw-black text-primary-dynamic" style={{ fontSize: '1rem', textShadow: '0 2px 5px rgba(0,0,0,0.5)' }}>{t('roadmap.day')} {day.dayId}</div>
                      <div className="text-neon fw-bold mb-1" style={{ fontSize: '0.7rem' }}>{displayQuest(day)}</div>
                      <div className="text-muted fw-bold" style={{ fontSize: '0.75rem' }}>[{displayMg(day)}]</div>
+                     {isActive && (
+                       <div className="text-neon fw-bold" style={{ fontSize: '0.7rem' }}>👆 {t('roadmap.tap_to_start')}</div>
+                     )}
                    </div>
                 </div>
               </div>
@@ -299,39 +303,39 @@ export default function Roadmap() {
         {selectedDay && (
           <Modal.Body className="bg-surface-card rounded-4 p-0 overflow-hidden" style={{ border: '1px solid rgba(var(--brand-neon-rgb),0.2)', boxShadow: 'var(--shadow-lg), var(--shadow-neon)' }}>
             <div className="p-4 position-relative text-center" style={{ background: 'linear-gradient(180deg, rgba(var(--brand-neon-rgb),0.2) 0%, transparent 100%)' }}>
-              <button onClick={() => setShowModal(false)} className="btn-close btn-close-white position-absolute top-0 end-0 m-3"></button>
-              
+              <button onClick={() => setShowModal(false)} className="btn-close position-absolute top-0 end-0 m-3"></button>
+
               <div className="rounded-circle bg-neon d-flex align-items-center justify-content-center mx-auto mb-3" style={{ width: '60px', height: '60px' }}>
                 <span className="fs-3 fw-bold text-dark">{selectedDay.dayId}</span>
               </div>
-              
+
               <h3 className="fw-black text-primary-dynamic mb-1" style={{ fontSize: '1.25rem' }}>{displayQuest(selectedDay)}</h3>
               <p className="text-neon fw-bold small mb-2">{displayChapter(selectedDay)}</p>
               <p className="text-muted small mb-3 fst-italic" style={{ minHeight: '40px' }}>"{displayStoryDesc(selectedDay)}"</p>
 
-              <div className="d-inline-block bg-dark px-3 py-1 rounded-pill border border-secondary">
-                <span className="text-light small fw-bold">🎯 {displayMg(selectedDay)}</span>
+              <div className="d-inline-block px-3 py-1 rounded-pill border border-surface" style={{ background: 'var(--surface-3)' }}>
+                <span className="text-primary-dynamic small fw-bold">🎯 {displayMg(selectedDay)}</span>
               </div>
             </div>
 
             <div className="p-4 pt-0">
               <Row className="g-3 mb-4 text-center">
                 <Col xs={4}>
-                  <div className="bg-dark rounded p-2 border border-secondary h-100">
+                  <div className="rounded p-2 border border-surface h-100" style={{ background: 'var(--surface-3)' }}>
                     <div className="text-muted small fw-bold mb-1">{t('roadmap.time')}</div>
-                    <div className="fw-bold text-light">{selectedDay.duration} {t('roadmap.mins')}</div>
+                    <div className="fw-bold text-primary-dynamic">{selectedDay.duration} {t('roadmap.mins')}</div>
                   </div>
                 </Col>
                 <Col xs={4}>
-                  <div className="bg-dark rounded p-2 border border-secondary h-100">
+                  <div className="rounded p-2 border border-surface h-100" style={{ background: 'var(--surface-3)' }}>
                     <div className="text-muted small fw-bold mb-1">{t('roadmap.kcal')}</div>
                     <div className="fw-bold text-neon">{selectedDay.kcal}</div>
                   </div>
                 </Col>
                 <Col xs={4}>
-                  <div className="bg-dark rounded p-2 border border-secondary h-100">
+                  <div className="rounded p-2 border border-surface h-100" style={{ background: 'var(--surface-3)' }}>
                     <div className="text-muted small fw-bold mb-1">{t('roadmap.week')}</div>
-                    <div className="fw-bold text-light">{selectedDay.week}</div>
+                    <div className="fw-bold text-primary-dynamic">{selectedDay.week}</div>
                   </div>
                 </Col>
               </Row>
@@ -341,8 +345,8 @@ export default function Roadmap() {
                   <span className="me-2 fs-5">✓</span> {t('roadmap.review_workout')}
                 </Button>
               ) : selectedDay.status === 'active' ? (
-                <Button className="w-100 btn-brand py-3 fw-bold rounded-pill" onClick={() => navigate(`/daily-workout/${selectedDay.dayId}`, { state: { day: selectedDay } })}>
-                  {t('roadmap.start_workout')}
+                <Button className="w-100 btn-brand py-3 fw-bold rounded-pill d-flex align-items-center justify-content-center" onClick={() => navigate(`/daily-workout/${selectedDay.dayId}`, { state: { day: selectedDay } })}>
+                  <span className="me-2 fs-5">▶</span> {t('roadmap.start_workout')}
                 </Button>
               ) : (
                 <Button variant="secondary" className="w-100 py-3 fw-bold rounded-pill" disabled>
